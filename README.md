@@ -32,9 +32,7 @@ Die Integration kommt mit zwei vorgefertigten Designs für dein Dashboard:
 | Design V1 (Classic) | Design V2 (Compact) |
 | :---: | :---: |
 | *Große Anzeige mit Linienfarben* | *Modern, platzsparend mit Lauftext* |
-| ![V1 Preview](pictures/V1.png) | ![V2 Preview](pictures/V2.png) |
-
-
+| ![V1 Preview](pictures/card_v1.png) | ![V2 Preview](pictures/card_v2.png) |
 
 ---
 
@@ -78,6 +76,13 @@ Du musst keinen Code schreiben! Die Karten sind im Paket enthalten.
 ![Karte hinzufügen](pictures/dashboard-hinzufuegen.png)
 
 4.  Wähle im Editor deinen Sensor aus. Fertig!
+
+### 🛠️ Karte bearbeiten (Editor)
+Du kannst die Einstellungen (Titel, Sensor, etc.) ganz einfach über den visuellen Editor ändern:
+
+| Editor V1 | Editor V2 |
+| :---: | :---: |
+| ![V1 Edit](pictures/V1edit.png) | ![V2 Edit](pictures/V2edit.png) |
 
 ---
 
