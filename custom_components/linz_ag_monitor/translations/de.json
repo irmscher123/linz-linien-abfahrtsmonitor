@@ -1,0 +1,24 @@
+{
+    "config": {
+        "step": {
+            "user": {
+                "title": "Suche nach Haltestelle",
+                "description": "Geben Sie einen Namen ein (z.B. 'Hauptbahnhof' oder 'Landstraße'), um die ID automatisch zu finden.",
+                "data": {
+                    "search_term": "Suchbegriff"
+                }
+            },
+            "select": {
+                "title": "Haltestelle wählen",
+                "description": "Bitte wählen Sie die gewünschte Haltestelle aus der Liste.",
+                "data": {
+                    "stop_id": "Gefundene Haltestellen"
+                }
+            }
+        },
+        "error": {
+            "cannot_connect": "Verbindung fehlgeschlagen (API Blockiert oder Offline).",
+            "no_stops_found": "Keine Haltestellen gefunden."
+        }
+    }
+}
