@@ -32,7 +32,7 @@ Die Integration kommt mit zwei vorgefertigten Designs für dein Dashboard:
 | Design V1 (Classic) | Design V2 (Compact) |
 | :---: | :---: |
 | *Große Anzeige mit Linienfarben* | *Modern, platzsparend mit Lauftext* |
-| ![V1 Preview](pictures/v1.png) | ![V2 Preview](pictures/v2.png) |
+| ![V1 Preview](pictures/V1.png) | ![V2 Preview](pictures/V2.png) |
 
 
 
