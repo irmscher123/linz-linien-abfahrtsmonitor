@@ -17,7 +17,7 @@
 
 ## ✨ Features
 
-* **⚡ Echtzeit-Daten:** Direkte Anbindung an die Schnittstelle der Linz AG (EFA).
+* **⚡ Echtzeit-Daten:** Direkte Anbindung an die Schnittstelle der Linz AG.
 * **🔍 Smart Search:** Suche einfach nach "Hauptplatz" oder "Goethekreuzung" – keine kryptischen IDs nötig!
 * **🎨 2 Design-Varianten:** Wähle zwischen "Classic" (V1) und "Compact" (V2).
 * **📱 Responsive:** Perfekt für Wall-Tablets und Smartphones.
@@ -65,7 +65,34 @@ Gehe zu **Einstellungen** > **Geräte & Dienste** > **Integration hinzufügen** 
 2.  Wähle den korrekten Treffer aus der Liste.
 3.  Fertig! Du hast nun einen Sensor (z.B. `sensor.simonystrasse`).
 
-### 2. Dashboard Karte hinzufügen
+---
+
+## 2. 🛠️ Manuelle Einrichtung der Karten
+
+*Hinweis: Dies ist meist nur nötig, wenn die Karten nach der Installation nicht automatisch erscheinen.*
+
+**Schritt 2.1: Dateien kopieren**
+1. Lade die Dateien `linz-monitor-card_v1.js` und `linz-monitor-card_v2.js` aus dem Ordner `dashboard-cards` dieses Repositories herunter.
+2. Lade sie in deinen Home Assistant Ordner: `/config/www/` hoch.
+   *(Hinweis: Wenn der Ordner `www` nicht existiert, erstelle ihn. Danach Home Assistant neu starten!)*
+
+**Schritt 2.2: Ressource registrieren**
+Damit Home Assistant die Dateien kennt:
+1. Gehe zu **Einstellungen** > **Dashboards**.
+2. Klicke oben rechts auf die drei Punkte `...` und wähle **Ressourcen**.
+3. Klicke auf **Ressource hinzufügen**.
+4. Trage folgendes ein (wiederhole es für beide Versionen):
+
+| Einstellung | Wert für V1 | Wert für V2 |
+| :--- | :--- | :--- |
+| **URL** | `/local/linz-monitor-card_v1.js` | `/local/linz-monitor-card_v2.js` |
+| **Art** | JavaScript Modul | JavaScript Modul |
+
+5. Klicke auf **Erstellen**.
+
+---
+
+### 3. Dashboard Karte hinzufügen
 
 Du musst keinen Code schreiben! Die Karten sind im Paket enthalten.
 
@@ -86,9 +113,19 @@ Du kannst die Einstellungen (Titel, Sensor, etc.) ganz einfach über den visuell
 
 ---
 
+## ⚖️ Disclaimer & Datenquelle
+
+**Datenquelle:**
+Die Abfahrtszeiten werden von der öffentlichen Schnittstelle der Linz Linien GmbH (`linzag.at/efa`) abgerufen.
+
+**Haftungsausschluss:**
+Dies ist ein privates, inoffizielles Projekt und steht in keiner Verbindung zur Linz AG.
+Der Entwickler übernimmt **keine Gewährleistung** für die Richtigkeit, Vollständigkeit oder Aktualität der angezeigten Daten. Sollte die Schnittstelle der Linz AG geändert werden oder ausfallen, kann die Funktion der Integration nicht garantiert werden.
+
+---
+
 ## 🛠️ Credits & Lizenz
 
 Entwickelt von **@irmscher123**.
-Datenbereitstellung durch Linz AG. Dies ist ein inoffizielles Projekt.
 
 [Lizenz: MIT](LICENSE)
