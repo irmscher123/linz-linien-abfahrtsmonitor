@@ -4,9 +4,9 @@
 [![version](https://img.shields.io/badge/version-0.0.1-blue.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 
-<p align="center">
-  <img src="static/logo.png" width="200" alt="Linz Linien Logo">
-</p>
+
+<img src="pictures/logo.png" width="200" alt="Linz Linien Logo">
+
 
 
   <b>Der moderne Abfahrtsmonitor für Home Assistant.</b><br>
