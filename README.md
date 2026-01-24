@@ -8,10 +8,10 @@
   <img src="static/logo.png" width="200" alt="Linz Linien Logo">
 </p>
 
-<p align="center">
+
   <b>Der moderne Abfahrtsmonitor für Home Assistant.</b><br>
   Live-Daten der Linz AG Linien, einfache Einrichtung und wunderschöne Dashboard-Karten.
-</p>
+
 
 ---
 
