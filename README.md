@@ -129,3 +129,134 @@ Der Entwickler übernimmt **keine Gewährleistung** für die Richtigkeit, Vollst
 Entwickelt von **@irmscher123**.
 
 [Lizenz: MIT](LICENSE)
+
+
+# 🚋 Linz Lines Departure Monitor
+
+[![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
+[![version](https://img.shields.io/badge/version-1.0.0-blue.svg?style=for-the-badge)]()
+[![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
+
+<img src="pictures/logo.png" width="200" alt="Linz Linien Logo">
+
+<p>
+  <b>The modern departure monitor for Home Assistant.</b><br>
+  Live data from Linz AG Lines, easy setup, and beautiful dashboard cards.
+</p>
+
+---
+
+## ✨ Features
+
+* **⚡ Real-time Data:** Direct connection to the Linz AG interface (EFA).
+* **🔍 Smart Search:** Simply search for "Hauptplatz" or "Goethekreuzung" – no cryptic IDs needed!
+* **🎨 2 Design Variants:** Choose between "Classic" (V1) and "Compact" (V2).
+* **📱 Responsive:** Perfect for wall tablets and smartphones.
+* **⚙️ UI Config:** Full setup via the Home Assistant user interface.
+
+---
+
+## 🖼️ Preview
+
+The integration comes with two pre-built designs for your dashboard:
+
+| Design V1 (Classic) | Design V2 (Compact) |
+| :---: | :---: |
+| *Large display with line colors* | *Modern, space-saving with scrolling text* |
+| ![V1 Preview](pictures/V1.png) | ![V2 Preview](pictures/V2.png) |
+
+---
+
+## 📥 Installation
+
+### Option 1: Via HACS (Recommended)
+
+1.  Open HACS in Home Assistant.
+2.  Go to **Integrations** > **Menu (three dots)** > **Custom Repositories**.
+3.  Paste this URL:
+    `https://github.com/irmscher123/linz-linien-abfahrtsmonitor`
+4.  Select category **Integration**.
+5.  Click **Add** and then **Download**.
+6.  **Restart Home Assistant.**
+
+### Option 2: Manual
+
+1.  Download the repository as a ZIP file.
+2.  Copy the folder `custom_components/linz_ag_monitor` into your `/config/custom_components/` directory.
+3.  Restart Home Assistant.
+
+---
+
+## ⚙️ Setup
+
+### 1. Add Sensor
+Go to **Settings** > **Devices & Services** > **Add Integration** and search for **Linz Linien Abfahrtsmonitor**.
+
+1.  Enter the name of the stop (e.g., `Simonystraße`).
+2.  Select the correct match from the list.
+3.  Done! You now have a sensor (e.g., `sensor.simonystrasse`).
+
+---
+
+## 2. 🛠️ Manual Card Setup
+
+*Note: This is usually only necessary if the cards do not appear automatically after installation.*
+
+**Step 2.1: Copy Files**
+1. Download the files `linz-monitor-card_v1.js` and `linz-monitor-card_v2.js` from the `dashboard-cards` folder of this repository.
+2. Upload them to your Home Assistant folder: `/config/www/`.
+   *(Note: If the `www` folder does not exist, create it. Restart Home Assistant afterwards!)*
+
+**Step 2.2: Register Resource**
+To make Home Assistant aware of the files:
+1. Go to **Settings** > **Dashboards**.
+2. Click the three dots `...` in the top right corner and select **Resources**.
+3. Click **Add Resource**.
+4. Enter the following (repeat for both versions):
+
+| Setting | Value for V1 | Value for V2 |
+| :--- | :--- | :--- |
+| **URL** | `/local/linz-monitor-card_v1.js` | `/local/linz-monitor-card_v2.js` |
+| **Type** | JavaScript Module | JavaScript Module |
+
+5. Click **Create**.
+
+---
+
+### 3. Add Dashboard Card
+
+No code needed! The cards are included in the package.
+
+1.  Go to your dashboard and click **Add Card**.
+2.  Search for "Linz" in the magnifying glass icon.
+3.  Select your design (**V1** or **V2**), as shown here:
+
+![Add Card](pictures/dashboard-hinzufuegen.png)
+
+4.  Select your sensor in the editor. Done!
+
+### 🛠️ Edit Card (Editor)
+You can easily change settings (Title, Sensor, etc.) via the visual editor:
+
+| Editor V1 | Editor V2 |
+| :---: | :---: |
+| ![V1 Edit](pictures/V1edit.png) | ![V2 Edit](pictures/V2edit.png) |
+
+---
+
+## ⚖️ Disclaimer & Data Source
+
+**Data Source:**
+Departure times are retrieved from the public interface of Linz Linien GmbH (`linzag.at/efa`).
+
+**Disclaimer:**
+This is a private, unofficial project and is not affiliated with Linz AG.
+The developer assumes **no warranty** for the accuracy, completeness, or timeliness of the displayed data. If the Linz AG interface changes or goes offline, the functionality of this integration cannot be guaranteed.
+
+---
+
+## 🛠️ Credits & License
+
+Developed by **@irmscher123**.
+
+[License: MIT](LICENSE)
