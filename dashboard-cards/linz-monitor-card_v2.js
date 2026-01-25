@@ -152,7 +152,12 @@ class LinzMonitorCardV2 extends HTMLElement {
       sortierung: "echtzeit",
       stop_name_override: "", 
       filter: "",
-      font_family: "", 
+      font_family: "",
+
+      // NEU: gleiches Verhalten wie V1
+      holiday_entity: "",        // z.B. "binary_sensor.tomorrow_is_holiday"
+      weekday_cutoff: "01:30",   // Unter der Woche bis 01:30
+
       ...config 
     };
     if (this._config.font_family) loadGoogleFont(this._config.font_family);
@@ -205,27 +210,76 @@ class LinzMonitorCardV2 extends HTMLElement {
       if (now - val.goneAt > 15000) this._gone_mem.delete(key);
     }
 
-    const combined = [...departures];
+    let combined = [...departures];
     this._gone_mem.forEach(val => combined.push({ ...val, isGone: true }));
 
-    // SORTIERUNG - MITTERNACHTS-FIX
-    combined.sort((a, b) => {
-      if (a.isGone && !b.isGone) return -1;
-      if (!a.isGone && b.isGone) return 1;
+    // SORTIERUNG (PLAN: Betriebstag bis 01:30 / WOCHENENDE: durchgehend)
+    if (this._config.sortierung === "plan") {
+      const dNow = new Date();
+      const nowMins = dNow.getHours() * 60 + dNow.getMinutes();
+      const dow = dNow.getDay(); // 0=So ... 5=Fr 6=Sa
 
-      if (this._config.sortierung === "plan") {
-        const getMins = (t) => {
-          const [h, m] = t.split(':').map(Number);
-          const nowH = new Date().getHours();
-          let total = h * 60 + m;
-          if (nowH > 18 && h < 5) total += 1440;
-          return total;
-        };
-        return getMins(a.scheduled) - getMins(b.scheduled);
-      } else {
-        return a.countdown - b.countdown;
+      const parseHHMM = (hhmm) => {
+        if (!hhmm || typeof hhmm !== "string" || !hhmm.includes(":")) return null;
+        const [h, m] = hhmm.split(":").map(Number);
+        if (Number.isNaN(h) || Number.isNaN(m)) return null;
+        return h * 60 + m;
+      };
+
+      const minsUntil = (hhmm) => {
+        const t = parseHHMM(hhmm);
+        if (t === null) return 99999;
+        return (t - nowMins + 1440) % 1440; // 0..1439
+      };
+
+      // Feiertag folgt? optional
+      let holidayFollows = false;
+      if (this._config.holiday_entity) {
+        const ent = hass.states[this._config.holiday_entity];
+        const s = (ent?.state || "").toString().toLowerCase();
+        holidayFollows = (s === "on" || s === "true" || s === "1" || s === "yes");
       }
-    });
+
+      // Fr/Sa oder Feiertag-Folge => durchgehend
+      const isWeekendNight = (dow === 5) || (dow === 6) || holidayFollows;
+
+      // Unter der Woche bis 01:30 (Betriebstag)
+      const cutoffStr = this._config.weekday_cutoff || "01:30";
+      const cutoffMins = parseHHMM(cutoffStr) ?? (1 * 60 + 30);
+
+      const allowedWeekday = (hhmm) => {
+        const t = parseHHMM(hhmm);
+        if (t === null) return false;
+
+        // tagsüber/abends (nach cutoff): >= jetzt ODER <= cutoff
+        if (nowMins > cutoffMins) {
+          return (t >= nowMins) || (t <= cutoffMins);
+        }
+
+        // nach Mitternacht (bis cutoff): nur jetzt..cutoff
+        return (t >= nowMins) && (t <= cutoffMins);
+      };
+
+      // Filter nur unter der Woche anwenden
+      if (!isWeekendNight) {
+        combined = combined.filter(d => d.isGone || allowedWeekday(d.scheduled));
+      }
+
+      // Sortierung: immer "Minuten ab jetzt"
+      combined.sort((a, b) => {
+        if (a.isGone && !b.isGone) return -1;
+        if (!a.isGone && b.isGone) return 1;
+        return minsUntil(a.scheduled) - minsUntil(b.scheduled);
+      });
+
+    } else {
+      // Echtzeit
+      combined.sort((a, b) => {
+        if (a.isGone && !b.isGone) return -1;
+        if (!a.isGone && b.isGone) return 1;
+        return a.countdown - b.countdown;
+      });
+    }
 
     this.render(state, combined);
   }
@@ -256,7 +310,6 @@ class LinzMonitorCardV2 extends HTMLElement {
             display: flex;
             flex-direction: column;
 
-            /* der Flex-Killer, wenn er fehlt */
             min-height: 0;
           }
 
