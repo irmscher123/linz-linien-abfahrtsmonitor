@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-   LINZ MONITOR CARD v1 (Classic) - PLAN FIX: bis 01:30 (Betriebstag)
+   LINZ MONITOR CARD v1 (Classic)
    --------------------------------------------------------- */
 
 const LINE_COLORS = { 
@@ -145,16 +145,6 @@ class LinzMonitorCard extends HTMLElement {
       show_info: true,
       badge_round: true,
 
-      // Optional: Feiertag-Folge als Entity (wenn vorhanden)
-      // z.B. "binary_sensor.tomorrow_is_holiday"
-      holiday_entity: "",
-
-      // Optional: Wochenende/Feiertag Vorschau in Minuten (falls du mehr/weniger willst)
-      plan_horizon_weekend: 12 * 60,
-
-      // Fix: unter der Woche Betriebstag bis 01:30
-      weekday_cutoff: "01:30",
-
       ...config
     };
     if (this._config.font_family) loadGoogleFont(this._config.font_family);
@@ -197,85 +187,33 @@ class LinzMonitorCard extends HTMLElement {
     this._lastRaw = departures;
     for (const [key, val] of this._gone_mem) { if (now - val.goneAt > 15000) this._gone_mem.delete(key); }
 
-    let combined = [...departures];
+    const combined = [...departures];
     this._gone_mem.forEach(val => combined.push({ ...val, isGone: true }));
 
-    // SORTIERUNG
-    if (this._config.sortierung === "plan") {
-      const dNow = new Date();
-      const nowMins = dNow.getHours() * 60 + dNow.getMinutes();
-      const dow = dNow.getDay(); // 0=So ... 5=Fr 6=Sa
+    // SORTIERUNG (FIX: Dynamisch statt starr 18 Uhr)
+    combined.sort((a, b) => {
+      if (a.isGone && !b.isGone) return -1;
+      if (!a.isGone && b.isGone) return 1;
 
-      const parseHHMM = (hhmm) => {
-        if (!hhmm || typeof hhmm !== "string" || !hhmm.includes(":")) return null;
-        const [h, m] = hhmm.split(":").map(Number);
-        if (Number.isNaN(h) || Number.isNaN(m)) return null;
-        return h * 60 + m;
-      };
-
-      const minsUntil = (hhmm) => {
-        const t = parseHHMM(hhmm);
-        if (t === null) return 99999;
-        return (t - nowMins + 1440) % 1440; // 0..1439
-      };
-
-      // Optional: Feiertag folgt?
-      let holidayFollows = false;
-      if (this._config.holiday_entity) {
-        const ent = hass.states[this._config.holiday_entity];
-        const s = (ent?.state || "").toString().toLowerCase();
-        holidayFollows = (s === "on" || s === "true" || s === "1" || s === "yes");
-      }
-
-      // Fr/Sa oder Feiertag-Folge = Wochenendnacht (durchgehend)
-      const isWeekendNight = (dow === 5) || (dow === 6) || holidayFollows;
-
-      // Unter der Woche: Betriebstag endet 01:30
-      const cutoffStr = this._config.weekday_cutoff || "01:30";
-      const cutoffMins = parseHHMM(cutoffStr) ?? (1 * 60 + 30);
-
-      // DAS ist der entscheidende Filter:
-      // Unter der Woche erlauben wir nur:
-      // - heute ab "jetzt" bis 23:59
-      // - plus 00:00 bis cutoff (01:30)
-      // Dadurch fliegen 05:15/06:xx zuverlässig raus.
-      const allowedWeekday = (hhmm) => {
-        const t = parseHHMM(hhmm);
-        if (t === null) return false;
-
-        // wenn wir tagsüber/abends sind (nach 01:30):
-        // erlauben >= now oder <= cutoff
-        if (nowMins > cutoffMins) {
-          return (t >= nowMins) || (t <= cutoffMins);
-        }
-
-        // wenn wir nach Mitternacht sind (zwischen 00:00 und 01:30):
-        // erlauben nur jetzt..cutoff
-        return (t >= nowMins) && (t <= cutoffMins);
-      };
-
-      if (!isWeekendNight) {
-        combined = combined.filter(d => d.isGone || allowedWeekday(d.scheduled));
+      if (this._config.sortierung === "plan") {
+        const getMins = (t) => {
+          const [h, m] = t.split(':').map(Number);
+          // HIER DIE ÄNDERUNG: Dynamischer Vergleich mit JETZT
+          const nowD = new Date();
+          const curMins = nowD.getHours() * 60 + nowD.getMinutes();
+          let total = h * 60 + m;
+          
+          // Wenn die Abfahrtszeit viel kleiner ist als die aktuelle Zeit (minus 2h Puffer),
+          // dann ist es "Morgen". (Ersetzt die starre "h < 5 && now > 18" Logik)
+          if (total < (curMins - 120)) total += 1440;
+          
+          return total;
+        };
+        return getMins(a.scheduled) - getMins(b.scheduled);
       } else {
-        // Wochenende/Feiertagsfolge: "läuft durch"
-        // Optional könntest du hier zusätzlich begrenzen, aber per Wunsch nicht.
-      }
-
-      // Sort nach "Minuten ab jetzt"
-      combined.sort((a, b) => {
-        if (a.isGone && !b.isGone) return -1;
-        if (!a.isGone && b.isGone) return 1;
-        return minsUntil(a.scheduled) - minsUntil(b.scheduled);
-      });
-
-    } else {
-      // Echtzeit
-      combined.sort((a, b) => {
-        if (a.isGone && !b.isGone) return -1;
-        if (!a.isGone && b.isGone) return 1;
         return a.countdown - b.countdown;
-      });
-    }
+      }
+    });
 
     this.render(state, combined);
   }
@@ -379,6 +317,7 @@ class LinzMonitorCard extends HTMLElement {
             font-weight: 600;
           }
 
+          /* Option B: keine Inline-Farben, alles neutral */
           .row-info span { color: #ffffff; }
 
           .mq-w { flex: 1; overflow: hidden; white-space: nowrap; position: relative; height: 18px; }
@@ -400,6 +339,17 @@ class LinzMonitorCard extends HTMLElement {
           <div class="rows-container"></div>
         </ha-card>
       `;
+    } else {
+      // CSS live anpassen (wenn User Toggles ändert)
+      const badge = this.querySelector(".line-badge");
+      if (badge) {
+        const styleTag = this.querySelector("style");
+        if (styleTag) {
+          styleTag.textContent = styleTag.textContent.replace(/border-radius:\s*\d+px;\s*\/\*badge\*\*\*\//g, "");
+        }
+      }
+      // einfacher: wird beim nächsten innerHTML-Neuaufbau sauber gesetzt,
+      // aber wir setzen pro Row sowieso borderRadius weiter unten nochmal.
     }
 
     const container = this.querySelector(".rows-container");
@@ -416,6 +366,7 @@ class LinzMonitorCard extends HTMLElement {
       const isNow = d.countdown === 0 && !d.isGone;
       let timeVal;
 
+      // DOTS STATT 0 MINUTEN
       if (isNow) {
         timeVal = `<div class="dots"><span></span><span></span><span></span></div>`;
       } else {
@@ -442,12 +393,17 @@ class LinzMonitorCard extends HTMLElement {
         metaVal = "";
       }
 
+      // Info HTML bauen (nur wenn Toggle an)
       let styledInfoHtml = "";
       if (showInfo) {
         const infoTextRaw = (d.infos || "").replace(/\n/g, " ").trim();
         if (infoTextRaw.length > 2 && !infoTextRaw.includes("Niederflur")) {
           const parts = infoTextRaw.split(/([.,;])/);
-          const block = parts.map(part => `<span>${part}</span>`).join("");
+
+          // Option B: keine Farb-Logik, nur neutrale spans
+          const buildColoredBlock = () => parts.map(part => `<span>${part}</span>`).join("");
+
+          const block = buildColoredBlock();
           const separator = `<span> &nbsp;&nbsp; +++ &nbsp;&nbsp; </span>`;
           styledInfoHtml = `
             <div class="row-info">
@@ -486,17 +442,23 @@ class LinzMonitorCard extends HTMLElement {
         if (cBox.innerHTML !== timeVal) cBox.innerHTML = timeVal;
         if (mBox.innerHTML !== metaVal) mBox.innerHTML = metaVal;
 
+        // Ziel ggf. ändern (falls sich Richtung ändert)
         const destEl = rowEl.querySelector(".dest");
         if (destEl && destEl.textContent !== d.direction) destEl.textContent = d.direction;
 
-        if (infoArea && infoArea.innerHTML !== styledInfoHtml) infoArea.innerHTML = styledInfoHtml;
+        // Info live updaten (Toggle + Text)
+        if (infoArea) {
+          if (infoArea.innerHTML !== styledInfoHtml) infoArea.innerHTML = styledInfoHtml;
+        }
 
+        // Badge Text/Color updaten
         if (badgeEl) {
           if (badgeEl.textContent !== lineT) badgeEl.textContent = lineT;
           badgeEl.style.background = LINE_COLORS[cleanL] || "#444";
         }
       }
 
+      // Badge-Form live setzen (auch wenn schon existiert)
       const badgeEl2 = rowEl.querySelector(".line-badge");
       if (badgeEl2) badgeEl2.style.borderRadius = `${badgeRadius}px`;
 
