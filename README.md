@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-0.3-blue.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-0.3a-blue.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 
 
@@ -134,7 +134,7 @@ Entwickelt von **@irmscher123**.
 # 🚋 Linz Lines Departure Monitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-0.3-blue.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-0.3a-blue.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 
 <img src="pictures/logo.png" width="200" alt="Linz Linien Logo">
