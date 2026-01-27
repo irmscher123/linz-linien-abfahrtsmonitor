@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-   LinzAG Monitor – V2 - Kompakt
+   LinzAG Monitor – V2 
    --------------------------------------------------------- */
 
 const LINE_COLORS_V2 = { 
@@ -35,7 +35,6 @@ const loadGoogleFont = (fontName) => {
   if (!fontName || ['Arial','Verdana','Helvetica','sans-serif','serif','monospace'].includes(fontName)) return;
   const id = `font-${fontName.replace(/\s+/g, '-').toLowerCase()}`;
   if (document.getElementById(id)) return;
-
   const link = document.createElement('link');
   link.id = id;
   link.rel = 'stylesheet';
@@ -49,15 +48,10 @@ class LinzMonitorCardEditorV2 extends HTMLElement {
     this._config = config; 
     this.render();
   }
-
   set hass(hass) {
     this._hass = hass;
-    if (!this._initialized) {
-      this.render();
-      this._initialized = true;
-    }
+    if (!this._initialized) { this.render(); this._initialized = true; }
   }
-
   render() {
     if (!this._hass || !this._config) return;
     const entities = Object.keys(this._hass.states)
@@ -73,12 +67,10 @@ class LinzMonitorCardEditorV2 extends HTMLElement {
             ${entities.map(e => `<option value="${e}" ${this._config.entity === e ? 'selected' : ''}>${e}</option>`).join('')}
           </select>
         </div>
-
         <div style="margin-bottom:10px;">
           <label style="font-weight:bold; display:block;">Name (Optional)</label>
           <input id="stop_name_override" type="text" value="${this._config.stop_name_override || ''}" placeholder="Eigener Name..." style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
         </div>
-
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
           <div>
             <label style="font-weight:bold; display:block;">Filter (Linien)</label>
@@ -92,7 +84,6 @@ class LinzMonitorCardEditorV2 extends HTMLElement {
             </select>
           </div>
         </div>
-
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
           <div>
             <label style="font-weight:bold; display:block;">Zeilen</label>
@@ -103,7 +94,6 @@ class LinzMonitorCardEditorV2 extends HTMLElement {
             <input id="row_height" type="number" value="${this._config.row_height || 38}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
           </div>
         </div>
-
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
           <div>
             <label style="font-weight:bold; display:block;">Schrift (Zeit)</label>
@@ -114,20 +104,16 @@ class LinzMonitorCardEditorV2 extends HTMLElement {
             <input id="dest_size" type="number" value="${this._config.dest_size || 20}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
           </div>
         </div>
-
         <div>
           <label style="font-weight:bold; display:block;">Google Font (Name)</label>
           <input id="font_family" type="text" value="${this._config.font_family || ''}" placeholder="z.B. Oswald, Roboto, Open Sans..." style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
-          <div style="font-size:11px; color:#888; margin-top:3px;">Schriftart wird automatisch von Google geladen.</div>
         </div>
       </div>
     `;
-
     this.querySelectorAll("select, input").forEach(el => {
       el.addEventListener("change", (ev) => this._update(ev));
     });
   }
-
   _update(ev) {
     const target = ev.target;
     const value = target.type === 'number' ? Number(target.value) : target.value;
@@ -145,27 +131,15 @@ class LinzMonitorCardV2 extends HTMLElement {
   setConfig(config) {
     this._config = { 
       entity: "sensor.linz_ag_monitor",
-      anzahl: 8, 
-      row_height: 38, 
-      font_size: 19,
-      dest_size: 20, 
-      sortierung: "echtzeit",
-      stop_name_override: "", 
-      filter: "",
-      font_family: "",
-
-      // NEU: gleiches Verhalten wie V1
-      holiday_entity: "",        // z.B. "binary_sensor.tomorrow_is_holiday"
-      weekday_cutoff: "01:30",   // Unter der Woche bis 01:30
-
-      ...config 
+      anzahl: 8, row_height: 38, font_size: 19, dest_size: 20,
+      sortierung: "echtzeit", stop_name_override: "", filter: "",
+      font_family: "", ...config 
     };
     if (this._config.font_family) loadGoogleFont(this._config.font_family);
   }
 
   set hass(hass) {
     this._hass = hass;
-
     if (!this._config.entity || !hass.states[this._config.entity]) {
       if (!this.querySelector("ha-card")) {
         this.innerHTML = `<ha-card style="padding:20px;color:white;background:var(--ha-card-background,var(--card-background-color,#1c1c1c));">Bitte Haltestelle wählen.</ha-card>`;
@@ -174,24 +148,17 @@ class LinzMonitorCardV2 extends HTMLElement {
     }
 
     const state = hass.states[this._config.entity];
-    const now = Date.now();
+    const nowTs = Date.now();
     let departures = [...(state.attributes.departureList || [])];
 
+    // Filter Logic
     const matchesFilter = (line) => {
       if (!this._config.filter) return true;
-      const filters = this._config.filter
-        .split(',')
-        .map(f => f.trim().toLowerCase())
-        .filter(Boolean);
-
+      const filters = this._config.filter.split(',').map(f => f.trim().toLowerCase()).filter(Boolean);
       if (filters.length === 0) return true;
-
       const l = (line || "").toLowerCase();
-      const clean = l.replace('*', '');
-      return filters.includes(l) || filters.includes(clean);
+      return filters.includes(l) || filters.includes(l.replace('*', ''));
     };
-
-    // Filter Logic
     departures = departures.filter(d => matchesFilter(d.line));
 
     // Memory Logic
@@ -199,87 +166,41 @@ class LinzMonitorCardV2 extends HTMLElement {
     if (this._lastRaw) {
       this._lastRaw.forEach(old => {
         const key = `${old.line}-${old.scheduled}-${old.direction}`;
-        if (matchesFilter(old.line) && !currentKeys.has(key) && old.countdown <= 1 && !this._gone_mem.has(key)) {
-          this._gone_mem.set(key, { ...old, goneAt: now });
+        // Wenn Bus weg ist und vorher Countdown <= 1 war -> MERKEN
+        if (matchesFilter(old.line) && !currentKeys.has(key) && old.countdown <= 1 && old.countdown >= 0 && !this._gone_mem.has(key)) {
+          this._gone_mem.set(key, { ...old, goneAt: nowTs });
         }
       });
     }
     this._lastRaw = departures;
 
+    // Speicher aufräumen (15 Sekunden)
     for (const [key, val] of this._gone_mem) {
-      if (now - val.goneAt > 15000) this._gone_mem.delete(key);
+      if (nowTs - val.goneAt > 15000) this._gone_mem.delete(key);
     }
 
-    let combined = [...departures];
+    const combined = [...departures];
     this._gone_mem.forEach(val => combined.push({ ...val, isGone: true }));
 
-    // SORTIERUNG (PLAN: Betriebstag bis 01:30 / WOCHENENDE: durchgehend)
-    if (this._config.sortierung === "plan") {
-      const dNow = new Date();
-      const nowMins = dNow.getHours() * 60 + dNow.getMinutes();
-      const dow = dNow.getDay(); // 0=So ... 5=Fr 6=Sa
+    // Sortierung (Gone nach oben)
+    combined.sort((a, b) => {
+      if (a.isGone && !b.isGone) return -1;
+      if (!a.isGone && b.isGone) return 1;
 
-      const parseHHMM = (hhmm) => {
-        if (!hhmm || typeof hhmm !== "string" || !hhmm.includes(":")) return null;
-        const [h, m] = hhmm.split(":").map(Number);
-        if (Number.isNaN(h) || Number.isNaN(m)) return null;
-        return h * 60 + m;
-      };
-
-      const minsUntil = (hhmm) => {
-        const t = parseHHMM(hhmm);
-        if (t === null) return 99999;
-        return (t - nowMins + 1440) % 1440; // 0..1439
-      };
-
-      // Feiertag folgt? optional
-      let holidayFollows = false;
-      if (this._config.holiday_entity) {
-        const ent = hass.states[this._config.holiday_entity];
-        const s = (ent?.state || "").toString().toLowerCase();
-        holidayFollows = (s === "on" || s === "true" || s === "1" || s === "yes");
-      }
-
-      // Fr/Sa oder Feiertag-Folge => durchgehend
-      const isWeekendNight = (dow === 5) || (dow === 6) || holidayFollows;
-
-      // Unter der Woche bis 01:30 (Betriebstag)
-      const cutoffStr = this._config.weekday_cutoff || "01:30";
-      const cutoffMins = parseHHMM(cutoffStr) ?? (1 * 60 + 30);
-
-      const allowedWeekday = (hhmm) => {
-        const t = parseHHMM(hhmm);
-        if (t === null) return false;
-
-        // tagsüber/abends (nach cutoff): >= jetzt ODER <= cutoff
-        if (nowMins > cutoffMins) {
-          return (t >= nowMins) || (t <= cutoffMins);
-        }
-
-        // nach Mitternacht (bis cutoff): nur jetzt..cutoff
-        return (t >= nowMins) && (t <= cutoffMins);
-      };
-
-      // Filter nur unter der Woche anwenden
-      if (!isWeekendNight) {
-        combined = combined.filter(d => d.isGone || allowedWeekday(d.scheduled));
-      }
-
-      // Sortierung: immer "Minuten ab jetzt"
-      combined.sort((a, b) => {
-        if (a.isGone && !b.isGone) return -1;
-        if (!a.isGone && b.isGone) return 1;
-        return minsUntil(a.scheduled) - minsUntil(b.scheduled);
-      });
-
-    } else {
-      // Echtzeit
-      combined.sort((a, b) => {
-        if (a.isGone && !b.isGone) return -1;
-        if (!a.isGone && b.isGone) return 1;
+      if (this._config.sortierung === "plan") {
+        const [hA, mA] = a.scheduled.split(':').map(Number);
+        const [hB, mB] = b.scheduled.split(':').map(Number);
+        const nowD = new Date();
+        const curMins = nowD.getHours() * 60 + nowD.getMinutes();
+        let minsA = hA * 60 + mA;
+        let minsB = hB * 60 + mB;
+        if (minsA < (curMins - 120)) minsA += 1440;
+        if (minsB < (curMins - 120)) minsB += 1440;
+        return minsA - minsB;
+      } else {
         return a.countdown - b.countdown;
-      });
-    }
+      }
+    });
 
     this.render(state, combined);
   }
@@ -296,155 +217,155 @@ class LinzMonitorCardV2 extends HTMLElement {
         <style>
           ha-card {
             background: var(--ha-card-background, var(--card-background-color, #1c1c1c));
-            border-radius: 12px !important;
-            padding: 10px !important;
+            border-radius: 12px !important; 
+            padding: 10px !important; 
             color: white !important;
-            font-family: ${FONT} !important;
+            font-family: ${FONT} !important; 
             border: 1px solid rgba(255,255,255,0.1);
-            overflow: hidden;
-
-            height: 100%;
-            width: 100%;
+            overflow: hidden; 
+            height: 100%; 
+            width: 100%; 
             box-sizing: border-box;
-
-            display: flex;
-            flex-direction: column;
-
+            display: flex; 
+            flex-direction: column; 
             min-height: 0;
-          }
 
+            /* HIER IST DER FIX FUER DAS UEBERLAPPEN: */
+            isolation: isolate; 
+          }
           .title-area {
-            font-size: ${TIME_S}px;
-            font-weight: 700;
+            font-size: ${TIME_S}px; 
+            font-weight: 700; 
             color: #bbb;
-            border-bottom: 1px solid rgba(255,255,255,0.1);
+            border-bottom: 1px solid rgba(255,255,255,0.1); 
             padding-bottom: 4px;
-            margin-bottom: 5px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
+            margin-bottom: 5px; 
+            display: flex; 
+            align-items: center; 
+            gap: 8px; 
             flex-shrink: 0;
           }
-
-          .title-icon {
-            height: ${Math.round(TIME_S * 1.3)}px;
-            width: ${Math.round(TIME_S * 1.3)}px;
-            object-fit: contain;
+          .title-icon { 
+            height: ${Math.round(TIME_S * 1.3)}px; 
+            width: ${Math.round(TIME_S * 1.3)}px; 
+            object-fit: contain; 
           }
-
-          table {
-            width: 100%;
-            border-collapse: collapse;
-            table-layout: fixed;
-
-            flex: 1;
-            min-height: 0;
+          table { 
+            width: 100%; 
+            border-collapse: collapse; 
+            table-layout: fixed; 
+            flex: 1; 
+            min-height: 0; 
           }
-
-          tbody {
-            display: block;
-            height: 100%;
-            overflow: hidden;
+          tbody { 
+            display: block; 
+            height: 100%; 
+            overflow: hidden; 
           }
-
-          tr {
-            display: table;
-            width: 100%;
-            table-layout: fixed;
-            height: ${ROW_H}px;
+          tr { 
+            display: table; 
+            width: 100%; 
+            table-layout: fixed; 
+            height: ${ROW_H}px; 
           }
-
-          td {
-            vertical-align: middle;
-            border-bottom: 1px solid rgba(255,255,255,0.05);
-            position: relative;
+          td { 
+            vertical-align: middle; 
+            border-bottom: 1px solid rgba(255,255,255,0.05); 
+            position: relative; 
           }
-
-          .col-line { width: ${BADGE_W + 10}px; }
-          .col-dest { width: auto; padding-left: 8px; overflow: hidden; }
-          .col-time {
-            width: 105px;
-            text-align: right;
-            font-weight: 800;
-            font-size: ${TIME_S + 1}px;
-            background: inherit;
-            position: relative;
-            z-index: 5;
+          .col-line { 
+            width: ${BADGE_W + 10}px; 
           }
-
+          .col-dest { 
+            width: auto; 
+            padding-left: 8px; 
+            overflow: hidden; 
+          }
+          .col-time { 
+            width: 105px; 
+            text-align: right; 
+            font-weight: 800; 
+            font-size: ${TIME_S + 1}px; 
+            z-index: 5; 
+          }
           .badge {
-            width: ${BADGE_W}px;
-            height: ${Math.round(ROW_H * 0.8)}px;
+            width: ${BADGE_W}px; 
+            height: ${Math.round(ROW_H * 0.8)}px; 
             border-radius: 4px;
-            display: flex;
-            align-items: center;
+            display: flex; 
+            align-items: center; 
             justify-content: center;
-            font-weight: 800;
-            font-size: ${TIME_S}px;
+            font-weight: 800; 
+            font-size: ${TIME_S}px; 
             color: white;
           }
-
-          .blink-badge { animation: syncBlink 1s infinite steps(1); }
-          @keyframes syncBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.5; } }
-
+          .blink-badge { 
+            animation: syncBlink 1s infinite steps(1); 
+          }
+          @keyframes syncBlink { 
+            0%, 49% { opacity: 1; } 
+            50%, 100% { opacity: 0.5; } 
+          }
           .dest-text {
-            font-size: ${DEST_S}px;
-            font-weight: 800;
+            font-size: ${DEST_S}px; 
+            font-weight: 800; 
             color: #fff;
-            white-space: nowrap;
-            overflow: hidden;
-            text-overflow: ellipsis;
+            white-space: nowrap; 
+            overflow: hidden; 
+            text-overflow: ellipsis; 
             display: block;
           }
-
           .info-overlay {
-            position: absolute;
-            top: 0;
-            left: 8px;
-            width: calc(100% - 8px);
+            position: absolute; 
+            top: 0; 
+            left: 8px; 
+            width: calc(100% - 8px); 
             height: 100%;
             background: var(--ha-card-background, var(--card-background-color, #1c1c1c));
-            display: flex;
-            align-items: center;
-            opacity: 0;
-            transition: opacity 0.4s;
-            z-index: 2;
+            display: flex; 
+            align-items: center; 
+            opacity: 0; 
+            transition: opacity 0.4s; 
+            z-index: 2; 
             pointer-events: none;
           }
-
-          .info-overlay.visible { opacity: 1; }
-
-          .marquee-wrap {
-            overflow: hidden;
-            flex: 1;
-            position: relative;
-            display: flex;
-            align-items: center;
-            height: 100%;
+          .info-overlay.visible { 
+            opacity: 1; 
           }
-
-          .marquee-text {
-            white-space: nowrap;
-            font-size: ${DEST_S - 2}px;
-            font-weight: 600;
-            color: #fff;
-            display: inline-block;
-            padding-left: 100%;
+          .marquee-wrap { 
+            overflow: hidden; 
+            flex: 1; 
+            position: relative; 
+            display: flex; 
+            align-items: center; 
+            height: 100%; 
           }
-
-          .animating .marquee-text { animation: scrollLeft linear forwards; }
-          @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
-
-          .delay-red {
-            font-size: ${Math.max(12, TIME_S - 6)}px;
-            color: #ff5252;
-            margin-right: 4px;
-            font-weight: 800;
+          .marquee-text { 
+            white-space: nowrap; 
+            font-size: ${DEST_S - 2}px; 
+            font-weight: 600; 
+            color: #fff; 
+            display: inline-block; 
+            padding-left: 100%; 
           }
-
-          .is-gone { opacity: 0.3 !important; text-decoration: line-through !important; }
+          .animating .marquee-text { 
+            animation: scrollLeft linear forwards; 
+          }
+          @keyframes scrollLeft { 
+            0% { transform: translateX(0); } 
+            100% { transform: translateX(-100%); } 
+          }
+          .delay-red { 
+            font-size: ${Math.max(12, TIME_S - 6)}px; 
+            color: #ff5252; 
+            margin-right: 4px; 
+            font-weight: 800; 
+          }
+          .is-gone { 
+            opacity: 0.3 !important; 
+            text-decoration: line-through !important; 
+          }
         </style>
-
         <ha-card>
           <div class="title-area">
             <img class="title-icon" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Zeichen_224_-_Haltestelle%2C_StVO_2017.svg/1200px-Zeichen_224_-_Haltestelle%2C_StVO_2017.svg.png">
@@ -462,7 +383,7 @@ class LinzMonitorCardV2 extends HTMLElement {
     const visibleRows = departures.slice(0, this._config.anzahl);
     const activeIds = [];
 
-    visibleRows.forEach(d => {
+    visibleRows.forEach((d, index) => {
       const rowId = `r-${d.line}-${d.scheduled}-${d.direction}`.replace(/[^a-z0-9]/gi, "");
       activeIds.push(rowId);
 
@@ -472,7 +393,6 @@ class LinzMonitorCardV2 extends HTMLElement {
       const cleanL = d.line.replace("*", "");
       const isStandard = STANDARD_ROUTES_V2[cleanL]?.includes(d.direction);
       let lineT = d.line;
-
       if (!isStandard && STANDARD_ROUTES_V2[cleanL]) {
         const dest = d.direction.toLowerCase();
         if ((cleanL === "3" || cleanL === "3a") && (dest.includes("neue welt") || dest.includes("ferihumerstraße") || dest.includes("remise kleinmünchen"))) {
@@ -501,10 +421,15 @@ class LinzMonitorCardV2 extends HTMLElement {
         row._next = Date.now() + 10000;
       }
 
+      // Visuelle Sortierung erzwingen
+      if (list.children[index] !== row) {
+           list.appendChild(row);
+      }
+
       row.className = d.isGone ? 'is-gone' : '';
 
       const b = row.querySelector(".badge");
-      b.innerText = lineT;
+      if(b.innerText !== lineT) b.innerText = lineT;
       b.style.background = LINE_COLORS_V2[cleanL] || "#444";
       b.classList.toggle("blink-badge", isNow);
 
@@ -520,9 +445,10 @@ class LinzMonitorCardV2 extends HTMLElement {
       }
 
       const destEl = row.querySelector(".dest-text");
-      destEl.innerText = d.direction;
+      if(destEl.innerText !== d.direction) destEl.innerText = d.direction;
       destEl.style.fontSize = `${DEST_S}px`;
 
+      // Lauftext
       const overlay = row.querySelector(".info-overlay");
       const marquee = row.querySelector(".marquee-text");
       const wrap = row.querySelector(".marquee-wrap");
@@ -530,10 +456,8 @@ class LinzMonitorCardV2 extends HTMLElement {
       if (d.infos && d.infos.length > 5 && !isNow && !d.isGone) {
         const infoText = d.infos.replace(/\n/g, " ").replace("Niederflurfahrzeug", "").trim();
         if (marquee.innerText !== infoText) marquee.innerText = infoText;
-
         marquee.style.fontSize = `${DEST_S - 2}px`;
         const duration = Math.max(7, infoText.length * 0.22);
-
         if (Date.now() > row._next) {
           if (row._state === 'dest') {
             row._state = 'info';
@@ -557,6 +481,7 @@ class LinzMonitorCardV2 extends HTMLElement {
       if (!activeIds.includes(c.getAttribute("data-id"))) list.removeChild(c);
     });
   }
+  getCardSize() { return (this._config.anzahl || 6) + 1; }
 }
 
 customElements.define("linz-monitor-card-v2", LinzMonitorCardV2);
