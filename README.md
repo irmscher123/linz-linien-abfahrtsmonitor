@@ -7,7 +7,7 @@
 
 <img src="pictures/logo.png" width="200" alt="Linz Linien Logo">
 
-
+<img src="pictures/dashboards.png" width="200" alt="Linz Linien Logo">
 
   <b>Der moderne Abfahrtsmonitor für Home Assistant.</b><br>
   Live-Daten der Linz AG Linien, einfache Einrichtung und wunderschöne Dashboard-Karten.
@@ -19,7 +19,7 @@
 
 * **⚡ Echtzeit-Daten:** Direkte Anbindung an die Schnittstelle der Linz AG.
 * **🔍 Smart Search:** Suche einfach nach "Hauptplatz" oder "Goethekreuzung" – keine kryptischen IDs nötig!
-* **🎨 2 Design-Varianten:** Wähle zwischen "Classic" (V1) und "Compact" (V2).
+* **🎨 3 Design-Varianten:** Wähle zwischen "Mini" "Midi" und "Maxi".
 * **📱 Responsive:** Perfekt für Wall-Tablets und Smartphones.
 * **⚙️ UI Config:** Vollständige Einrichtung über die Home Assistant Benutzeroberfläche.
 
@@ -29,10 +29,10 @@
 
 Die Integration kommt mit zwei vorgefertigten Designs für dein Dashboard:
 
-| Design V1 (Classic) | Design V2 (Compact) |
-| :---: | :---: |
+| Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) |
+| :---: | :---: | :---: |
 | *Große Anzeige mit Linienfarben* | *Modern, platzsparend mit Lauftext* |
-| ![V1 Preview](pictures/V1.png) | ![V2 Preview](pictures/V2.png) |
+| ![v1 Preview](pictures/v1.png) | ![v2 Preview](pictures/v2.png) | ![v3 Preview](pictures/v3.png) |
 
 ---
 
@@ -72,7 +72,7 @@ Gehe zu **Einstellungen** > **Geräte & Dienste** > **Integration hinzufügen** 
 *Hinweis: Dies ist meist nur nötig, wenn die Karten nach der Installation nicht automatisch erscheinen.*
 
 **Schritt 2.1: Dateien kopieren**
-1. Lade die Dateien `linz-monitor-card_v1.js` und `linz-monitor-card_v2.js` aus dem Ordner `dashboard-cards` dieses Repositories herunter.
+1. Lade die Dateien `linz-monitor-card_v1.js` , `linz-monitor-card_v2.js` und `linz-monitor-card_v3.js` aus dem Ordner `dashboard-cards` dieses Repositories herunter.
 2. Lade sie in deinen Home Assistant Ordner: `/config/www/` hoch.
    *(Hinweis: Wenn der Ordner `www` nicht existiert, erstelle ihn. Danach Home Assistant neu starten!)*
 
@@ -85,7 +85,7 @@ Damit Home Assistant die Dateien kennt:
 
 | Einstellung | Wert für V1 | Wert für V2 |
 | :--- | :--- | :--- |
-| **URL** | `/local/linz-monitor-card_v1.js` | `/local/linz-monitor-card_v2.js` |
+| **URL** | `/local/linz-monitor-card_v1.js` | `/local/linz-monitor-card_v2.js` | `/local/linz-monitor-card_v3.js` |
 | **Art** | JavaScript Modul | JavaScript Modul |
 
 5. Klicke auf **Erstellen**.
@@ -98,7 +98,7 @@ Du musst keinen Code schreiben! Die Karten sind im Paket enthalten.
 
 1.  Gehe auf dein Dashboard und klicke auf **Karte hinzufügen**.
 2.  Suche oben in der Lupe nach "Linz".
-3.  Wähle dein Design (**V1** oder **V2**), wie hier zu sehen:
+3.  Wähle dein Design (**V1**, **V2** oder **V3**), wie hier zu sehen:
 
 ![Karte hinzufügen](pictures/dashboard-hinzufuegen.png)
 
@@ -107,9 +107,9 @@ Du musst keinen Code schreiben! Die Karten sind im Paket enthalten.
 ### 🛠️ Karte bearbeiten (Editor)
 Du kannst die Einstellungen (Titel, Sensor, etc.) ganz einfach über den visuellen Editor ändern:
 
-| Editor V1 | Editor V2 |
+| Editor V1 | Editor V2 | Editor V3 |
 | :---: | :---: |
-| ![V1 Edit](pictures/V1edit.png) | ![V2 Edit](pictures/V2edit.png) |
+| ![v1 Edit](pictures/v1edit.png) | ![v2 Edit](pictures/v2edit.png) | ![v3 Edit](pictures/v3edit.png) |
 
 ---
 
