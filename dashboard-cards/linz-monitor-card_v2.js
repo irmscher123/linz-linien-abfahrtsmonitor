@@ -1,5 +1,5 @@
 /* ---------------------------------------------------------
-   LinzAG Monitor – V2 
+   LinzAG Monitor – V2 - Midi
    --------------------------------------------------------- */
 
 const LINE_COLORS_V2 = { 
@@ -31,53 +31,38 @@ const STANDARD_ROUTES_V2 = {
 };
 
 /* --- GOOGLE FONT LOADER --- */
-const loadGoogleFont = (fontName) => {
+const loadGoogleFontV2 = (fontName) => {
   if (!fontName || ['Arial','Verdana','Helvetica','sans-serif','serif','monospace'].includes(fontName)) return;
-  const id = `font-${fontName.replace(/\s+/g, '-').toLowerCase()}`;
+  const id = `font-v2-${fontName.replace(/\s+/g, '-').toLowerCase()}`;
   if (document.getElementById(id)) return;
   const link = document.createElement('link');
-  link.id = id;
-  link.rel = 'stylesheet';
+  link.id = id; link.rel = 'stylesheet';
   link.href = `https://fonts.googleapis.com/css2?family=${fontName.replace(/\s+/g, '+')}:wght@400;600;700&display=swap`;
   document.head.appendChild(link);
 };
 
 /* --- EDITOR --- */
 class LinzMonitorCardEditorV2 extends HTMLElement {
-  setConfig(config) { 
-    this._config = config; 
-    this.render();
-  }
-  set hass(hass) {
-    this._hass = hass;
-    if (!this._initialized) { this.render(); this._initialized = true; }
-  }
+  setConfig(config) { this._config = config; this.render(); }
+  set hass(hass) { this._hass = hass; if (!this._initialized) { this.render(); this._initialized = true; } }
   render() {
     if (!this._hass || !this._config) return;
-    const entities = Object.keys(this._hass.states)
-      .filter(k => k.includes('linz_ag') || this._hass.states[k].attributes?.departureList)
-      .sort();
+    const entities = Object.keys(this._hass.states).filter(k => k.includes('linz_ag') || this._hass.states[k].attributes?.departureList).sort();
 
     this.innerHTML = `
       <div class="card-config" style="padding:10px;">
-        <div style="margin-bottom:10px;">
-          <label style="font-weight:bold; display:block;">Haltestelle</label>
+        <div style="margin-bottom:10px;"><label style="font-weight:bold; display:block;">Haltestelle</label>
           <select id="entity" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
             <option value="">Wählen...</option>
             ${entities.map(e => `<option value="${e}" ${this._config.entity === e ? 'selected' : ''}>${e}</option>`).join('')}
           </select>
         </div>
-        <div style="margin-bottom:10px;">
-          <label style="font-weight:bold; display:block;">Name (Optional)</label>
+        <div style="margin-bottom:10px;"><label style="font-weight:bold; display:block;">Name (Optional)</label>
           <input id="stop_name_override" type="text" value="${this._config.stop_name_override || ''}" placeholder="Eigener Name..." style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-          <div>
-            <label style="font-weight:bold; display:block;">Filter (Linien)</label>
-            <input id="filter" type="text" value="${this._config.filter || ''}" placeholder="z.B. 1, 2" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
-          </div>
-          <div>
-            <label style="font-weight:bold; display:block;">Sortierung</label>
+          <div><label style="font-weight:bold; display:block;">Filter (Linien)</label><input id="filter" type="text" value="${this._config.filter || ''}" placeholder="z.B. 1, 2" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;"></div>
+          <div><label style="font-weight:bold; display:block;">Sortierung</label>
             <select id="sortierung" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
               <option value="echtzeit" ${this._config.sortierung === "echtzeit" ? 'selected' : ''}>Echtzeit</option>
               <option value="plan" ${this._config.sortierung === "plan" ? 'selected' : ''}>Plan</option>
@@ -85,34 +70,17 @@ class LinzMonitorCardEditorV2 extends HTMLElement {
           </div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-          <div>
-            <label style="font-weight:bold; display:block;">Zeilen</label>
-            <input id="anzahl" type="number" value="${this._config.anzahl || 8}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
-          </div>
-          <div>
-            <label style="font-weight:bold; display:block;">Zeilenhöhe</label>
-            <input id="row_height" type="number" value="${this._config.row_height || 38}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
-          </div>
+          <div><label style="font-weight:bold; display:block;">Zeilen</label><input id="anzahl" type="number" value="${this._config.anzahl || 8}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;"></div>
+          <div><label style="font-weight:bold; display:block;">Zeilenhöhe</label><input id="row_height" type="number" value="${this._config.row_height || 38}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;"></div>
         </div>
         <div style="display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:10px;">
-          <div>
-            <label style="font-weight:bold; display:block;">Schrift (Zeit)</label>
-            <input id="font_size" type="number" value="${this._config.font_size || 19}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
-          </div>
-          <div>
-            <label style="font-weight:bold; display:block;">Schrift (Ziel)</label>
-            <input id="dest_size" type="number" value="${this._config.dest_size || 20}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
-          </div>
+          <div><label style="font-weight:bold; display:block;">Schrift (Zeit)</label><input id="font_size" type="number" value="${this._config.font_size || 20}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;"></div>
+          <div><label style="font-weight:bold; display:block;">Schrift (Ziel)</label><input id="dest_size" type="number" value="${this._config.dest_size || 20}" style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;"></div>
         </div>
-        <div>
-          <label style="font-weight:bold; display:block;">Google Font (Name)</label>
-          <input id="font_family" type="text" value="${this._config.font_family || ''}" placeholder="z.B. Oswald, Roboto, Open Sans..." style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;">
-        </div>
+        <div><label style="font-weight:bold; display:block;">Google Font (Name)</label><input id="font_family" type="text" value="${this._config.font_family || ''}" placeholder="z.B. Oswald, Roboto, Open Sans..." style="width:100%; padding:8px; background:#222; color:white; border:1px solid #444; border-radius:4px;"></div>
       </div>
     `;
-    this.querySelectorAll("select, input").forEach(el => {
-      el.addEventListener("change", (ev) => this._update(ev));
-    });
+    this.querySelectorAll("select, input").forEach(el => el.addEventListener("change", (ev) => this._update(ev)));
   }
   _update(ev) {
     const target = ev.target;
@@ -121,7 +89,7 @@ class LinzMonitorCardEditorV2 extends HTMLElement {
     this.dispatchEvent(new CustomEvent("config-changed", { detail: { config: newConfig }, bubbles: true, composed: true }));
   }
 }
-customElements.define("linz-monitor-card-editor-v2", LinzMonitorCardEditorV2);
+if (!customElements.get("linz-monitor-card-editor-v2")) { customElements.define("linz-monitor-card-editor-v2", LinzMonitorCardEditorV2); }
 
 /* --- CARD --- */
 class LinzMonitorCardV2 extends HTMLElement {
@@ -131,11 +99,11 @@ class LinzMonitorCardV2 extends HTMLElement {
   setConfig(config) {
     this._config = { 
       entity: "sensor.linz_ag_monitor",
-      anzahl: 8, row_height: 38, font_size: 19, dest_size: 20,
+      anzahl: 8, row_height: 38, font_size: 20, dest_size: 20,
       sortierung: "echtzeit", stop_name_override: "", filter: "",
       font_family: "", ...config 
     };
-    if (this._config.font_family) loadGoogleFont(this._config.font_family);
+    if (this._config.font_family) loadGoogleFontV2(this._config.font_family);
   }
 
   set hass(hass) {
@@ -166,41 +134,33 @@ class LinzMonitorCardV2 extends HTMLElement {
     if (this._lastRaw) {
       this._lastRaw.forEach(old => {
         const key = `${old.line}-${old.scheduled}-${old.direction}`;
-        // Wenn Bus weg ist und vorher Countdown <= 1 war -> MERKEN
         if (matchesFilter(old.line) && !currentKeys.has(key) && old.countdown <= 1 && old.countdown >= 0 && !this._gone_mem.has(key)) {
           this._gone_mem.set(key, { ...old, goneAt: nowTs });
         }
       });
     }
     this._lastRaw = departures;
-
-    // Speicher aufräumen (15 Sekunden)
-    for (const [key, val] of this._gone_mem) {
-      if (nowTs - val.goneAt > 15000) this._gone_mem.delete(key);
-    }
-
+    for (const [key, val] of this._gone_mem) { if (nowTs - val.goneAt > 10000) this._gone_mem.delete(key); }
     const combined = [...departures];
     this._gone_mem.forEach(val => combined.push({ ...val, isGone: true }));
 
-    // Sortierung (Gone nach oben)
-    combined.sort((a, b) => {
-      if (a.isGone && !b.isGone) return -1;
-      if (!a.isGone && b.isGone) return 1;
-
-      if (this._config.sortierung === "plan") {
-        const [hA, mA] = a.scheduled.split(':').map(Number);
-        const [hB, mB] = b.scheduled.split(':').map(Number);
-        const nowD = new Date();
-        const curMins = nowD.getHours() * 60 + nowD.getMinutes();
-        let minsA = hA * 60 + mA;
-        let minsB = hB * 60 + mB;
-        if (minsA < (curMins - 120)) minsA += 1440;
-        if (minsB < (curMins - 120)) minsB += 1440;
-        return minsA - minsB;
-      } else {
-        return a.countdown - b.countdown;
+    // --- NEUE SORTIERUNG (UNIFIED TIME SORT) ---
+    const getSortTime = (d) => {
+      const [h, m] = d.scheduled.split(':').map(Number);
+      const now = new Date();
+      const nowMins = now.getHours() * 60 + now.getMinutes();
+      let schedMins = h * 60 + m;
+      if (schedMins < (nowMins - 180)) schedMins += 1440;
+      
+      // Wenn wir "Echtzeit" wollen und ein Countdown da ist -> Nimm (Jetzt + Countdown)
+      if (this._config.sortierung !== "plan" && typeof d.countdown === 'number') {
+         return nowMins + d.countdown;
       }
-    });
+      // Fallback: Planzeit (Geisterbusse reihen sich hier richtig ein)
+      return schedMins;
+    };
+
+    combined.sort((a, b) => getSortTime(a) - getSortTime(b));
 
     this.render(state, combined);
   }
@@ -215,156 +175,39 @@ class LinzMonitorCardV2 extends HTMLElement {
     if (!this.querySelector("ha-card") || (this.querySelector("ha-card")?.innerText || "").includes("Bitte Haltestelle")) {
       this.innerHTML = `
         <style>
-          ha-card {
-            background: var(--ha-card-background, var(--card-background-color, #1c1c1c));
-            border-radius: 12px !important; 
-            padding: 10px !important; 
-            color: white !important;
-            font-family: ${FONT} !important; 
-            border: 1px solid rgba(255,255,255,0.1);
-            overflow: hidden; 
-            height: 100%; 
-            width: 100%; 
-            box-sizing: border-box;
-            display: flex; 
-            flex-direction: column; 
-            min-height: 0;
+          ha-card { background: var(--ha-card-background, var(--card-background-color, #1c1c1c)); border-radius: 12px !important; padding: 10px !important; color: white !important; font-family: ${FONT} !important; border: 1px solid rgba(255,255,255,0.1); overflow: hidden; height: 100%; width: 100%; box-sizing: border-box; display: flex; flex-direction: column; min-height: 0; isolation: isolate; }
+          .title-area { font-size: ${TIME_S}px; font-weight: 700; color: #bbb; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 4px; margin-bottom: 5px; display: flex; align-items: center; gap: 8px; flex-shrink: 0; }
+          .title-icon { height: ${Math.round(TIME_S * 1.3)}px; width: ${Math.round(TIME_S * 1.3)}px; object-fit: contain; }
+          table { width: 100%; border-collapse: collapse; table-layout: fixed; flex: 1; min-height: 0; }
+          tbody { display: block; height: 100%; overflow: hidden; }
+          tr { display: table; width: 100%; table-layout: fixed; height: ${ROW_H}px; }
+          td { vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative; }
+          .col-line { width: ${BADGE_W + 10}px; }
+          .col-dest { width: auto; padding-left: 8px; overflow: hidden; white-space: nowrap; }
+          .col-time { width: 105px; text-align: right; font-weight: 800; font-size: ${TIME_S + 1}px; z-index: 5; }
+          .badge { width: ${BADGE_W}px; height: ${Math.round(ROW_H * 0.8)}px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: ${TIME_S}px; color: white; }
+          .blink-badge { animation: syncBlink 1s infinite steps(1); }
+          @keyframes syncBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.5; } }
+          
+          .dest-text { font-size: ${DEST_S}px; font-weight: 800; color: #fff; white-space: nowrap; display: inline-block; transition: opacity 0.2s; }
+          
+          /* PING PONG SCROLL */
+          .ping-pong-scroll { animation: scroll-pingpong 8s linear infinite alternate; --scroll-dist: -50px; }
+          @keyframes scroll-pingpong { 0%, 15% { transform: translateX(0); } 85%, 100% { transform: translateX(var(--scroll-dist)); } }
 
-            /* HIER IST DER FIX FUER DAS UEBERLAPPEN: */
-            isolation: isolate; 
-          }
-          .title-area {
-            font-size: ${TIME_S}px; 
-            font-weight: 700; 
-            color: #bbb;
-            border-bottom: 1px solid rgba(255,255,255,0.1); 
-            padding-bottom: 4px;
-            margin-bottom: 5px; 
-            display: flex; 
-            align-items: center; 
-            gap: 8px; 
-            flex-shrink: 0;
-          }
-          .title-icon { 
-            height: ${Math.round(TIME_S * 1.3)}px; 
-            width: ${Math.round(TIME_S * 1.3)}px; 
-            object-fit: contain; 
-          }
-          table { 
-            width: 100%; 
-            border-collapse: collapse; 
-            table-layout: fixed; 
-            flex: 1; 
-            min-height: 0; 
-          }
-          tbody { 
-            display: block; 
-            height: 100%; 
-            overflow: hidden; 
-          }
-          tr { 
-            display: table; 
-            width: 100%; 
-            table-layout: fixed; 
-            height: ${ROW_H}px; 
-          }
-          td { 
-            vertical-align: middle; 
-            border-bottom: 1px solid rgba(255,255,255,0.05); 
-            position: relative; 
-          }
-          .col-line { 
-            width: ${BADGE_W + 10}px; 
-          }
-          .col-dest { 
-            width: auto; 
-            padding-left: 8px; 
-            overflow: hidden; 
-          }
-          .col-time { 
-            width: 105px; 
-            text-align: right; 
-            font-weight: 800; 
-            font-size: ${TIME_S + 1}px; 
-            z-index: 5; 
-          }
-          .badge {
-            width: ${BADGE_W}px; 
-            height: ${Math.round(ROW_H * 0.8)}px; 
-            border-radius: 4px;
-            display: flex; 
-            align-items: center; 
-            justify-content: center;
-            font-weight: 800; 
-            font-size: ${TIME_S}px; 
-            color: white;
-          }
-          .blink-badge { 
-            animation: syncBlink 1s infinite steps(1); 
-          }
-          @keyframes syncBlink { 
-            0%, 49% { opacity: 1; } 
-            50%, 100% { opacity: 0.5; } 
-          }
-          .dest-text {
-            font-size: ${DEST_S}px; 
-            font-weight: 800; 
-            color: #fff;
-            white-space: nowrap; 
-            overflow: hidden; 
-            text-overflow: ellipsis; 
-            display: block;
-          }
-          .info-overlay {
-            position: absolute; 
-            top: 0; 
-            left: 8px; 
-            width: calc(100% - 8px); 
-            height: 100%;
-            background: var(--ha-card-background, var(--card-background-color, #1c1c1c));
-            display: flex; 
-            align-items: center; 
-            opacity: 0; 
-            transition: opacity 0.4s; 
-            z-index: 2; 
-            pointer-events: none;
-          }
-          .info-overlay.visible { 
-            opacity: 1; 
-          }
-          .marquee-wrap { 
-            overflow: hidden; 
-            flex: 1; 
-            position: relative; 
-            display: flex; 
-            align-items: center; 
-            height: 100%; 
-          }
-          .marquee-text { 
-            white-space: nowrap; 
-            font-size: ${DEST_S - 2}px; 
-            font-weight: 600; 
-            color: #fff; 
-            display: inline-block; 
-            padding-left: 100%; 
-          }
-          .animating .marquee-text { 
-            animation: scrollLeft linear forwards; 
-          }
-          @keyframes scrollLeft { 
-            0% { transform: translateX(0); } 
-            100% { transform: translateX(-100%); } 
-          }
-          .delay-red { 
-            font-size: ${Math.max(12, TIME_S - 6)}px; 
-            color: #ff5252; 
-            margin-right: 4px; 
-            font-weight: 800; 
-          }
-          .is-gone { 
-            opacity: 0.3 !important; 
-            text-decoration: line-through !important; 
-          }
+          .info-overlay { position: absolute; top: 0; left: 8px; width: calc(100% - 8px); height: 100%; background: var(--ha-card-background, var(--card-background-color, #1c1c1c)); display: flex; align-items: center; opacity: 0; transition: opacity 0.4s; z-index: 2; pointer-events: none; }
+          .info-overlay.visible { opacity: 1; }
+          .marquee-wrap { overflow: hidden; flex: 1; position: relative; display: flex; align-items: center; height: 100%; }
+          .marquee-text { white-space: nowrap; font-size: ${DEST_S - 2}px; font-weight: 600; color: #fff; display: inline-block; padding-left: 100%; }
+          .animating .marquee-text { animation: scrollLeft linear forwards; }
+          @keyframes scrollLeft { 0% { transform: translateX(0); } 100% { transform: translateX(-100%); } }
+          .delay-red { font-size: ${Math.max(12, TIME_S - 6)}px; color: #ff5252; margin-right: 4px; font-weight: 800; }
+          .is-gone { opacity: 0.3 !important; text-decoration: line-through !important; }
+          .is-cancelled { opacity: 0.6; text-decoration: line-through; color: #ff5252 !important; }
+          .is-cancelled .dest-text { color: #ff5252 !important; text-decoration: line-through; }
+          
+          /* ALERT STYLE (Rot/Weiss) */
+          .alert-style { background: #d32f2f; color: white !important; border: 1px solid #ff8a80; border-radius: 4px; padding: 0 4px; font-weight: 800; }
         </style>
         <ha-card>
           <div class="title-area">
@@ -383,50 +226,34 @@ class LinzMonitorCardV2 extends HTMLElement {
     const visibleRows = departures.slice(0, this._config.anzahl);
     const activeIds = [];
 
-    visibleRows.forEach((d, index) => {
+    visibleRows.forEach((d) => {
       const rowId = `r-${d.line}-${d.scheduled}-${d.direction}`.replace(/[^a-z0-9]/gi, "");
       activeIds.push(rowId);
 
       let row = list.querySelector(`[data-id="${rowId}"]`);
-      const isNow = d.countdown === 0 && !d.isGone;
+      
+      const infoLow = (d.infos || "").toLowerCase();
+      const isCancelled = d.canceled || d.cancelled || infoLow.includes("fällt aus") || infoLow.includes("entfällt");
+      const isNow = d.countdown === 0 && !d.isGone && !isCancelled;
 
       const cleanL = d.line.replace("*", "");
       const isStandard = STANDARD_ROUTES_V2[cleanL]?.includes(d.direction);
       let lineT = d.line;
       if (!isStandard && STANDARD_ROUTES_V2[cleanL]) {
         const dest = d.direction.toLowerCase();
-        if ((cleanL === "3" || cleanL === "3a") && (dest.includes("neue welt") || dest.includes("ferihumerstraße") || dest.includes("remise kleinmünchen"))) {
-          lineT = cleanL + "a";
-        } else {
-          lineT = cleanL + "*";
-        }
+        if ((cleanL === "3" || cleanL === "3a") && (dest.includes("neue welt") || dest.includes("remise kleinmünchen"))) lineT = cleanL + "a";
+        else lineT = cleanL + "*";
       }
 
       if (!row) {
         row = document.createElement("tr");
         row.setAttribute("data-id", rowId);
-        row.innerHTML = `
-          <td class="col-line"><div class="badge"></div></td>
-          <td class="col-dest">
-            <div class="dest-text"></div>
-            <div class="info-overlay">
-              <span style="margin-right:5px">⚠️</span>
-              <div class="marquee-wrap"><div class="marquee-text"></div></div>
-            </div>
-          </td>
-          <td class="col-time"></td>
-        `;
+        row.innerHTML = `<td class="col-line"><div class="badge"></div></td><td class="col-dest"><div class="dest-text"></div><div class="info-overlay"><span style="margin-right:5px">⚠️</span><div class="marquee-wrap"><div class="marquee-text"></div></div></div></td><td class="col-time"></td>`;
         list.appendChild(row);
-        row._state = 'dest';
-        row._next = Date.now() + 10000;
+        row._state = 'dest'; row._next = Date.now() + 10000;
       }
 
-      // Visuelle Sortierung erzwingen
-      if (list.children[index] !== row) {
-           list.appendChild(row);
-      }
-
-      row.className = d.isGone ? 'is-gone' : '';
+      row.className = d.isGone ? 'is-gone' : (isCancelled ? 'is-cancelled' : '');
 
       const b = row.querySelector(".badge");
       if(b.innerText !== lineT) b.innerText = lineT;
@@ -434,46 +261,78 @@ class LinzMonitorCardV2 extends HTMLElement {
       b.classList.toggle("blink-badge", isNow);
 
       const timeCol = row.querySelector(".col-time");
-      const delayText = (!d.isGone && d.delay > 0) ? `<span class="delay-red">(+${d.delay}')</span>` : "";
+      const delayText = (!d.isGone && !isCancelled && d.delay > 0) ? `<span class="delay-red">(+${d.delay})</span>` : "";
 
-      if (isNow) {
-        timeCol.innerHTML = `<div style="display:flex;justify-content:flex-end;"><img src="https://www.irmscher.at/linzag/linzlinien-z.png" style="width:22px;height:22px;object-fit:contain;"></div>`;
-      } else if (d.isGone || d.countdown >= 30) {
-        timeCol.innerHTML = `${delayText}${d.scheduled}`;
-      } else {
-        timeCol.innerHTML = `${delayText}${d.countdown}<span style="font-size:${TIME_S-3}px;opacity:0.6;margin-left:2px">Min</span>`;
-      }
+      if (isCancelled) timeCol.innerHTML = `<span style="text-decoration: line-through; color: #ff5252; opacity: 0.9;">${d.scheduled}</span>`;
+      else if (isNow) timeCol.innerHTML = `<div style="display:flex;justify-content:flex-end;"><img src="https://www.irmscher.at/linzag/linzlinien-z.png" style="width:22px;height:22px;object-fit:contain;"></div>`;
+      else if (d.isGone || d.countdown >= 45) timeCol.innerHTML = `${d.scheduled}`;
+      else timeCol.innerHTML = `${delayText}${d.countdown}<span style="font-size:${TIME_S-3}px;opacity:0.6;margin-left:2px">Min</span>`;
 
       const destEl = row.querySelector(".dest-text");
       if(destEl.innerText !== d.direction) destEl.innerText = d.direction;
       destEl.style.fontSize = `${DEST_S}px`;
 
-      // Lauftext
+      // AUTO-SCROLL (Ping Pong)
+      const col = row.querySelector(".col-dest");
+      if (col && destEl) {
+         if (destEl.scrollWidth > col.offsetWidth) {
+            const diff = col.offsetWidth - destEl.scrollWidth;
+            destEl.style.setProperty('--scroll-dist', `${diff - 5}px`);
+            destEl.classList.add("ping-pong-scroll");
+         } else {
+            destEl.classList.remove("ping-pong-scroll");
+         }
+      }
+
+      // LAUFTEXT & ALARM (Static)
       const overlay = row.querySelector(".info-overlay");
       const marquee = row.querySelector(".marquee-text");
       const wrap = row.querySelector(".marquee-wrap");
 
-      if (d.infos && d.infos.length > 5 && !isNow && !d.isGone) {
+      const hideDest = (shouldHide) => {
+         if (shouldHide) destEl.style.opacity = "0";
+         else destEl.style.opacity = "1";
+      };
+
+      if (isCancelled) {
+        const alarmMsg = "FAHRT FÄLLT AUS";
+        if (marquee.innerText !== alarmMsg) { 
+            marquee.innerText = alarmMsg; 
+            marquee.className = "marquee-text alert-style"; 
+        }
+        if (Date.now() > row._next) {
+          row._state = (row._state === 'dest') ? 'warn' : 'dest';
+          row._next = Date.now() + 5000;
+          if (row._state === 'warn') { 
+              overlay.classList.add("visible"); 
+              wrap.classList.remove("animating"); 
+              hideDest(true);
+          } else { 
+              overlay.classList.remove("visible"); 
+              hideDest(false);
+          }
+        }
+      } else if (d.infos && d.infos.length > 5 && !isNow && !d.isGone) {
         const infoText = d.infos.replace(/\n/g, " ").replace("Niederflurfahrzeug", "").trim();
-        if (marquee.innerText !== infoText) marquee.innerText = infoText;
-        marquee.style.fontSize = `${DEST_S - 2}px`;
+        if (marquee.innerText !== infoText) { marquee.innerText = infoText; marquee.className = "marquee-text"; }
         const duration = Math.max(7, infoText.length * 0.22);
         if (Date.now() > row._next) {
           if (row._state === 'dest') {
-            row._state = 'info';
-            row._next = Date.now() + (duration * 1000) + 500;
-            overlay.classList.add("visible");
-            wrap.classList.add("animating");
+            row._state = 'info'; row._next = Date.now() + (duration * 1000) + 500;
+            overlay.classList.add("visible"); 
+            wrap.classList.add("animating"); 
             marquee.style.animationDuration = `${duration}s`;
+            hideDest(true);
           } else {
-            row._state = 'dest';
-            row._next = Date.now() + 10000;
-            overlay.classList.remove("visible");
+            row._state = 'dest'; row._next = Date.now() + 10000;
+            overlay.classList.remove("visible"); 
             wrap.classList.remove("animating");
+            hideDest(false);
           }
         }
       } else {
         overlay.classList.remove("visible");
+        hideDest(false);
       }
     });
 
@@ -481,15 +340,17 @@ class LinzMonitorCardV2 extends HTMLElement {
       if (!activeIds.includes(c.getAttribute("data-id"))) list.removeChild(c);
     });
   }
-  getCardSize() { return (this._config.anzahl || 6) + 1; }
+  getCardSize() { return (this._config.anzahl || 8) + 1; }
 }
 
-customElements.define("linz-monitor-card-v2", LinzMonitorCardV2);
+if (!customElements.get("linz-monitor-card-v2")) {
+  customElements.define("linz-monitor-card-v2", LinzMonitorCardV2);
+}
 
 window.customCards = window.customCards || [];
 window.customCards.push({ 
   type: "linz-monitor-card-v2", 
-  name: "Linz AG Monitor -V2 - Kompakt", 
-  description: "LinzAG Linien Abfahrtsmonitor (kompakt)",
+  name: "Linz AG Monitor - V2 - Midi", 
+  description: "LinzAG Linien Abfahrtsmonitor (midi)",
   preview: true 
 });
