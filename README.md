@@ -100,7 +100,7 @@ Du musst keinen Code schreiben! Die Karten sind im Paket enthalten.
 2.  Suche oben in der Lupe nach "Linz".
 3.  Wähle dein Design (**V1**, **V2** oder **V3**), wie hier zu sehen:
 
-![Karte hinzufügen](pictures/dashboard-hinzufuegen.png)
+![Karte hinzufügen](pictures/dashboard_hinzufuegen.png)
 
 4.  Wähle im Editor deinen Sensor aus. Fertig!
 
@@ -233,7 +233,7 @@ No code needed! The cards are included in the package.
 2.  Search for "Linz" in the magnifying glass icon.
 3.  Select your design (**V1**, **V2**, or **V3**), as shown here:
 
-![Add Card](pictures/dashboard-hinzufuegen.png)
+![Add Card](pictures/dashboard_hinzufuegen.png)
 
 4.  Select your sensor in the editor. Done!
 
