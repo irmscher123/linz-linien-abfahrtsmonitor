@@ -7,7 +7,7 @@
 
 <img src="pictures/logo.png" width="200" alt="Linz Linien Logo">
 
-<img src="pictures/dashboards.png" width="800" alt="Linz Linien Logo">
+<img src="pictures/dashboards.png" width="800" alt="Linz Linien Dashboards">
 
   <b>Der moderne Abfahrtsmonitor für Home Assistant.</b><br>
   Live-Daten der Linz AG Linien, einfache Einrichtung und wunderschöne Dashboard-Karten.
@@ -81,14 +81,14 @@ Damit Home Assistant die Dateien kennt:
 1. Gehe zu **Einstellungen** > **Dashboards**.
 2. Klicke oben rechts auf die drei Punkte `...` und wähle **Ressourcen**.
 3. Klicke auf **Ressource hinzufügen**.
-4. Trage folgendes ein (wiederhole es für beide Versionen):
+4. Trage folgendes ein (wiederhole es für alle Versionen):
 
 | Einstellung | Wert für V1 | Wert für V2 | Wert für V3 |
-| :--- | :--- | :--- |
+| :--- | :--- | :--- | :--- |
 | **URL** | `/local/linz-monitor-card_v1.js` | `/local/linz-monitor-card_v2.js` | `/local/linz-monitor-card_v3.js` |
-| **Art** | JavaScript Modul | JavaScript Modul |
+| **Art** | JavaScript Modul | JavaScript Modul | JavaScript Modul |
 
-3. Klicke auf **Erstellen**.
+5. Klicke auf **Erstellen**.
 
 ---
 
@@ -221,7 +221,7 @@ To make Home Assistant aware of the files:
 | **URL** | `/local/linz-monitor-card_v1.js` | `/local/linz-monitor-card_v2.js` | `/local/linz-monitor-card_v3.js` |
 | **Type** | JavaScript Module | JavaScript Module | JavaScript Module |
 
-3. Click **Create**.
+5. Click **Create**.
 
 ---
 
