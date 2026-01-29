@@ -7,7 +7,7 @@
 
 <img src="pictures/logo.png" width="200" alt="Linz Linien Logo">
 
-<img src="pictures/dashboards.png" width="200" alt="Linz Linien Logo">
+<img src="pictures/dashboards.png" width="600" alt="Linz Linien Logo">
 
   <b>Der moderne Abfahrtsmonitor für Home Assistant.</b><br>
   Live-Daten der Linz AG Linien, einfache Einrichtung und wunderschöne Dashboard-Karten.
@@ -19,7 +19,7 @@
 
 * **⚡ Echtzeit-Daten:** Direkte Anbindung an die Schnittstelle der Linz AG.
 * **🔍 Smart Search:** Suche einfach nach "Hauptplatz" oder "Goethekreuzung" – keine kryptischen IDs nötig!
-* **🎨 3 Design-Varianten:** Wähle zwischen "Mini" "Midi" und "Maxi".
+* **🎨 3 Design-Varianten:** Wähle zwischen "Mini", "Midi" und "Maxi".
 * **📱 Responsive:** Perfekt für Wall-Tablets und Smartphones.
 * **⚙️ UI Config:** Vollständige Einrichtung über die Home Assistant Benutzeroberfläche.
 
@@ -27,7 +27,7 @@
 
 ## 🖼️ Vorschau
 
-Die Integration kommt mit zwei vorgefertigten Designs für dein Dashboard:
+Die Integration kommt mit drei vorgefertigten Designs für dein Dashboard:
 
 | Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) |
 | :---: | :---: | :---: |
