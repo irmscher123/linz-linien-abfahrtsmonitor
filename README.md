@@ -7,7 +7,7 @@
 
 <img src="pictures/logo.png" width="200" alt="Linz Linien Logo">
 
-<img src="pictures/dashboards.png" width="600" alt="Linz Linien Logo">
+<img src="pictures/dashboards.png" width="800" alt="Linz Linien Logo">
 
   <b>Der moderne Abfahrtsmonitor für Home Assistant.</b><br>
   Live-Daten der Linz AG Linien, einfache Einrichtung und wunderschöne Dashboard-Karten.
@@ -31,7 +31,7 @@ Die Integration kommt mit drei vorgefertigten Designs für dein Dashboard:
 
 | Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) |
 | :---: | :---: | :---: |
-| *Große Anzeige mit Linienfarben* | *Modern, platzsparend mit Lauftext* |
+| *Maxiversion* | *Midiversion* | *Miniversion* |
 | ![v1 Preview](pictures/v1.png) | ![v2 Preview](pictures/v2.png) | ![v3 Preview](pictures/v3.png) |
 
 ---
@@ -83,12 +83,12 @@ Damit Home Assistant die Dateien kennt:
 3. Klicke auf **Ressource hinzufügen**.
 4. Trage folgendes ein (wiederhole es für beide Versionen):
 
-| Einstellung | Wert für V1 | Wert für V2 |
+| Einstellung | Wert für V1 | Wert für V2 | Wert für V3 |
 | :--- | :--- | :--- |
 | **URL** | `/local/linz-monitor-card_v1.js` | `/local/linz-monitor-card_v2.js` | `/local/linz-monitor-card_v3.js` |
 | **Art** | JavaScript Modul | JavaScript Modul |
 
-5. Klicke auf **Erstellen**.
+3. Klicke auf **Erstellen**.
 
 ---
 
@@ -108,7 +108,7 @@ Du musst keinen Code schreiben! Die Karten sind im Paket enthalten.
 Du kannst die Einstellungen (Titel, Sensor, etc.) ganz einfach über den visuellen Editor ändern:
 
 | Editor V1 | Editor V2 | Editor V3 |
-| :---: | :---: |
+| :---: | :---: | :---: |
 | ![v1 Edit](pictures/v1edit.png) | ![v2 Edit](pictures/v2edit.png) | ![v3 Edit](pictures/v3edit.png) |
 
 ---
@@ -139,6 +139,8 @@ Entwickelt von **@irmscher123**.
 
 <img src="pictures/logo.png" width="200" alt="Linz Linien Logo">
 
+<img src="pictures/dashboards.png" width="800" alt="Linz Linien Dashboard">
+
 <p>
   <b>The modern departure monitor for Home Assistant.</b><br>
   Live data from Linz AG Lines, easy setup, and beautiful dashboard cards.
@@ -148,9 +150,9 @@ Entwickelt von **@irmscher123**.
 
 ## ✨ Features
 
-* **⚡ Real-time Data:** Direct connection to the Linz AG interface (EFA).
+* **⚡ Real-time Data:** Direct connection to the Linz AG interface.
 * **🔍 Smart Search:** Simply search for "Hauptplatz" or "Goethekreuzung" – no cryptic IDs needed!
-* **🎨 2 Design Variants:** Choose between "Classic" (V1) and "Compact" (V2).
+* **🎨 3 Design Variants:** Choose between "Mini", "Midi", and "Maxi".
 * **📱 Responsive:** Perfect for wall tablets and smartphones.
 * **⚙️ UI Config:** Full setup via the Home Assistant user interface.
 
@@ -158,12 +160,12 @@ Entwickelt von **@irmscher123**.
 
 ## 🖼️ Preview
 
-The integration comes with two pre-built designs for your dashboard:
+The integration comes with three pre-built designs for your dashboard:
 
-| Design V1 (Classic) | Design V2 (Compact) |
-| :---: | :---: |
-| *Large display with line colors* | *Modern, space-saving with scrolling text* |
-| ![V1 Preview](pictures/V1.png) | ![V2 Preview](pictures/V2.png) |
+| Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) |
+| :---: | :---: | :---: |
+| *Maxi Version* | *Midi Version* | *Mini Version* |
+| ![v1 Preview](pictures/v1.png) | ![v2 Preview](pictures/v2.png) | ![v3 Preview](pictures/v3.png) |
 
 ---
 
@@ -192,7 +194,7 @@ The integration comes with two pre-built designs for your dashboard:
 ### 1. Add Sensor
 Go to **Settings** > **Devices & Services** > **Add Integration** and search for **Linz Linien Abfahrtsmonitor**.
 
-1.  Enter the name of the stop (e.g., `Simonystraße`).
+1.  Enter the stop name (e.g., `Simonystraße`).
 2.  Select the correct match from the list.
 3.  Done! You now have a sensor (e.g., `sensor.simonystrasse`).
 
@@ -203,7 +205,7 @@ Go to **Settings** > **Devices & Services** > **Add Integration** and search for
 *Note: This is usually only necessary if the cards do not appear automatically after installation.*
 
 **Step 2.1: Copy Files**
-1. Download the files `linz-monitor-card_v1.js` and `linz-monitor-card_v2.js` from the `dashboard-cards` folder of this repository.
+1. Download the files `linz-monitor-card_v1.js`, `linz-monitor-card_v2.js`, and `linz-monitor-card_v3.js` from the `dashboard-cards` folder of this repository.
 2. Upload them to your Home Assistant folder: `/config/www/`.
    *(Note: If the `www` folder does not exist, create it. Restart Home Assistant afterwards!)*
 
@@ -212,14 +214,14 @@ To make Home Assistant aware of the files:
 1. Go to **Settings** > **Dashboards**.
 2. Click the three dots `...` in the top right corner and select **Resources**.
 3. Click **Add Resource**.
-4. Enter the following (repeat for both versions):
+4. Enter the following (repeat for all versions):
 
-| Setting | Value for V1 | Value for V2 |
-| :--- | :--- | :--- |
-| **URL** | `/local/linz-monitor-card_v1.js` | `/local/linz-monitor-card_v2.js` |
-| **Type** | JavaScript Module | JavaScript Module |
+| Setting | Value for V1 | Value for V2 | Value for V3 |
+| :--- | :--- | :--- | :--- |
+| **URL** | `/local/linz-monitor-card_v1.js` | `/local/linz-monitor-card_v2.js` | `/local/linz-monitor-card_v3.js` |
+| **Type** | JavaScript Module | JavaScript Module | JavaScript Module |
 
-5. Click **Create**.
+3. Click **Create**.
 
 ---
 
@@ -229,7 +231,7 @@ No code needed! The cards are included in the package.
 
 1.  Go to your dashboard and click **Add Card**.
 2.  Search for "Linz" in the magnifying glass icon.
-3.  Select your design (**V1** or **V2**), as shown here:
+3.  Select your design (**V1**, **V2**, or **V3**), as shown here:
 
 ![Add Card](pictures/dashboard-hinzufuegen.png)
 
@@ -238,9 +240,9 @@ No code needed! The cards are included in the package.
 ### 🛠️ Edit Card (Editor)
 You can easily change settings (Title, Sensor, etc.) via the visual editor:
 
-| Editor V1 | Editor V2 |
-| :---: | :---: |
-| ![V1 Edit](pictures/V1edit.png) | ![V2 Edit](pictures/V2edit.png) |
+| Editor V1 | Editor V2 | Editor V3 |
+| :---: | :---: | :---: |
+| ![v1 Edit](pictures/v1edit.png) | ![v2 Edit](pictures/v2edit.png) | ![v3 Edit](pictures/v3edit.png) |
 
 ---
 
