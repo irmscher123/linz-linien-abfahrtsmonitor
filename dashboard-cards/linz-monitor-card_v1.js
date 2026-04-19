@@ -223,7 +223,7 @@ class LinzMonitorCardV1 extends HTMLElement {
 
         <ha-card>
           <div class="header-box">
-            <img class="stop-logo" src="https://upload.wikimedia.org/wikipedia/commons/thumb/a/a6/Zeichen_224_-_Haltestelle%2C_StVO_2017.svg/1200px-Zeichen_224_-_Haltestelle%2C_StVO_2017.svg.png">
+            <img class="stop-logo" src="https://upload.wikimedia.org/wikipedia/commons/a/a6/Zeichen_224_-_Haltestelle%2C_StVO_2017.svgg">
             <div class="stop-title"></div>
           </div>
           <div class="rows-container"></div>
