@@ -1,11 +1,11 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-0.4-blue.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-0.4.1-blue.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 
 
-<img src="pictures/logo.png" width="200" alt="Linz Linien Logo">
+<img src="https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/logo.png" width="200" alt="Linz Linien Logo">
 
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/dashboards.png" width="800" alt="Linz Linien Dashboards">
 
