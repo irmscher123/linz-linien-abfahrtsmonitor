@@ -18,7 +18,7 @@ Live‑Daten der Linz AG Linien, einfache Einrichtung und ansprechende Dashboard
 
 - ⚡ Echtzeit‑Daten (Linz AG)  
 - 🔍 Smart Search für Haltestellen (kein Suchen nach kryptischen IDs)  
-- 🎨 Drei Design‑Varianten: Mini (v3), Midi (v2), Maxi (v1) — jetzt in einer einzigen Karte zusammengeführt  
+- 🎨 Drei Design‑Varianten: Mini (v3), Midi (v2), Maxi (v1), LED Wall — jetzt in einer einzigen Karte zusammengeführt  
 - 📱 Responsive: Tablets & Smartphones  
 - ⚙️ UI‑Konfiguration via Lovelace Editor
 
@@ -82,7 +82,7 @@ Migration (wenn vorher separate V1/V2/V3 lokal genutzt wurden)
 
 | Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) |
 | :---: | :---: | :---: |
-| ![v1 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v1.png) | ![v2 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v2.png) | ![v3 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v3.png) |
+| ![v1 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v1.png) | ![v2 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v2.png) | ![v3 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v3.png) | ![ledwall Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/ledwall.png) |
 
 ---
 
