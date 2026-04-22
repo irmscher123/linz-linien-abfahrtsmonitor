@@ -15,8 +15,16 @@ class GTFSHelper:
         self.hass = hass
         self.stop_id = stop_id
         self.stop_name = stop_name
-        # Eigener Name für die Datenbank dieses Plugins
-        self.db_path = self.hass.config.path(f"linz_ag_gtfs_{stop_id}.sqlite")
+        
+        # 1. NEU: Einen eigenen Unterordner definieren
+        self.db_dir = self.hass.config.path("linz_ag_gtfs")
+        
+        # Ordner erstellen, falls er noch nicht existiert
+        if not os.path.exists(self.db_dir):
+            os.makedirs(self.db_dir)
+            
+        # 2. NEU: Der Pfad zur Datei liegt jetzt im neuen Unterordner
+        self.db_path = os.path.join(self.db_dir, f"gtfs_{stop_id}.sqlite")
 
     async def update_database_if_needed(self):
         if not os.path.exists(self.db_path):
@@ -44,7 +52,6 @@ class GTFSHelper:
                 )
 
     def _clean_name(self, text):
-        """Entfernt unerwünschte Ortszusätze, Kommas und Bindestriche."""
         if not text: return "Unbekannt"
         to_remove = ["Linz/Donau", "- Steyregg", "Steyregg", "- Leonding", "Leonding", "- Traun OÖ", "Traun OÖ", "- Bergham b.Linz", "Bergham b.Linz"]
         for r in to_remove:
@@ -83,7 +90,13 @@ class GTFSHelper:
                 [(cd['service_id'], cd['date'], cd['exception_type']) for cd in calendar_dates])
 
         cursor.execute("CREATE INDEX idx_st ON stop_times (stop_id, departure_time)")
+        
+        # Änderungen speichern
         conn.commit()
+        
+        # 3. NEU: Datenbank komprimieren und unnötigen Speicherplatz freigeben (Macht die Datei winzig!)
+        conn.execute("VACUUM")
+        
         conn.close()
 
     async def get_next_departures(self, limit=150):
