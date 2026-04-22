@@ -80,9 +80,9 @@ Migration (wenn vorher separate V1/V2/V3 lokal genutzt wurden)
 
 ## 🖼️ Vorschau
 
-| Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) |
-| :---: | :---: | :---: |
-| ![v1 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v1.png) | ![v2 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v2.png) | ![v3 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v3.png) | ![ledwall Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/ledwall.png) |
+| Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) | LED-Wall |
+| :---: | :---: | :---: | :---: |
+| ![v1 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v1.png) | ![v2 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v2.png) | ![v3 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v3.png) | ![led-wall Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/ledwall.png) |
 
 ---
 
