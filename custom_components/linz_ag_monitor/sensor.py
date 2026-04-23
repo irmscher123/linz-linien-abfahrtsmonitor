@@ -5,8 +5,8 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
 
-# Wir binden den GTFS Helper ein
 from .gtfs_helper import GTFSHelper
 
 _LOGGER = logging.getLogger(__name__)
@@ -20,23 +20,31 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     stop_id = config_entry.data.get("stop_id")
     name = config_entry.data.get("name")
     session = async_get_clientsession(hass)
-    async_add_entities([LinzAGSensor(hass, session, stop_id, name, config_entry.entry_id)], True)
+    
+    # 1. Der Coordinator holt die Daten zentral für alle Sensoren (alle 10 Sekunden)
+    coordinator = LinzAGCoordinator(hass, session, stop_id, name)
+    await coordinator.async_config_entry_first_refresh()
 
-class LinzAGSensor(SensorEntity):
-    def __init__(self, hass, session, stop_id, name, entry_id):
-        self.hass = hass
+    # 2. Wir erstellen 5 Sensoren und weisen sie automatisch einem neuen "Gerät" zu
+    entities = []
+    for i in range(5):
+        entities.append(LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i))
+        
+    async_add_entities(entities, False)
+
+class LinzAGCoordinator(DataUpdateCoordinator):
+    def __init__(self, hass, session, stop_id, name):
+        super().__init__(
+            hass,
+            _LOGGER,
+            name=f"LinzAG {name}",
+            # HIER GEÄNDERT: Aktualisiert jetzt exakt alle 10 Sekunden!
+            update_interval=timedelta(seconds=10) 
+        )
         self._session = session
         self._stop_id = stop_id
-        self._attr_name = name
-        self._attr_unique_id = f"linz_ag_{stop_id}_{entry_id}"
-        self._attr_has_entity_name = False
-        self._attr_icon = "mdi:tram"
-        self._state = None
-        self._attr_extra_state_attributes = {}
-        
-        # Initialisiere den GTFS Helper
-        self._gtfs_helper = GTFSHelper(self.hass, stop_id, name)
-        
+        self.stop_name = name
+        self._gtfs_helper = GTFSHelper(hass, stop_id, name)
         self._url = "https://www.linzag.at/static/XML_DM_REQUEST"
         self._params = {
             "sessionID": "0",
@@ -50,41 +58,26 @@ class LinzAGSensor(SensorEntity):
             "limit": "40"
         }
 
-    async def async_added_to_hass(self):
-        """Aktiviert das nächtliche GTFS-Update."""
-        self.async_on_remove(
-            async_track_time_change(self.hass, self._nightly_gtfs_update, hour=2, minute=0, second=0)
-        )
-        await self._gtfs_helper.update_database_if_needed()
-
     async def _nightly_gtfs_update(self, _now):
-        _LOGGER.info("Starte nächtliches GTFS-Update...")
+        _LOGGER.info("Starte nächtliches GTFS-Update für %s...", self.stop_name)
         await self._gtfs_helper._download_and_build_db()
 
-    @property
-    def state(self):
-        return self._state
-
     def _clean_name(self, text):
-        """Entfernt unerwünschte Ortszusätze, Kommas und Bindestriche."""
         if not text: return "Unbekannt"
         to_remove = ["Linz/Donau", "- Steyregg", "Steyregg", "- Leonding", "Leonding", "- Traun OÖ", "Traun OÖ", "- Bergham b.Linz", "Bergham b.Linz"]
         for r in to_remove:
             text = text.replace(r, "")
         return text.replace(",", "").strip("- ").strip()
 
-    async def async_update(self):
+    async def _async_update_data(self):
         try:
-            # 1. Lade den Fahrplan für die nächsten Stunden aus der GTFS-Datenbank
             await self._gtfs_helper.update_database_if_needed()
             departures = await self._gtfs_helper.get_next_departures(limit=150)
             
-            # Jedem GTFS-Eintrag schon mal leere Infos mitgeben
             for entry in departures:
                 entry["infos"] = ""
                 entry["cancelled"] = False
 
-            # 2. Lade deine perfekten Echtzeit-Daten inkl. infos und hints
             async with async_timeout.timeout(15):
                 response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False)
                 data = await response.json(content_type=None)
@@ -92,7 +85,6 @@ class LinzAGSensor(SensorEntity):
             events = data.get("stopEvents", [])
             now = dt_util.now()
 
-            # 3. Verknüpfe Live-Daten mit dem GTFS-Fahrplan
             for event in events:
                 trans = event.get("transportation", {})
                 planned_str = event.get("departureTimePlanned")
@@ -103,12 +95,10 @@ class LinzAGSensor(SensorEntity):
                 dt_planned = dt_util.parse_datetime(planned_str)
                 dt_estimated = dt_util.parse_datetime(estimated_str)
                 
-                # Geplante Zeit als HH:MM für den Vergleich mit GTFS
                 p_time = dt_util.as_local(dt_planned).strftime("%H:%M")
                 l_line = trans.get("number", trans.get("disassembledName", "?"))
                 delay = round((dt_estimated - dt_planned).total_seconds() / 60)
 
-                # --- INFOS LOGIK ---
                 collected_infos = []
                 for hint in event.get("hints", []):
                     if content := hint.get("content"): collected_infos.append(content)
@@ -117,7 +107,6 @@ class LinzAGSensor(SensorEntity):
                         if text := (link.get("urlText") or link.get("subtitle")): collected_infos.append(text)
                 info_string = " +++ ".join(collected_infos)
 
-                # Jetzt suchen wir die Fahrt im GTFS-Fahrplan und aktualisieren sie
                 for entry in departures:
                     if entry["line"] == l_line and entry["scheduled"] == p_time:
                         entry["is_realtime"] = True
@@ -129,7 +118,6 @@ class LinzAGSensor(SensorEntity):
                         entry["direction"] = self._clean_name(raw_direction)
                         break
 
-            # 4. Countdowns berechnen
             for entry in departures:
                 h, m = map(int, entry["scheduled"].split(":"))
                 sched_ts = now.replace(hour=h, minute=m, second=0, microsecond=0)
@@ -140,37 +128,79 @@ class LinzAGSensor(SensorEntity):
                 diff = int((sched_ts - now).total_seconds() / 60) + entry.get("delay", 0)
                 entry["countdown"] = max(0, diff)
 
-            # Sortieren nach Countdown
             departures.sort(key=lambda x: x["countdown"])
-
-            # ------------------------------------------------------------------
-            # 5. NEU: DEN HAUPTZUSTAND DES SENSORS ALS LESBAREN TEXT DEFINIEREN
-            # ------------------------------------------------------------------
-            if departures:
-                next_dep = departures[0]
-                line = next_dep["line"]
-                direction = next_dep["direction"]
-                sched = next_dep["scheduled"]
-                cd = next_dep["countdown"]
-                
-                if next_dep.get("cancelled"):
-                    self._state = f"{line} {direction} (Fällt aus)"
-                elif cd == 0:
-                    self._state = f"{line} {direction} (Jetzt)"
-                else:
-                    self._state = f"{line} {direction}: {sched} ({cd} Min)"
-            else:
-                self._state = "Keine Abfahrten in Kürze"
-
-            # 6. Attribute für das Dashboard schreiben
-            self._attr_extra_state_attributes = {
-                "departureList": departures[:100], 
-                "stop_id": self._stop_id,
-                "stop_name": self._attr_name,
-                "station": self._attr_name,
-                "station_name": self._attr_name,
-                "last_update": now.strftime("%H:%M:%S")
-            }
+            return departures
 
         except Exception as e:
             _LOGGER.error("Linz AG Sensor Fehler: %s", e)
+            raise UpdateFailed(f"Fehler beim Abrufen der Daten: {e}")
+
+class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
+    def __init__(self, coordinator, stop_id, name, entry_id, index):
+        super().__init__(coordinator)
+        self._index = index
+        self._stop_id = stop_id
+        self._name = name
+        
+        self._attr_device_info = {
+            "identifiers": {("linz_ag_monitor", stop_id)},
+            "name": name,
+            "manufacturer": "Linz AG Monitor",
+            "model": "Haltestelle"
+        }
+        
+        self._attr_has_entity_name = True
+        
+        # Namensgebung der Entitäten
+        if index == 0:
+            self._attr_name = "Nächste Abfahrt"
+        else:
+            self._attr_name = f"Abfahrt {index + 1}"
+            
+        self._attr_unique_id = f"linz_ag_{stop_id}_{entry_id}_{index}"
+        self._attr_icon = "mdi:tram"
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        if self._index == 0:
+            self.async_on_remove(
+                async_track_time_change(
+                    self.hass, 
+                    self.coordinator._nightly_gtfs_update, 
+                    hour=2, minute=0, second=0
+                )
+            )
+
+    @property
+    def state(self):
+        """Zustand des Sensors (Klartext, wie am Screenshot)."""
+        departures = self.coordinator.data
+        if not departures or len(departures) <= self._index:
+            return "Keine Abfahrt"
+            
+        dep = departures[self._index]
+        line = dep["line"]
+        direction = dep["direction"]
+        sched = dep["scheduled"]
+        cd = dep["countdown"]
+        
+        if dep.get("cancelled"):
+            return f"{line} {direction} (Fällt aus)"
+        elif cd == 0:
+            return f"{line} {direction} (Jetzt)"
+        else:
+            return f"{line} {direction} {sched} ({cd} Min)"
+
+    @property
+    def extra_state_attributes(self):
+        """Attribute. Die Liste geht komplett in den ersten Sensor."""
+        if self._index == 0 and self.coordinator.data:
+            return {
+                "departureList": self.coordinator.data[:100], 
+                "stop_id": self._stop_id,
+                "stop_name": self._name,
+                "station": self._name,
+                "station_name": self._name,
+                "last_update": dt_util.now().strftime("%H:%M:%S")
+            }
+        return {}
