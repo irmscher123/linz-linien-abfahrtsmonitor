@@ -108,7 +108,7 @@ class LinzAGSensor(SensorEntity):
                 l_line = trans.get("number", trans.get("disassembledName", "?"))
                 delay = round((dt_estimated - dt_planned).total_seconds() / 60)
 
-                # --- DEINE INFOS LOGIK ---
+                # --- INFOS LOGIK ---
                 collected_infos = []
                 for hint in event.get("hints", []):
                     if content := hint.get("content"): collected_infos.append(content)
@@ -125,29 +125,46 @@ class LinzAGSensor(SensorEntity):
                         entry["cancelled"] = event.get("isCancelled", False)
                         entry["infos"] = info_string
                         
-                        # Wir übernehmen auch das exakte Ziel aus der Live-API (bereinigt)
                         raw_direction = trans.get("destination", {}).get("name", "Unbekannt")
                         entry["direction"] = self._clean_name(raw_direction)
                         break
 
-            # 4. Countdowns für alle berechnen (sowohl GTFS als auch Echtzeit)
+            # 4. Countdowns berechnen
             for entry in departures:
                 h, m = map(int, entry["scheduled"].split(":"))
                 sched_ts = now.replace(hour=h, minute=m, second=0, microsecond=0)
                 
-                # Mitternachtssprung abfangen
                 if sched_ts < now and now.hour > 12 and h < 12:
                     sched_ts += timedelta(days=1)
                 
                 diff = int((sched_ts - now).total_seconds() / 60) + entry.get("delay", 0)
                 entry["countdown"] = max(0, diff)
 
-            # Sortieren nach Countdown (die nächsten zuerst)
+            # Sortieren nach Countdown
             departures.sort(key=lambda x: x["countdown"])
 
-            self._state = len(departures)
+            # ------------------------------------------------------------------
+            # 5. NEU: DEN HAUPTZUSTAND DES SENSORS ALS LESBAREN TEXT DEFINIEREN
+            # ------------------------------------------------------------------
+            if departures:
+                next_dep = departures[0]
+                line = next_dep["line"]
+                direction = next_dep["direction"]
+                sched = next_dep["scheduled"]
+                cd = next_dep["countdown"]
+                
+                if next_dep.get("cancelled"):
+                    self._state = f"{line} {direction} (Fällt aus)"
+                elif cd == 0:
+                    self._state = f"{line} {direction} (Jetzt)"
+                else:
+                    self._state = f"{line} {direction}: {sched} ({cd} Min)"
+            else:
+                self._state = "Keine Abfahrten in Kürze"
+
+            # 6. Attribute für das Dashboard schreiben
             self._attr_extra_state_attributes = {
-                "departureList": departures[:100],  # Limit für das Dashboard auf 100 erhöht
+                "departureList": departures[:100], 
                 "stop_id": self._stop_id,
                 "stop_name": self._attr_name,
                 "station": self._attr_name,
