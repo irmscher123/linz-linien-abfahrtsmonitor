@@ -36,7 +36,6 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"LinzAG {name}",
-            # HIER KORRIGIERT: 30 Sekunden ist der sichere Wert für die Linz AG Server
             update_interval=timedelta(seconds=30) 
         )
         self._session = session
@@ -79,7 +78,6 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             async with async_timeout.timeout(15):
                 response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False)
                 
-                # FEHLERABFANG: Prüfen ob wirklich JSON zurückkommt, sonst bricht das Skript sauber ab
                 if response.status != 200:
                     raise UpdateFailed(f"API antwortet mit Status {response.status}")
                 
@@ -124,7 +122,14 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                         entry["direction"] = self._clean_name(raw_direction)
                         break
 
+            # ---------------------------------------------------------
+            # ENDSTATIONEN FILTER & COUNTDOWN BERECHNUNG
+            # ---------------------------------------------------------
+            my_station_clean = self._clean_name(self.stop_name).lower()
+            filtered_departures = []
+            
             for entry in departures:
+                # 1. Countdown berechnen
                 h, m = map(int, entry["scheduled"].split(":"))
                 sched_ts = now.replace(hour=h, minute=m, second=0, microsecond=0)
                 
@@ -133,9 +138,17 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 
                 diff = int((sched_ts - now).total_seconds() / 60) + entry.get("delay", 0)
                 entry["countdown"] = max(0, diff)
+                
+                # 2. Endstationen-Filter (Rauswerfen, wenn Fahrt hier endet)
+                dest_clean = entry["direction"].lower()
+                if dest_clean == my_station_clean or dest_clean == f"linz {my_station_clean}":
+                    continue # Überspringen, da es die Endstation ist
+                    
+                filtered_departures.append(entry)
 
-            departures.sort(key=lambda x: x["countdown"])
-            return departures
+            # Nur noch die gefilterte Liste sortieren
+            filtered_departures.sort(key=lambda x: x["countdown"])
+            return filtered_departures
 
         except UpdateFailed:
             raise
