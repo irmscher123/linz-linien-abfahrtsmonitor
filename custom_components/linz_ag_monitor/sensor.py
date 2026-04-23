@@ -5,7 +5,9 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change
-from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, UpdateFailed
+
+# HIER FEHLTE DAS WORT "CoordinatorEntity" - ist jetzt repariert!
+from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity, UpdateFailed
 
 from .gtfs_helper import GTFSHelper
 
@@ -21,11 +23,11 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     name = config_entry.data.get("name")
     session = async_get_clientsession(hass)
     
-    # 1. Der Coordinator holt die Daten zentral für alle Sensoren (alle 10 Sekunden)
+    # Der Coordinator holt die Daten zentral für alle Sensoren (alle 10 Sekunden)
     coordinator = LinzAGCoordinator(hass, session, stop_id, name)
     await coordinator.async_config_entry_first_refresh()
 
-    # 2. Wir erstellen 5 Sensoren und weisen sie automatisch einem neuen "Gerät" zu
+    # Wir erstellen 5 Sensoren und weisen sie automatisch einem neuen "Gerät" zu
     entities = []
     for i in range(5):
         entities.append(LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i))
@@ -38,7 +40,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"LinzAG {name}",
-            # HIER GEÄNDERT: Aktualisiert jetzt exakt alle 10 Sekunden!
+            # Aktualisiert jetzt exakt alle 10 Sekunden!
             update_interval=timedelta(seconds=10) 
         )
         self._session = session
