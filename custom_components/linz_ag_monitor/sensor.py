@@ -5,8 +5,6 @@ import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
 from homeassistant.helpers.event import async_track_time_change
-
-# HIER FEHLTE DAS WORT "CoordinatorEntity" - ist jetzt repariert!
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity, UpdateFailed
 
 from .gtfs_helper import GTFSHelper
@@ -23,11 +21,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     name = config_entry.data.get("name")
     session = async_get_clientsession(hass)
     
-    # Der Coordinator holt die Daten zentral für alle Sensoren (alle 10 Sekunden)
     coordinator = LinzAGCoordinator(hass, session, stop_id, name)
     await coordinator.async_config_entry_first_refresh()
 
-    # Wir erstellen 5 Sensoren und weisen sie automatisch einem neuen "Gerät" zu
     entities = []
     for i in range(5):
         entities.append(LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i))
@@ -40,8 +36,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"LinzAG {name}",
-            # Aktualisiert jetzt exakt alle 10 Sekunden!
-            update_interval=timedelta(seconds=10) 
+            # HIER KORRIGIERT: 30 Sekunden ist der sichere Wert für die Linz AG Server
+            update_interval=timedelta(seconds=30) 
         )
         self._session = session
         self._stop_id = stop_id
@@ -82,7 +78,15 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
             async with async_timeout.timeout(15):
                 response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False)
-                data = await response.json(content_type=None)
+                
+                # FEHLERABFANG: Prüfen ob wirklich JSON zurückkommt, sonst bricht das Skript sauber ab
+                if response.status != 200:
+                    raise UpdateFailed(f"API antwortet mit Status {response.status}")
+                
+                try:
+                    data = await response.json(content_type=None)
+                except Exception:
+                    raise UpdateFailed("API blockiert / liefert kein gültiges JSON (Spamschutz aktiv)")
 
             events = data.get("stopEvents", [])
             now = dt_util.now()
@@ -133,6 +137,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             departures.sort(key=lambda x: x["countdown"])
             return departures
 
+        except UpdateFailed:
+            raise
         except Exception as e:
             _LOGGER.error("Linz AG Sensor Fehler: %s", e)
             raise UpdateFailed(f"Fehler beim Abrufen der Daten: {e}")
@@ -153,7 +159,6 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
         
         self._attr_has_entity_name = True
         
-        # Namensgebung der Entitäten
         if index == 0:
             self._attr_name = "Nächste Abfahrt"
         else:
@@ -175,7 +180,6 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def state(self):
-        """Zustand des Sensors (Klartext, wie am Screenshot)."""
         departures = self.coordinator.data
         if not departures or len(departures) <= self._index:
             return "Keine Abfahrt"
@@ -195,7 +199,6 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        """Attribute. Die Liste geht komplett in den ersten Sensor."""
         if self._index == 0 and self.coordinator.data:
             return {
                 "departureList": self.coordinator.data[:100], 
