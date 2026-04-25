@@ -7,5 +7,5 @@
   "iot_class": "cloud_polling",
   "version": "1.1",
   "config_flow": true
-  "logo": "https://raw.githubusercontent.com/irmscher/linz-linien-abfahrtsmonitor/main/logo-2026.png"
+  "logo": "https://raw.githubusercontent.com/irmscher/linz-linien-abfahrtsmonitor/main/logo2026.png"
 }
