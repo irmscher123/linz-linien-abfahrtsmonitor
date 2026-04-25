@@ -1,5 +1,7 @@
 import logging
 import async_timeout
+import asyncio
+import random
 from datetime import datetime, timedelta
 import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
@@ -22,6 +24,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     session = async_get_clientsession(hass)
     
     coordinator = LinzAGCoordinator(hass, session, stop_id, name)
+    
+    # ---------------------------------------------------------
+    # SPAMSCHUTZ: Warteschlange beim Start (Thundering Herd Protection)
+    # Verhindert, dass bei 20 Haltestellen alle in derselben 
+    # Millisekunde feuern und die Firewall der Linz AG auslösen.
+    # ---------------------------------------------------------
+    await asyncio.sleep(random.uniform(1, 15))
+    
     await coordinator.async_config_entry_first_refresh()
 
     entities = []
@@ -122,14 +132,10 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                         entry["direction"] = self._clean_name(raw_direction)
                         break
 
-            # ---------------------------------------------------------
-            # ENDSTATIONEN FILTER & COUNTDOWN BERECHNUNG
-            # ---------------------------------------------------------
             my_station_clean = self._clean_name(self.stop_name).lower()
             filtered_departures = []
             
             for entry in departures:
-                # 1. Countdown berechnen
                 h, m = map(int, entry["scheduled"].split(":"))
                 sched_ts = now.replace(hour=h, minute=m, second=0, microsecond=0)
                 
@@ -139,14 +145,12 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 diff = int((sched_ts - now).total_seconds() / 60) + entry.get("delay", 0)
                 entry["countdown"] = max(0, diff)
                 
-                # 2. Endstationen-Filter (Rauswerfen, wenn Fahrt hier endet)
                 dest_clean = entry["direction"].lower()
                 if dest_clean == my_station_clean or dest_clean == f"linz {my_station_clean}":
-                    continue # Überspringen, da es die Endstation ist
+                    continue 
                     
                 filtered_departures.append(entry)
 
-            # Nur noch die gefilterte Liste sortieren
             filtered_departures.sort(key=lambda x: x["countdown"])
             return filtered_departures
 
