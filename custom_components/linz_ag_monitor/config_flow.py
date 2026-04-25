@@ -22,7 +22,7 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Entfernt lästige Präfixe sicher, ohne echte Straßennamen zu beschädigen."""
         if not text: return "Unbekannt"
         
-        to_remove = ["Linz/Donau, ", "Linz/Donau", "Leonding, ", "Leonding", "Steyregg, ", "- Steyregg", "Steyregg", "Traun OÖ, ", "- Traun OÖ", "Traun OÖ", "Bergham b.Linz, ", "- Bergham b.Linz", "Bergham b.Linz"]
+        to_remove = ["Linz/Donau, ", "Linz/Donau", "Leonding, ", "Steyregg, ", "- Steyregg", "Steyregg", "Traun OÖ, ", "- Traun OÖ", "Traun OÖ", "Bergham b.Linz, ", "- Bergham b.Linz", "Bergham b.Linz"]
         for r in to_remove:
             text = text.replace(r, "")
             
