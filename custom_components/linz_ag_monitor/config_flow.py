@@ -26,7 +26,6 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         for r in to_remove:
             text = text.replace(r, "")
             
-        # 'Linz ' nur am Anfang entfernen, damit z.B. 'Linzer Straße' nicht kaputt geht
         if text.startswith("Linz "):
             text = text[5:]
             
@@ -126,10 +125,17 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             else:
                 return await self.async_step_select()
 
+        # STARTPUNKT FESTLEGEN: Zuhause des Nutzers + 500 Meter Radius
+        default_loc = {
+            "latitude": self.hass.config.latitude,
+            "longitude": self.hass.config.longitude,
+            "radius": 500
+        }
+
         return self.async_show_form(
             step_id="map_search",
             data_schema=vol.Schema({
-                vol.Required("location"): selector.LocationSelector(
+                vol.Required("location", default=default_loc): selector.LocationSelector(
                     selector.LocationSelectorConfig(radius=True, icon="mdi:map-marker-radius")
                 ),
             }),
