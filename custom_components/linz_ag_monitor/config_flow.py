@@ -38,10 +38,19 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             menu_options=["text_search", "map_search"]
         )
 
-    async def _search_api(self, params):
-        """Zentrale Funktion, um die API für beide Suchmethoden abzufragen."""
+    async def _search_api_text(self, search_term):
+        """Sucht über den klassischen Namen."""
         session = async_get_clientsession(self.hass)
         url = "https://www.linzag.at/static/XML_STOPFINDER_REQUEST"
+        params = {
+            "sessionID": "0",
+            "locationServerActive": "1",
+            "type_sf": "any",
+            "name_sf": search_term,
+            "outputFormat": "JSON",
+            "coordOutputFormat": "WGS84[dd.ddddd]",
+            "limit": "60"
+        }
         
         try:
             async with session.get(url, params=params, headers=HEADERS, ssl=False, timeout=15) as response:
@@ -65,30 +74,80 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                         clean_name = self._clean_name(stop_name)
                         if clean_name and clean_name not in seen_names:
                             seen_names.add(clean_name)
-                            self.found_stops[stop_id] = clean_name
+                            self.found_stops[stop_id] = {
+                                "display": clean_name,
+                                "clean": clean_name
+                            }
 
                 if not self.found_stops:
                     return "no_stops_found"
                 return None
                 
         except Exception as e:
-            _LOGGER.error("Linz AG Verbindungsfehler: %s", e)
+            _LOGGER.error("Linz AG Textsuche Fehler: %s", e)
+            return "cannot_connect"
+
+    async def _search_api_coords(self, lat, lon, radius):
+        """Sucht über die GPS Umkreissuche der Linz AG."""
+        session = async_get_clientsession(self.hass)
+        url = "https://www.linzag.at/static/XML_COORD_REQUEST"
+        params = {
+            "sessionID": "0",
+            "locationServerActive": "1",
+            "outputFormat": "JSON",
+            "coord": f"{lon}:{lat}:WGS84[dd.ddddd]",
+            "max": "50",
+            "inclFilter": "1",
+            "type_1": "STOP",
+            "radius_1": str(int(radius))
+        }
+        
+        try:
+            async with session.get(url, params=params, headers=HEADERS, ssl=False, timeout=15) as response:
+                if response.status != 200:
+                    return "cannot_connect"
+                
+                data = await response.json(content_type=None)
+                pins = data.get("pins", [])
+                
+                if isinstance(pins, dict):
+                    pins = [pins]
+
+                self.found_stops = {}
+                seen_names = set()
+                
+                for p in pins:
+                    if str(p.get("type", "")).upper() == "STOP":
+                        stop_id = p.get("stateless") or p.get("id")
+                        stop_name = p.get("desc") or p.get("name")
+                        
+                        if stop_id and stop_name:
+                            clean_name = self._clean_name(stop_name)
+                            if clean_name and clean_name not in seen_names:
+                                seen_names.add(clean_name)
+                                
+                                # Fügt die Entfernung als Bonus für das Menü hinzu
+                                dist = p.get("distance")
+                                display_name = f"{clean_name} ({dist}m)" if dist else clean_name
+                                
+                                self.found_stops[stop_id] = {
+                                    "display": display_name,
+                                    "clean": clean_name
+                                }
+
+                if not self.found_stops:
+                    return "no_stops_found"
+                return None
+                
+        except Exception as e:
+            _LOGGER.error("Linz AG Umkreissuche Fehler: %s", e)
             return "cannot_connect"
 
     async def async_step_text_search(self, user_input=None):
         """Schritt 2a: Klassische Textsuche."""
         errors = {}
         if user_input is not None:
-            params = {
-                "sessionID": "0",
-                "locationServerActive": "1",
-                "type_sf": "any",
-                "name_sf": user_input["search_term"],
-                "outputFormat": "JSON",
-                "coordOutputFormat": "WGS84[dd.ddddd]",
-                "limit": "60"
-            }
-            error = await self._search_api(params)
+            error = await self._search_api_text(user_input["search_term"])
             if error:
                 errors["base"] = error
             else:
@@ -108,24 +167,14 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             lat = user_input["location"]["latitude"]
             lon = user_input["location"]["longitude"]
+            radius = user_input["location"]["radius"]
             
-            # Die Linz AG API erwartet die Koordinaten im Format: longitude:latitude:WGS84
-            params = {
-                "sessionID": "0",
-                "locationServerActive": "1",
-                "type_sf": "coord",
-                "name_sf": f"{lon}:{lat}:WGS84[dd.ddddd]",
-                "outputFormat": "JSON",
-                "coordOutputFormat": "WGS84[dd.ddddd]",
-                "limit": "40" # Sucht die nächsten 40 Haltestellen im Umkreis
-            }
-            error = await self._search_api(params)
+            error = await self._search_api_coords(lat, lon, radius)
             if error:
                 errors["base"] = error
             else:
                 return await self.async_step_select()
 
-        # STARTPUNKT FESTLEGEN: Zuhause des Nutzers + 500 Meter Radius
         default_loc = {
             "latitude": self.hass.config.latitude,
             "longitude": self.hass.config.longitude,
@@ -146,14 +195,19 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         """Schritt 3: Das Dropdown-Menü mit den gefundenen Haltestellen."""
         if user_input is not None:
             stop_id = user_input["stop_id"]
-            stop_name = self.found_stops[stop_id]
+            stop_info = self.found_stops[stop_id]
+            
+            # Wir speichern den sauberen Namen (ohne Meter-Angabe) für die Entitäten
             return self.async_create_entry(
-                title=stop_name,
-                data={"stop_id": stop_id, "name": stop_name}
+                title=stop_info["clean"],
+                data={"stop_id": stop_id, "name": stop_info["clean"]}
             )
 
-        # Alphabetische Sortierung für das Dropdown
-        sorted_stops = dict(sorted(self.found_stops.items(), key=lambda item: item[1]))
+        # Dropdown Liste erstellen und alphabetisch nach Display-Name sortieren
+        dropdown_options = {
+            stop_id: info["display"] for stop_id, info in self.found_stops.items()
+        }
+        sorted_stops = dict(sorted(dropdown_options.items(), key=lambda item: item[1]))
 
         return self.async_show_form(
             step_id="select",
