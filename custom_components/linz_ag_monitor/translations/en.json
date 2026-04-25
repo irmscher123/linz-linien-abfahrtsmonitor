@@ -1,0 +1,42 @@
+{
+  "config": {
+    "step": {
+      "user": {
+        "title": "Add Linz AG Station",
+        "description": "How would you like to search for your station?",
+        "menu_options": {
+          "text_search": "Search by name (Text)",
+          "map_search": "Search on map (Radius)"
+        }
+      },
+      "text_search": {
+        "title": "Text Search",
+        "description": "Enter the name of the station (e.g., Hauptbahnhof or Simonystraße).",
+        "data": {
+          "search_term": "Search term"
+        }
+      },
+      "map_search": {
+        "title": "Map Search",
+        "description": "Please select a location and a search radius to find nearby stations.",
+        "data": {
+          "location": "Location & Search radius"
+        }
+      },
+      "select": {
+        "title": "Select Station",
+        "description": "Choose the desired station from the search results.",
+        "data": {
+          "stop_id": "Found stations"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Connection to Linz AG failed. Please try again later.",
+      "no_stops_found": "No stations were found. Please increase the radius or use a different search term."
+    },
+    "abort": {
+      "already_configured": "This station is already configured."
+    }
+  }
+}
