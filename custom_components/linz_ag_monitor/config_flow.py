@@ -26,6 +26,7 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         for r in to_remove:
             text = text.replace(r, "")
             
+        # 'Linz ' nur am Anfang entfernen, damit z.B. 'Linzer Straße' nicht kaputt geht
         if text.startswith("Linz "):
             text = text[5:]
             
@@ -103,7 +104,7 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         )
 
     async def async_step_map_search(self, user_input=None):
-        """Schritt 2b: Die neue Suche über die Karte."""
+        """Schritt 2b: Die neue Suche über die interaktive Karte."""
         errors = {}
         if user_input is not None:
             lat = user_input["location"]["latitude"]
@@ -145,6 +146,7 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 data={"stop_id": stop_id, "name": stop_name}
             )
 
+        # Alphabetische Sortierung für das Dropdown
         sorted_stops = dict(sorted(self.found_stops.items(), key=lambda item: item[1]))
 
         return self.async_show_form(
