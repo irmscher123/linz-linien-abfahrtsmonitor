@@ -1,24 +1,42 @@
 {
-    "config": {
-        "step": {
-            "user": {
-                "title": "Suche nach Haltestelle",
-                "description": "Geben Sie einen Namen ein (z.B. 'Hauptbahnhof' oder 'Landstraße'), um die ID automatisch zu finden.",
-                "data": {
-                    "search_term": "Suchbegriff"
-                }
-            },
-            "select": {
-                "title": "Haltestelle wählen",
-                "description": "Bitte wählen Sie die gewünschte Haltestelle aus der Liste.",
-                "data": {
-                    "stop_id": "Gefundene Haltestellen"
-                }
-            }
-        },
-        "error": {
-            "cannot_connect": "Verbindung fehlgeschlagen (API Blockiert oder Offline).",
-            "no_stops_found": "Keine Haltestellen gefunden."
+  "config": {
+    "step": {
+      "user": {
+        "title": "Linz AG Haltestelle hinzufügen",
+        "description": "Wie möchtest du nach deiner Haltestelle suchen?",
+        "menu_options": {
+          "text_search": "Suche nach Name (Text)",
+          "map_search": "Suche auf der Karte (Umkreis)"
         }
+      },
+      "text_search": {
+        "title": "Textsuche",
+        "description": "Gib den Namen der Haltestelle ein (z.B. Hauptbahnhof oder Simonystraße).",
+        "data": {
+          "search_term": "Suchbegriff"
+        }
+      },
+      "map_search": {
+        "title": "Kartensuche",
+        "description": "Bitte wähle einen Standort und einen Suchradius aus, um nahegelegene Haltestellen zu finden.",
+        "data": {
+          "location": "Standort & Suchradius"
+        }
+      },
+      "select": {
+        "title": "Haltestelle auswählen",
+        "description": "Wähle die gewünschte Haltestelle aus den gefundenen Treffern aus.",
+        "data": {
+          "stop_id": "Gefundene Haltestellen"
+        }
+      }
+    },
+    "error": {
+      "cannot_connect": "Verbindung zur Linz AG fehlgeschlagen. Bitte versuche es später erneut.",
+      "no_stops_found": "Es wurden keine Haltestellen gefunden. Bitte vergrößere den Radius oder nutze einen anderen Text."
+    },
+    "abort": {
+      "already_configured": "Diese Haltestelle ist bereits konfiguriert."
     }
+  }
 }
