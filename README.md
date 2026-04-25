@@ -7,7 +7,7 @@
 
 
 
-<img src="https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/logo.png" width="200" alt="Linz Linien Logo">
+<img src="https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/logo2026.png" width="200" alt="Linz Linien Logo">
 
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/dashboards.png" width="800" alt="Linz Linien Dashboards">
 
