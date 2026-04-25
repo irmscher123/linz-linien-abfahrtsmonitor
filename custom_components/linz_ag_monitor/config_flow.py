@@ -2,6 +2,7 @@ import voluptuous as vol
 import logging
 from homeassistant import config_entries
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers import selector
 
 DOMAIN = "linz_ag_monitor"
 _LOGGER = logging.getLogger(__name__)
@@ -17,75 +18,125 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
     def __init__(self):
         self.found_stops = {}
 
-    async def async_step_user(self, user_input=None):
-        errors = {}
+    def _clean_name(self, text):
+        """Entfernt lästige Präfixe sicher, ohne echte Straßennamen zu beschädigen."""
+        if not text: return "Unbekannt"
         
+        to_remove = ["Linz/Donau, ", "Linz/Donau", "Leonding, ", "Leonding", "Steyregg, ", "- Steyregg", "Steyregg", "Traun OÖ, ", "- Traun OÖ", "Traun OÖ", "Bergham b.Linz, ", "- Bergham b.Linz", "Bergham b.Linz"]
+        for r in to_remove:
+            text = text.replace(r, "")
+            
+        if text.startswith("Linz "):
+            text = text[5:]
+            
+        return text.replace(",", "").strip("- ").strip()
+
+    async def async_step_user(self, user_input=None):
+        """Erster Schritt: Auswahl zwischen Text- und Kartensuche."""
+        return self.async_show_menu(
+            step_id="user",
+            menu_options=["text_search", "map_search"]
+        )
+
+    async def _search_api(self, params):
+        """Zentrale Funktion, um die API für beide Suchmethoden abzufragen."""
+        session = async_get_clientsession(self.hass)
+        url = "https://www.linzag.at/static/XML_STOPFINDER_REQUEST"
+        
+        try:
+            async with session.get(url, params=params, headers=HEADERS, ssl=False, timeout=15) as response:
+                if response.status != 200:
+                    return "cannot_connect"
+                
+                data = await response.json(content_type=None)
+                points = data.get("stopFinder", {}).get("points", [])
+                
+                if isinstance(points, dict):
+                    points = [points]
+
+                self.found_stops = {}
+                seen_names = set()
+                
+                for p in points:
+                    stop_id = p.get("stateless") or p.get("id")
+                    stop_name = p.get("name")
+                    
+                    if stop_id and stop_name:
+                        clean_name = self._clean_name(stop_name)
+                        if clean_name and clean_name not in seen_names:
+                            seen_names.add(clean_name)
+                            self.found_stops[stop_id] = clean_name
+
+                if not self.found_stops:
+                    return "no_stops_found"
+                return None
+                
+        except Exception as e:
+            _LOGGER.error("Linz AG Verbindungsfehler: %s", e)
+            return "cannot_connect"
+
+    async def async_step_text_search(self, user_input=None):
+        """Schritt 2a: Klassische Textsuche."""
+        errors = {}
         if user_input is not None:
-            search_term = user_input["search_term"]
-            session = async_get_clientsession(self.hass)
-            
-            # Basis-URL
-            url = "https://www.linzag.at/static/XML_STOPFINDER_REQUEST"
-            
             params = {
                 "sessionID": "0",
                 "locationServerActive": "1",
-                "type_sf": "any",  # 'any' ist zwingend für Straßennamen wie 'Rudolfstraße'
-                "name_sf": search_term,
+                "type_sf": "any",
+                "name_sf": user_input["search_term"],
                 "outputFormat": "JSON",
-                "coordOutputFormat": "WGS84[dd.ddddd]", # Verbessert die Objekterkennung
+                "coordOutputFormat": "WGS84[dd.ddddd]",
                 "limit": "60"
             }
-
-            try:
-                async with session.get(url, params=params, headers=HEADERS, ssl=False, timeout=15) as response:
-                    if response.status != 200:
-                        _LOGGER.error("Linz AG API Fehler: HTTP %s", response.status)
-                        errors["base"] = "cannot_connect"
-                    else:
-                        data = await response.json(content_type=None)
-                        # Die Struktur der API kann variieren
-                        finder = data.get("stopFinder", {})
-                        points = finder.get("points", [])
-                        
-                        # Falls nur ein Punkt gefunden wurde, liefert die API ein Dict statt einer Liste
-                        if isinstance(points, dict):
-                            points = [points]
-
-                        self.found_stops = {}
-                        for p in points:
-                            # Wir nehmen nur Einträge, die eine ID haben und vom Typ 'stop' oder 'poi' sind
-                            # 'stateless' ist die stabilste ID für Custom Cards
-                            stop_id = p.get("stateless") or p.get("id")
-                            stop_name = p.get("name")
-                            
-                            # Filter: Wir wollen keine reinen Adressen ohne Haltestellen-ID
-                            if stop_id and stop_name:
-                                # Bereinigung der Präfixe für die Auswahl
-                                clean_name = stop_name.replace("Linz/Donau, ", "").replace("Leonding, ", "").replace("Linz ", "").replace("Leonding ", "").strip()
-                                
-                                # Manchmal gibt die API doppelte IDs zurück, wir nehmen den Namen mit der besten Übereinstimmung
-                                self.found_stops[stop_id] = clean_name
-
-                        if not self.found_stops:
-                            _LOGGER.warning("Keine Haltestellen für '%s' gefunden. API Antwort: %s", search_term, data)
-                            errors["base"] = "no_stops_found"
-                        else:
-                            return await self.async_step_select()
-                            
-            except Exception as e:
-                _LOGGER.error("Linz AG Verbindungsfehler: %s", e)
-                errors["base"] = "cannot_connect"
+            error = await self._search_api(params)
+            if error:
+                errors["base"] = error
+            else:
+                return await self.async_step_select()
 
         return self.async_show_form(
-            step_id="user",
+            step_id="text_search",
             data_schema=vol.Schema({
                 vol.Required("search_term"): str,
             }),
             errors=errors,
         )
 
+    async def async_step_map_search(self, user_input=None):
+        """Schritt 2b: Die neue Suche über die Karte."""
+        errors = {}
+        if user_input is not None:
+            lat = user_input["location"]["latitude"]
+            lon = user_input["location"]["longitude"]
+            
+            # Die Linz AG API erwartet die Koordinaten im Format: longitude:latitude:WGS84
+            params = {
+                "sessionID": "0",
+                "locationServerActive": "1",
+                "type_sf": "coord",
+                "name_sf": f"{lon}:{lat}:WGS84[dd.ddddd]",
+                "outputFormat": "JSON",
+                "coordOutputFormat": "WGS84[dd.ddddd]",
+                "limit": "40" # Sucht die nächsten 40 Haltestellen im Umkreis
+            }
+            error = await self._search_api(params)
+            if error:
+                errors["base"] = error
+            else:
+                return await self.async_step_select()
+
+        return self.async_show_form(
+            step_id="map_search",
+            data_schema=vol.Schema({
+                vol.Required("location"): selector.LocationSelector(
+                    selector.LocationSelectorConfig(radius=True, icon="mdi:map-marker-radius")
+                ),
+            }),
+            errors=errors,
+        )
+
     async def async_step_select(self, user_input=None):
+        """Schritt 3: Das Dropdown-Menü mit den gefundenen Haltestellen."""
         if user_input is not None:
             stop_id = user_input["stop_id"]
             stop_name = self.found_stops[stop_id]
@@ -94,7 +145,6 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 data={"stop_id": stop_id, "name": stop_name}
             )
 
-        # Sortierung für eine schöne Liste
         sorted_stops = dict(sorted(self.found_stops.items(), key=lambda item: item[1]))
 
         return self.async_show_form(
