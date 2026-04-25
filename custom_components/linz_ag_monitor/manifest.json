@@ -1,11 +1,11 @@
 {
   "domain": "linz_ag_monitor",
   "name": "Linz AG Monitor",
-  "codeowners": [],
+  "codeowners": "irmscher123",
   "dependencies": [],
   "documentation": "",
   "iot_class": "cloud_polling",
-  "version": "1.0",
+  "version": "1.1",
   "config_flow": true
 
 }
