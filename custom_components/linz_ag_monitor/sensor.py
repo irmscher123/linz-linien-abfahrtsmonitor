@@ -69,12 +69,32 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         _LOGGER.info("Starte nächtliches GTFS-Update für %s...", self.stop_name)
         await self._gtfs_helper._download_and_build_db()
 
-    def _clean_name(self, text):
+        def _clean_name(self, text):
+        """Entfernt Orts-Präfixe nur am Anfang, lässt sie am Ende stehen."""
         if not text: return "Unbekannt"
-        to_remove = ["Linz/Donau", "- Steyregg", "Steyregg", "Leonding,", "- Traun OÖ", "Traun OÖ", "- Bergham b.Linz", "Bergham b.Linz"]
-        for r in to_remove:
-            text = text.replace(r, "")
-        return text.replace(",", "").strip("- ").strip()
+        
+        text = text.strip()
+        
+        prefixes = [
+            "Linz/Donau, ", "Linz/Donau ",
+            "Leonding, ",
+            "Steyregg, ",
+            "Traun OÖ, ", "Traun OÖ ",
+            "Bergham b.Linz, ",
+            "Linz, ", "Linz "
+        ]
+        
+        for p in prefixes:
+            if text.startswith(p):
+                text = text[len(p):]
+                break
+                
+        text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
+        
+        if text == "Linz/Donau": text = "Linz"
+        if text == "Traun OÖ": text = "Traun"
+        
+        return text.strip(" ,-")
 
     async def _async_update_data(self):
         try:
@@ -146,8 +166,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 entry["countdown"] = max(0, diff)
                 
                 dest_clean = entry["direction"].lower()
-                if dest_clean == my_station_clean or dest_clean == f"linz {my_station_clean}":
-                    continue 
+                if dest_clean == my_station_clean:
+                    continue
                     
                 filtered_departures.append(entry)
 
