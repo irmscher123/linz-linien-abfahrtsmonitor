@@ -14,9 +14,11 @@ from .gtfs_helper import GTFSHelper
 _LOGGER = logging.getLogger(__name__)
 
 HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
     "Accept": "application/json"
 }
+
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     stop_id = config_entry.data.get("stop_id")
@@ -27,7 +29,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     # ---------------------------------------------------------
     # SPAMSCHUTZ: Warteschlange beim Start (Thundering Herd Protection)
-    # Verhindert, dass bei 20 Haltestellen alle in derselben 
+    # Verhindert, dass bei 20 Haltestellen alle in der selben 
     # Millisekunde feuern und die Firewall der Linz AG auslösen.
     # ---------------------------------------------------------
     await asyncio.sleep(random.uniform(1, 15))
@@ -40,13 +42,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         
     async_add_entities(entities, False)
 
+
 class LinzAGCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, session, stop_id, name):
         super().__init__(
             hass,
             _LOGGER,
             name=f"LinzAG {name}",
-            update_interval=timedelta(seconds=30) 
+            update_interval=timedelta(seconds=30)
         )
         self._session = session
         self._stop_id = stop_id
@@ -65,13 +68,10 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             "limit": "40"
         }
 
-    async def _nightly_gtfs_update(self, _now):
-        _LOGGER.info("Starte nächtliches GTFS-Update für %s...", self.stop_name)
-        await self._gtfs_helper._download_and_build_db()
-
-        def _clean_name(self, text):
+    def _clean_name(self, text):
         """Entfernt Orts-Präfixe nur am Anfang, lässt sie am Ende stehen."""
-        if not text: return "Unbekannt"
+        if not text:
+            return "Unbekannt"
         
         text = text.strip()
         
@@ -91,10 +91,16 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 
         text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
         
-        if text == "Linz/Donau": text = "Linz"
-        if text == "Traun OÖ": text = "Traun"
+        if text == "Linz/Donau":
+            text = "Linz"
+        if text == "Traun OÖ":
+            text = "Traun"
         
         return text.strip(" ,-")
+
+    async def _nightly_gtfs_update(self, _now):
+        _LOGGER.info("Starte nächtliches GTFS-Update für %s...", self.stop_name)
+        await self._gtfs_helper._download_and_build_db()
 
     async def _async_update_data(self):
         try:
@@ -124,7 +130,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 planned_str = event.get("departureTimePlanned")
                 estimated_str = event.get("departureTimeEstimated", planned_str)
 
-                if not planned_str: continue
+                if not planned_str:
+                    continue
 
                 dt_planned = dt_util.parse_datetime(planned_str)
                 dt_estimated = dt_util.parse_datetime(estimated_str)
@@ -135,10 +142,12 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
                 collected_infos = []
                 for hint in event.get("hints", []):
-                    if content := hint.get("content"): collected_infos.append(content)
+                    if content := hint.get("content"):
+                        collected_infos.append(content)
                 for info in event.get("infos", []):
                     for link in info.get("infoLinks", []):
-                        if text := (link.get("urlText") or link.get("subtitle")): collected_infos.append(text)
+                        if text := (link.get("urlText") or link.get("subtitle")):
+                            collected_infos.append(text)
                 info_string = " +++ ".join(collected_infos)
 
                 for entry in departures:
@@ -179,6 +188,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         except Exception as e:
             _LOGGER.error("Linz AG Sensor Fehler: %s", e)
             raise UpdateFailed(f"Fehler beim Abrufen der Daten: {e}")
+
 
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, stop_id, name, entry_id, index):
