@@ -19,17 +19,34 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         self.found_stops = {}
 
     def _clean_name(self, text):
-        """Entfernt lästige Präfixe sicher, ohne echte Straßennamen zu beschädigen."""
+        """Entfernt Orts-Präfixe nur am Anfang, lässt sie am Ende stehen."""
         if not text: return "Unbekannt"
         
-        to_remove = ["Linz/Donau, ", "Linz/Donau", "Leonding, ", "Steyregg, ", "- Steyregg", "Steyregg", "Traun OÖ, ", "- Traun OÖ", "Traun OÖ", "Bergham b.Linz, ", "- Bergham b.Linz", "Bergham b.Linz"]
-        for r in to_remove:
-            text = text.replace(r, "")
-            
-        if text.startswith("Linz "):
-            text = text[5:]
-            
-        return text.replace(",", "").strip("- ").strip()
+        text = text.strip()
+        
+        # Ort-Präfixe (Stadt + Komma/Leerzeichen) NUR am ANFANG entfernen
+        prefixes = [
+            "Linz/Donau, ", "Linz/Donau ",
+            "Leonding, ",
+            "Steyregg, ",
+            "Traun OÖ, ", "Traun OÖ ",
+            "Bergham b.Linz, ",
+            "Linz, ", "Linz "
+        ]
+        
+        for p in prefixes:
+            if text.startswith(p):
+                text = text[len(p):]
+                break
+                
+        # Störende Suffixe bei Fahrtrichtungen entfernen
+        text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
+        
+        # Falls als Ziel exakt nur der Stadtname übergeben wird
+        if text == "Linz/Donau": text = "Linz"
+        if text == "Traun OÖ": text = "Traun"
+        
+        return text.strip(" ,-")
 
     async def async_step_user(self, user_input=None):
         """Erster Schritt: Auswahl zwischen Text- und Kartensuche."""
@@ -126,7 +143,6 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                             if clean_name and clean_name not in seen_names:
                                 seen_names.add(clean_name)
                                 
-                                # Fügt die Entfernung als Bonus für das Menü hinzu
                                 dist = p.get("distance")
                                 display_name = f"{clean_name} ({dist}m)" if dist else clean_name
                                 
@@ -197,13 +213,11 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             stop_id = user_input["stop_id"]
             stop_info = self.found_stops[stop_id]
             
-            # Wir speichern den sauberen Namen (ohne Meter-Angabe) für die Entitäten
             return self.async_create_entry(
                 title=stop_info["clean"],
                 data={"stop_id": stop_id, "name": stop_info["clean"]}
             )
 
-        # Dropdown Liste erstellen und alphabetisch nach Display-Name sortieren
         dropdown_options = {
             stop_id: info["display"] for stop_id, info in self.found_stops.items()
         }
