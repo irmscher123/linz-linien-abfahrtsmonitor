@@ -71,7 +71,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
     def _clean_name(self, text):
         if not text: return "Unbekannt"
-        to_remove = ["Linz/Donau", "- Steyregg", "Steyregg", "- Leonding", "Leonding", "- Traun OÖ", "Traun OÖ", "- Bergham b.Linz", "Bergham b.Linz"]
+        to_remove = ["Linz/Donau", "- Steyregg", "Steyregg", "Leonding,", "- Traun OÖ", "Traun OÖ", "- Bergham b.Linz", "Bergham b.Linz"]
         for r in to_remove:
             text = text.replace(r, "")
         return text.replace(",", "").strip("- ").strip()
