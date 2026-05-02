@@ -52,11 +52,27 @@ class GTFSHelper:
                 )
 
     def _clean_name(self, text):
-        if not text: return "Unbekannt"
-        to_remove = ["Linz/Donau", "- Steyregg", "Steyregg", "- Leonding", "Leonding", "- Traun OÖ", "Traun OÖ", "- Bergham b.Linz", "Bergham b.Linz"]
-        for r in to_remove:
-            text = text.replace(r, "")
-        return text.replace(",", "").strip("- ").strip()
+    if not text:
+        return "Unbekannt"
+    
+    text = text.strip()
+
+    # Wenn der Name mehrere Teile durch "|" getrennt hat, nimm nur den letzten Teil (z.B. 'Universität')
+    if "|" in text:
+        parts = [part.strip() for part in text.split("|")]
+        text = parts[-1]
+    
+    to_remove = [
+        "Linz/Donau", 
+        "- Steyregg", "Steyregg", 
+        "- Leonding", "Leonding", 
+        "- Traun OÖ", "Traun OÖ", 
+        "- Bergham b.Linz", "Bergham b.Linz"
+    ]
+    for r in to_remove:
+        text = text.replace(r, "")
+    
+    return text.replace(",", "").strip("- ").strip()
 
     def _process(self, routes, trips, stops, stop_times, calendar, calendar_dates):
         conn = sqlite3.connect(self.db_path)
