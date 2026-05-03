@@ -38,7 +38,16 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
             if text.startswith(p):
                 text = text[len(p):]
                 break
-                
+        # Eigene Behandlung für „JKU | “
+        if text.startswith("JKU | "):
+        # Entferne alleinstehenden „JKU | “
+        if text.strip() == "JKU |":
+            text = "Universität"
+        else:
+            # z.B. "JKU | Universität" -> "Universität"
+            text = text[len("JKU | "):]
+
+        
         # Störende Suffixe bei Fahrtrichtungen entfernen
         text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
         
