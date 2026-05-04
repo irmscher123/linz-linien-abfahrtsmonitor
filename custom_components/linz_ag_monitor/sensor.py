@@ -1,7 +1,4 @@
 import logging
-import async_timeout
-import asyncio
-import random
 from datetime import timedelta
 import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
@@ -27,7 +24,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     coordinator = LinzAGCoordinator(hass, session, stop_id, name, gtfs_helper)
     
-    await asyncio.sleep(random.uniform(1, 15))
+    # Pause wurde komplett entfernt, damit Home Assistant nicht blockiert!
     await coordinator.async_config_entry_first_refresh()
 
     entities = [LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i) for i in range(5)]
@@ -64,49 +61,47 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         try:
-            # 1. Hole alle Plandaten (auch die weite Zukunft) aus lokaler Datenbank
+            # 1. Hole alle Plandaten aus lokaler Datenbank
             departures = await self._gtfs_helper.get_next_departures(self._stop_id, limit=50)
             now = dt_util.now()
             
-            # 2. Hole aktuelle Live-Daten von der API
-            async with async_timeout.timeout(15):
-                response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False)
-                if response.status == 200:
-                    try:
-                        data = await response.json(content_type=None)
-                        events = data.get("stopEvents", [])
+            # 2. Hole aktuelle Live-Daten von der API (mit nativem Timeout, ohne async_timeout)
+            response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False, timeout=15)
+            if response.status == 200:
+                try:
+                    data = await response.json(content_type=None)
+                    events = data.get("stopEvents", [])
+                    
+                    # 3. Mische Live-Daten in den Plan
+                    for event in events:
+                        trans = event.get("transportation", {})
+                        planned_str = event.get("departureTimePlanned")
+                        estimated_str = event.get("departureTimeEstimated", planned_str)
+
+                        if not planned_str: continue
+
+                        dt_planned = dt_util.parse_datetime(planned_str)
+                        dt_estimated = dt_util.parse_datetime(estimated_str)
+                        p_time = dt_util.as_local(dt_planned).strftime("%H:%M")
+                        l_line = trans.get("number", trans.get("disassembledName", "?"))
+                        delay = round((dt_estimated - dt_planned).total_seconds() / 60)
                         
-                        # 3. Mische Live-Daten in den langfristigen Plan
-                        for event in events:
-                            trans = event.get("transportation", {})
-                            planned_str = event.get("departureTimePlanned")
-                            estimated_str = event.get("departureTimeEstimated", planned_str)
+                        infos = []
+                        for hint in event.get("hints", []):
+                            if content := hint.get("content"): infos.append(content)
+                        for info in event.get("infos", []):
+                            for link in info.get("infoLinks", []):
+                                if text := (link.get("urlText") or link.get("subtitle")): infos.append(text)
 
-                            if not planned_str: continue
-
-                            dt_planned = dt_util.parse_datetime(planned_str)
-                            dt_estimated = dt_util.parse_datetime(estimated_str)
-                            p_time = dt_util.as_local(dt_planned).strftime("%H:%M")
-                            l_line = trans.get("number", trans.get("disassembledName", "?"))
-                            delay = round((dt_estimated - dt_planned).total_seconds() / 60)
-                            
-                            infos = []
-                            for hint in event.get("hints", []):
-                                if content := hint.get("content"): infos.append(content)
-                            for info in event.get("infos", []):
-                                for link in info.get("infoLinks", []):
-                                    if text := (link.get("urlText") or link.get("subtitle")): infos.append(text)
-
-                            # Verknüpfe mit passendem GTFS-Eintrag
-                            for entry in departures:
-                                if entry["line"] == l_line and entry["scheduled"] == p_time:
-                                    entry["is_realtime"] = True
-                                    entry["delay"] = max(0, delay)
-                                    entry["cancelled"] = event.get("isCancelled", False)
-                                    entry["infos"] = " +++ ".join(infos)
-                                    break
-                    except Exception:
-                        pass # API Fehler ignorieren, Fallback auf GTFS
+                        for entry in departures:
+                            if entry["line"] == l_line and entry["scheduled"] == p_time:
+                                entry["is_realtime"] = True
+                                entry["delay"] = max(0, delay)
+                                entry["cancelled"] = event.get("isCancelled", False)
+                                entry["infos"] = " +++ ".join(infos)
+                                break
+                except Exception:
+                    pass
 
             # 4. Countdowns berechnen und filtern
             my_station_clean = self._clean_name(self.stop_name).lower()
