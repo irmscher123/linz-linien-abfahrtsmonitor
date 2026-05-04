@@ -18,16 +18,17 @@ class GTFSHelper:
         if not os.path.exists(self.db_dir):
             os.makedirs(self.db_dir)
         self.db_path = os.path.join(self.db_dir, "linzag_global.sqlite")
+        self.is_updating = False
 
     async def update_database_if_needed(self):
+        self.is_updating = True
         needs_update = True
         if os.path.exists(self.db_path):
             try:
                 def check_db():
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
-                    # Version 2.5 erzwingt die neue Regex-Reinigung
-                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_2_5'")
+                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_2_6'")
                     res = cursor.fetchone()[0]
                     conn.close()
                     return res > 0
@@ -37,8 +38,9 @@ class GTFSHelper:
                 pass
 
         if needs_update:
-            _LOGGER.warning("Datenbank-Update (Version 2.5) wird durchgeführt...")
+            _LOGGER.warning("Datenbank-Update (Version 2.6) wird durchgeführt...")
             await self.download_and_build_db()
+        self.is_updating = False
 
     async def _fetch_csv(self, session, filename):
         try:
@@ -66,16 +68,22 @@ class GTFSHelper:
 
     def _clean_name(self, text):
         if not text: return "Unbekannt"
+        # Entfernt LinzDonau, JKU und alles vor |
         if "|" in text: text = text.split("|")[-1]
-        # REGEX: Behält nur Buchstaben, Zahlen und Leerzeichen
-        text = re.sub(r'[^a-zA-Z0-9äöüÄÖÜß\s]', '', text)
-        text = text.replace("JKU", "").strip()
-        return text
+        text = text.replace("LinzDonau", "").replace("JKU", "").strip()
+        text = re.sub(r'^[^a-zA-Z0-9äöüÄÖÜß]+', '', text) # Führende Sonderzeichen weg
+        
+        prefixes = ["Linz Donau", "Leonding", "Steyregg", "Traun", "Bergham", "Linz"]
+        for p in prefixes:
+            if text.startswith(p):
+                text = text[len(p):].strip()
+                break
+        return text.strip(" .-,")
 
     def _process(self, routes, trips, stops, stop_times, calendar, calendar_dates):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_2_4", "db_version_2_5"]:
+        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_2_5", "db_version_2_6"]:
             cursor.execute(f"DROP TABLE IF EXISTS {table}")
         
         cursor.execute("CREATE TABLE routes (route_id TEXT PRIMARY KEY, route_short_name TEXT)")
@@ -84,7 +92,7 @@ class GTFSHelper:
         cursor.execute("CREATE TABLE stop_times (trip_id TEXT, departure_time TEXT, stop_id TEXT)")
         cursor.execute("CREATE TABLE calendar (service_id TEXT, monday INT, tuesday INT, wednesday INT, thursday INT, friday INT, saturday INT, sunday INT, start_date TEXT, end_date TEXT)")
         cursor.execute("CREATE TABLE calendar_dates (service_id TEXT, date TEXT, exception_type TEXT)")
-        cursor.execute("CREATE TABLE db_version_2_5 (version INT)")
+        cursor.execute("CREATE TABLE db_version_2_6 (version INT)")
 
         cursor.executemany("INSERT OR IGNORE INTO routes VALUES (?, ?)", [(r['route_id'], str(r.get('route_short_name', '?')).replace("*", "")) for r in routes])
         cursor.executemany("INSERT OR IGNORE INTO trips VALUES (?, ?, ?, ?)", [(t['trip_id'], t['route_id'], t['service_id'], self._clean_name(t.get('trip_headsign', 'Unbekannt'))) for t in trips])
@@ -102,7 +110,7 @@ class GTFSHelper:
         conn.close()
 
     async def get_next_departures(self, stop_name, limit=50):
-        if not os.path.exists(self.db_path): return []
+        if self.is_updating or not os.path.exists(self.db_path): return []
         now = datetime.now()
         now_str = now.strftime("%H:%M:%S")
         query_date = now - timedelta(days=1) if now.hour < 4 else now
@@ -111,29 +119,32 @@ class GTFSHelper:
         today_weekday = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][query_date.weekday()]
         
         def _query():
-            conn = sqlite3.connect(self.db_path)
-            valid_services = [row[0] for row in conn.execute(f"SELECT service_id FROM calendar WHERE {today_weekday} = 1 AND start_date <= ? AND end_date >= ?", (today_str, today_str))]
-            for row in conn.execute("SELECT service_id, exception_type FROM calendar_dates WHERE date = ?", (today_str,)):
-                if row[1] == '1': valid_services.append(row[0])
-                elif row[1] == '2' and row[0] in valid_services: valid_services.remove(row[0])
-            if not valid_services:
+            try:
+                conn = sqlite3.connect(self.db_path)
+                valid_services = [row[0] for row in conn.execute(f"SELECT service_id FROM calendar WHERE {today_weekday} = 1 AND start_date <= ? AND end_date >= ?", (today_str, today_str))]
+                for row in conn.execute("SELECT service_id, exception_type FROM calendar_dates WHERE date = ?", (today_str,)):
+                    if row[1] == '1': valid_services.append(row[0])
+                    elif row[1] == '2' and row[0] in valid_services: valid_services.remove(row[0])
+                if not valid_services:
+                    conn.close()
+                    return []
+                qs = ",".join("?" * len(valid_services))
+                query = f"""
+                    SELECT r.route_short_name, t.trip_headsign, s.departure_time 
+                    FROM stop_times s 
+                    JOIN trips t ON s.trip_id = t.trip_id 
+                    JOIN routes r ON t.route_id = r.route_id 
+                    JOIN stops st ON s.stop_id = st.stop_id
+                    WHERE st.stop_name LIKE ? AND s.departure_time >= ? 
+                    AND t.service_id IN ({qs})
+                    GROUP BY r.route_short_name, t.trip_headsign, s.departure_time
+                    ORDER BY s.departure_time ASC LIMIT ?
+                """
+                res = conn.execute(query, [f"%{stop_name}%", now_str] + list(set(valid_services)) + [limit]).fetchall()
                 conn.close()
+                return res
+            except sqlite3.OperationalError:
                 return []
-            qs = ",".join("?" * len(valid_services))
-            query = f"""
-                SELECT r.route_short_name, t.trip_headsign, s.departure_time 
-                FROM stop_times s 
-                JOIN trips t ON s.trip_id = t.trip_id 
-                JOIN routes r ON t.route_id = r.route_id 
-                JOIN stops st ON s.stop_id = st.stop_id
-                WHERE st.stop_name LIKE ? AND s.departure_time >= ? 
-                AND t.service_id IN ({qs})
-                GROUP BY r.route_short_name, t.trip_headsign, s.departure_time
-                ORDER BY s.departure_time ASC LIMIT ?
-            """
-            res = conn.execute(query, [f"%{stop_name}%", now_str] + list(set(valid_services)) + [limit]).fetchall()
-            conn.close()
-            return res
 
         rows = await self.hass.async_add_executor_job(_query)
         return [{"line": str(r[0]), "direction": r[1], "scheduled": f"{int(r[2].split(':')[0])%24:02d}:{r[2].split(':')[1]}", "countdown": 0, "delay": 0, "is_realtime": False, "cancelled": False, "infos": ""} for r in rows]
