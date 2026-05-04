@@ -14,10 +14,8 @@ class GTFSHelper:
     def __init__(self, hass):
         self.hass = hass
         self.db_dir = self.hass.config.path("linz_ag_gtfs")
-        
         if not os.path.exists(self.db_dir):
             os.makedirs(self.db_dir)
-            
         self.db_path = os.path.join(self.db_dir, "linzag_global.sqlite")
 
     async def update_database_if_needed(self):
@@ -27,20 +25,17 @@ class GTFSHelper:
                 def check_db():
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
-                    # Versions-Check 1.7: Erzwingt ein sauberes Update ohne Altlasten
-                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_1_7'")
+                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_1_8'")
                     res = cursor.fetchone()[0]
                     conn.close()
                     return res > 0
-                
                 is_current = await self.hass.async_add_executor_job(check_db)
-                if is_current:
-                    needs_update = False
+                if is_current: needs_update = False
             except Exception:
                 pass
 
         if needs_update:
-            _LOGGER.warning("Datenbank-Update (Version 1.7) wird im Hintergrund durchgeführt...")
+            _LOGGER.warning("Datenbank-Update (Version 1.8) wird im Hintergrund durchgeführt...")
             await self.download_and_build_db()
 
     async def _fetch_csv(self, session, filename):
@@ -57,19 +52,19 @@ class GTFSHelper:
         async with aiohttp.ClientSession() as session:
             routes = await self._fetch_csv(session, "routes.txt")
             trips = await self._fetch_csv(session, "trips.txt")
+            stops = await self._fetch_csv(session, "stops.txt")
             stop_times = await self._fetch_csv(session, "stop_times.txt")
             calendar = await self._fetch_csv(session, "calendar.txt")
             calendar_dates = await self._fetch_csv(session, "calendar_dates.txt")
 
-            if routes and trips and stop_times:
+            if routes and trips and stop_times and stops:
                 await self.hass.async_add_executor_job(
-                    self._process, routes, trips, stop_times, calendar, calendar_dates
+                    self._process, routes, trips, stops, stop_times, calendar, calendar_dates
                 )
 
     def _clean_name(self, text):
         if not text: return "Unbekannt"
         text = text.strip()
-        
         if text.startswith("JKU |"):
             if text.strip() == "JKU |": text = "Universität"
             else: text = text[len("JKU | "):]
@@ -89,29 +84,30 @@ class GTFSHelper:
                 break
                 
         suffixes = [" - Traun OÖ", " - Steyregg", " - Bergham b.Linz", " - Leonding"]
-        for s in suffixes:
-            text = text.replace(s, "")
+        for s in suffixes: text = text.replace(s, "")
             
         if text == "Linz/Donau": text = "Linz"
         if text == "Traun OÖ": text = "Traun"
         return text.strip(" ,-")
 
-    def _process(self, routes, trips, stop_times, calendar, calendar_dates):
+    def _process(self, routes, trips, stops, stop_times, calendar, calendar_dates):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_1_6", "db_version_1_7"]:
+        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_1_7", "db_version_1_8"]:
             cursor.execute(f"DROP TABLE IF EXISTS {table}")
         
         cursor.execute("CREATE TABLE routes (route_id TEXT PRIMARY KEY, route_short_name TEXT)")
         cursor.execute("CREATE TABLE trips (trip_id TEXT PRIMARY KEY, route_id TEXT, service_id TEXT, trip_headsign TEXT)")
+        cursor.execute("CREATE TABLE stops (stop_id TEXT PRIMARY KEY, stop_name TEXT)")
         cursor.execute("CREATE TABLE stop_times (trip_id TEXT, departure_time TEXT, stop_id TEXT)")
         cursor.execute("CREATE TABLE calendar (service_id TEXT, monday INT, tuesday INT, wednesday INT, thursday INT, friday INT, saturday INT, sunday INT, start_date TEXT, end_date TEXT)")
         cursor.execute("CREATE TABLE calendar_dates (service_id TEXT, date TEXT, exception_type TEXT)")
-        cursor.execute("CREATE TABLE db_version_1_7 (version INT)")
+        cursor.execute("CREATE TABLE db_version_1_8 (version INT)")
 
         cursor.executemany("INSERT OR IGNORE INTO routes VALUES (?, ?)", [(r['route_id'], r.get('route_short_name', '?')) for r in routes])
         cursor.executemany("INSERT OR IGNORE INTO trips VALUES (?, ?, ?, ?)", [(t['trip_id'], t['route_id'], t['service_id'], self._clean_name(t.get('trip_headsign', 'Unbekannt'))) for t in trips])
+        cursor.executemany("INSERT OR IGNORE INTO stops VALUES (?, ?)", [(s['stop_id'], s['stop_name']) for s in stops])
         cursor.executemany("INSERT INTO stop_times VALUES (?, ?, ?)", [(st['trip_id'], st['departure_time'], st['stop_id']) for st in stop_times])
         
         if calendar:
@@ -121,20 +117,16 @@ class GTFSHelper:
 
         cursor.execute("CREATE INDEX idx_st_stop ON stop_times (stop_id)")
         cursor.execute("CREATE INDEX idx_st_time ON stop_times (departure_time)")
-        
         conn.commit()
         conn.execute("VACUUM")
         conn.close()
 
-    # Parameter hier auf stop_id geändert
-    async def get_next_departures(self, stop_id, limit=30):
-        if not os.path.exists(self.db_path):
-            return []
+    async def get_next_departures(self, stop_name, limit=30):
+        if not os.path.exists(self.db_path): return []
         
         now = datetime.now()
         now_str = now.strftime("%H:%M:%S")
         query_date = now
-        
         if now.hour < 4: 
             now_str = f"{now.hour + 24:02d}:{now.strftime('%M:%S')}"
             query_date = now - timedelta(days=1)
@@ -146,7 +138,6 @@ class GTFSHelper:
         def _query():
             conn = sqlite3.connect(self.db_path)
             valid_services = set()
-            
             try:
                 c = conn.execute(f"SELECT service_id FROM calendar WHERE {today_weekday} = 1 AND start_date <= ? AND end_date >= ?", (today_str, today_str))
                 for row in c: valid_services.add(row[0])
@@ -164,20 +155,18 @@ class GTFSHelper:
                 return []
 
             qs = ",".join("?" * len(valid_services))
-            
-            # WICHTIG: Suche über stop_id mit LIKE, um Steige wie 4300301 zu erwischen!
-            # GROUP BY eliminiert weiterhin Duplikate.
             query = f"""
                 SELECT r.route_short_name, t.trip_headsign, s.departure_time 
                 FROM stop_times s 
                 JOIN trips t ON s.trip_id = t.trip_id 
                 JOIN routes r ON t.route_id = r.route_id 
-                WHERE s.stop_id LIKE ? AND s.departure_time >= ? 
+                JOIN stops st ON s.stop_id = st.stop_id
+                WHERE st.stop_name LIKE ? AND s.departure_time >= ? 
                 AND t.service_id IN ({qs})
                 GROUP BY r.route_short_name, t.trip_headsign, s.departure_time
                 ORDER BY s.departure_time ASC LIMIT ?
             """
-            params = [f"%{stop_id}%", now_str] + list(valid_services) + [limit]
+            params = [f"%{stop_name}%", now_str] + list(valid_services) + [limit]
             res = conn.execute(query, params).fetchall()
             conn.close()
             return res
@@ -185,8 +174,7 @@ class GTFSHelper:
         rows = await self.hass.async_add_executor_job(_query)
         return [
             {
-                # STERNCHEN-KILLER für die GTFS Daten
-                "line": str(r[0]).replace("*", ""),
+                "line": str(r[0]).replace("*", ""), # Sternchen bei GTFS Daten entfernen
                 "direction": r[1],
                 "scheduled": f"{int(r[2].split(':')[0])%24:02d}:{r[2].split(':')[1]}",
                 "countdown": 0,
