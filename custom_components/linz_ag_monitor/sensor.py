@@ -6,7 +6,6 @@ from datetime import datetime, timedelta
 import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity, UpdateFailed
 
 _LOGGER = logging.getLogger(__name__)
@@ -16,12 +15,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     name = config_entry.data.get("name")
     session = async_get_clientsession(hass)
     
-    # Nutzt den Helper, der in der __init__.py angelegt wurde
     from . import DOMAIN
     helper = hass.data[DOMAIN][config_entry.entry_id]
     
     coordinator = LinzAGCoordinator(hass, session, stop_id, name, helper)
-    await asyncio.sleep(random.uniform(1, 5))
+    # Spamschutz: Jede Haltestelle wartet beim Start unterschiedlich lang
+    await asyncio.sleep(random.uniform(2, 20))
     await coordinator.async_config_entry_first_refresh()
 
     entities = [LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i) for i in range(5)]
@@ -45,15 +44,18 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         try:
-            await self._gtfs_helper.update_database_if_needed()
             departures = await self._gtfs_helper.get_next_departures(limit=150)
             now = dt_util.now()
             max_api_horizon = 0
 
-            async with async_timeout.timeout(15):
-                params = {"sessionID": "0", "outputFormat": "rapidJSON", "depType": "stopEvents", "type_dm": "any", "name_dm": self._stop_id, "useRealtime": "1", "limit": "40"}
-                response = await self._session.get("https://www.linzag.at/static/XML_DM_REQUEST", params=params, ssl=False)
-                data = await response.json(content_type=None)
+            try:
+                async with async_timeout.timeout(20): # Höherer Timeout gegen den REST-Fehler
+                    params = {"sessionID": "0", "outputFormat": "rapidJSON", "depType": "stopEvents", "type_dm": "any", "name_dm": self._stop_id, "useRealtime": "1", "limit": "40"}
+                    response = await self._session.get("https://www.linzag.at/static/XML_DM_REQUEST", params=params, ssl=False)
+                    data = await response.json(content_type=None)
+            except Exception as e:
+                _LOGGER.warning("Timeout/API Fehler für %s (nutze Fahrplan): %s", self.stop_name, e)
+                data = {"stopEvents": []}
 
             events = data.get("stopEvents", [])
             for event in events:
@@ -67,14 +69,14 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 
                 max_api_horizon = max(max_api_horizon, int((dt_p - now).total_seconds() / 60))
                 
-                infos = [h.get("content") for h in event.get("hints", []) if h.get("content")]
+                hints = [h.get("content") for h in event.get("hints", []) if h.get("content")]
                 for info in event.get("infos", []):
                     for link in info.get("infoLinks", []):
-                        if txt := (link.get("urlText") or link.get("subtitle")): infos.append(txt)
+                        if txt := (link.get("urlText") or link.get("subtitle")): hints.append(txt)
 
                 for entry in departures:
                     if entry["line"] == l_line and entry["scheduled"] == p_time:
-                        entry.update({"is_realtime": True, "delay": max(0, delay), "cancelled": event.get("isCancelled", False), "infos": " +++ ".join(infos)})
+                        entry.update({"is_realtime": True, "delay": max(0, delay), "cancelled": event.get("isCancelled", False), "infos": " +++ ".join(hints)})
                         entry["direction"] = self._clean_name(event["transportation"].get("destination", {}).get("name", "Unbekannt"))
                         break
 
@@ -95,14 +97,14 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             return sorted(final_list, key=lambda x: x["countdown"])
         except Exception as e:
             _LOGGER.error("Linz AG Sensor Fehler: %s", e)
-            raise UpdateFailed(f"Fehler: {e}")
+            return []
 
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, stop_id, name, entry_id, index):
         super().__init__(coordinator)
         self._index, self._stop_id, self._name = index, stop_id, name
         self._attr_name = "Nächste Abfahrt" if index == 0 else f"Abfahrt {index + 1}"
-        self._attr_unique_id = f"linz_ag_{stop_id}_{entry_id}_{index}"
+        self._attr_unique_id = f"lin_ag_{stop_id}_{entry_id}_{index}"
 
     @property
     def state(self):
