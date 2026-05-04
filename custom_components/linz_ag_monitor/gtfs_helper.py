@@ -4,6 +4,7 @@ import logging
 import aiohttp
 import csv
 import io
+import re
 from datetime import datetime, timedelta
 
 _LOGGER = logging.getLogger(__name__)
@@ -25,7 +26,8 @@ class GTFSHelper:
                 def check_db():
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
-                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_2_4'")
+                    # Version 2.5 erzwingt die neue Regex-Reinigung
+                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_2_5'")
                     res = cursor.fetchone()[0]
                     conn.close()
                     return res > 0
@@ -35,7 +37,7 @@ class GTFSHelper:
                 pass
 
         if needs_update:
-            _LOGGER.warning("Datenbank-Update (Version 2.4) wird durchgeführt...")
+            _LOGGER.warning("Datenbank-Update (Version 2.5) wird durchgeführt...")
             await self.download_and_build_db()
 
     async def _fetch_csv(self, session, filename):
@@ -65,18 +67,15 @@ class GTFSHelper:
     def _clean_name(self, text):
         if not text: return "Unbekannt"
         if "|" in text: text = text.split("|")[-1]
-        text = text.replace("JKU", "").replace("|", "").strip()
-        prefixes = ["Linz/Donau, ", "Linz/Donau ", "Leonding ", "Steyregg ", "Traun OÖ ", "Traun ", "Bergham b.Linz ", "Linz "]
-        for p in prefixes:
-            if text.startswith(p):
-                text = text[len(p):]
-                break
-        return text.strip(" .-,")
+        # REGEX: Behält nur Buchstaben, Zahlen und Leerzeichen
+        text = re.sub(r'[^a-zA-Z0-9äöüÄÖÜß\s]', '', text)
+        text = text.replace("JKU", "").strip()
+        return text
 
     def _process(self, routes, trips, stops, stop_times, calendar, calendar_dates):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_2_3", "db_version_2_4"]:
+        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_2_4", "db_version_2_5"]:
             cursor.execute(f"DROP TABLE IF EXISTS {table}")
         
         cursor.execute("CREATE TABLE routes (route_id TEXT PRIMARY KEY, route_short_name TEXT)")
@@ -85,7 +84,7 @@ class GTFSHelper:
         cursor.execute("CREATE TABLE stop_times (trip_id TEXT, departure_time TEXT, stop_id TEXT)")
         cursor.execute("CREATE TABLE calendar (service_id TEXT, monday INT, tuesday INT, wednesday INT, thursday INT, friday INT, saturday INT, sunday INT, start_date TEXT, end_date TEXT)")
         cursor.execute("CREATE TABLE calendar_dates (service_id TEXT, date TEXT, exception_type TEXT)")
-        cursor.execute("CREATE TABLE db_version_2_4 (version INT)")
+        cursor.execute("CREATE TABLE db_version_2_5 (version INT)")
 
         cursor.executemany("INSERT OR IGNORE INTO routes VALUES (?, ?)", [(r['route_id'], str(r.get('route_short_name', '?')).replace("*", "")) for r in routes])
         cursor.executemany("INSERT OR IGNORE INTO trips VALUES (?, ?, ?, ?)", [(t['trip_id'], t['route_id'], t['service_id'], self._clean_name(t.get('trip_headsign', 'Unbekannt'))) for t in trips])
