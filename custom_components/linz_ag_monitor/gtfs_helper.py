@@ -18,7 +18,6 @@ class GTFSHelper:
         if not os.path.exists(self.db_dir):
             os.makedirs(self.db_dir)
             
-        # Nur noch EINE globale Datenbank für alle Sensoren
         self.db_path = os.path.join(self.db_dir, "linzag_global.sqlite")
 
     async def update_database_if_needed(self):
@@ -39,13 +38,14 @@ class GTFSHelper:
         async with aiohttp.ClientSession() as session:
             routes = await self._fetch_csv(session, "routes.txt")
             trips = await self._fetch_csv(session, "trips.txt")
+            stops = await self._fetch_csv(session, "stops.txt")  # Wieder hinzugefügt
             stop_times = await self._fetch_csv(session, "stop_times.txt")
             calendar = await self._fetch_csv(session, "calendar.txt")
             calendar_dates = await self._fetch_csv(session, "calendar_dates.txt")
 
-            if routes and trips and stop_times:
+            if routes and trips and stop_times and stops:
                 await self.hass.async_add_executor_job(
-                    self._process, routes, trips, stop_times, calendar, calendar_dates
+                    self._process, routes, trips, stops, stop_times, calendar, calendar_dates
                 )
 
     def _clean_name(self, text):
@@ -63,21 +63,23 @@ class GTFSHelper:
             text = text.replace(r, "")
         return text.replace(",", "").strip("- ").strip()
 
-    def _process(self, routes, trips, stop_times, calendar, calendar_dates):
+    def _process(self, routes, trips, stops, stop_times, calendar, calendar_dates):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
         
-        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates"]:
+        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops"]:
             cursor.execute(f"DROP TABLE IF EXISTS {table}")
         
         cursor.execute("CREATE TABLE routes (route_id TEXT PRIMARY KEY, route_short_name TEXT)")
         cursor.execute("CREATE TABLE trips (trip_id TEXT PRIMARY KEY, route_id TEXT, service_id TEXT, trip_headsign TEXT)")
+        cursor.execute("CREATE TABLE stops (stop_id TEXT PRIMARY KEY, stop_name TEXT)")
         cursor.execute("CREATE TABLE stop_times (trip_id TEXT, departure_time TEXT, stop_id TEXT)")
         cursor.execute("CREATE TABLE calendar (service_id TEXT, monday INT, tuesday INT, wednesday INT, thursday INT, friday INT, saturday INT, sunday INT, start_date TEXT, end_date TEXT)")
         cursor.execute("CREATE TABLE calendar_dates (service_id TEXT, date TEXT, exception_type TEXT)")
 
         cursor.executemany("INSERT OR IGNORE INTO routes VALUES (?, ?)", [(r['route_id'], r.get('route_short_name', '?')) for r in routes])
         cursor.executemany("INSERT OR IGNORE INTO trips VALUES (?, ?, ?, ?)", [(t['trip_id'], t['route_id'], t['service_id'], self._clean_name(t.get('trip_headsign', 'Unbekannt'))) for t in trips])
+        cursor.executemany("INSERT OR IGNORE INTO stops VALUES (?, ?)", [(s['stop_id'], s['stop_name']) for s in stops])
         cursor.executemany("INSERT INTO stop_times VALUES (?, ?, ?)", [(st['trip_id'], st['departure_time'], st['stop_id']) for st in stop_times])
         
         if calendar:
@@ -85,15 +87,14 @@ class GTFSHelper:
         if calendar_dates:
             cursor.executemany("INSERT INTO calendar_dates VALUES (?, ?, ?)", [(cd['service_id'], cd['date'], cd['exception_type']) for cd in calendar_dates])
 
-        # INDEXE MACHEN DIE DATENBANK EXTREM SCHNELL
-        cursor.execute("CREATE INDEX idx_st ON stop_times (stop_id, departure_time)")
-        cursor.execute("CREATE INDEX idx_trip ON trips (trip_id)")
+        cursor.execute("CREATE INDEX idx_st_stop ON stop_times (stop_id)")
+        cursor.execute("CREATE INDEX idx_st_time ON stop_times (departure_time)")
         
         conn.commit()
         conn.execute("VACUUM")
         conn.close()
 
-    async def get_next_departures(self, stop_id, limit=30):
+    async def get_next_departures(self, stop_name, limit=30):
         if not os.path.exists(self.db_path):
             return []
         
@@ -130,17 +131,20 @@ class GTFSHelper:
                 return []
 
             qs = ",".join("?" * len(valid_services))
-            # Frage explizit nach der übergebenen stop_id ab!
+            
+            # Suche über den Namen der Haltestelle statt über die ID
             query = f"""
                 SELECT r.route_short_name, t.trip_headsign, s.departure_time 
                 FROM stop_times s 
                 JOIN trips t ON s.trip_id = t.trip_id 
                 JOIN routes r ON t.route_id = r.route_id 
-                WHERE s.stop_id = ? AND s.departure_time >= ? 
+                JOIN stops st ON s.stop_id = st.stop_id
+                WHERE st.stop_name LIKE ? AND s.departure_time >= ? 
                 AND t.service_id IN ({qs})
                 ORDER BY s.departure_time ASC LIMIT ?
             """
-            params = [stop_id, now_str] + list(valid_services) + [limit]
+            # Füge % um den Namen herum hinzu, damit er auch Teil-Treffer (wie "Linz/Donau Taubenmarkt") findet
+            params = [f"%{stop_name}%", now_str] + list(valid_services) + [limit]
             res = conn.execute(query, params).fetchall()
             conn.close()
             return res
