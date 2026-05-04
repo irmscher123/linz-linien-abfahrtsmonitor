@@ -75,7 +75,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         try:
-            departures = await self._gtfs_helper.get_next_departures(self.stop_name, limit=50)
+            # WICHTIG: Wir suchen jetzt wieder exakt über die STOP_ID
+            departures = await self._gtfs_helper.get_next_departures(self._stop_id, limit=50)
             now = dt_util.now()
             
             response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False, timeout=15)
@@ -94,7 +95,10 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                         dt_planned = dt_util.parse_datetime(planned_str)
                         dt_estimated = dt_util.parse_datetime(estimated_str)
                         p_time = dt_util.as_local(dt_planned).strftime("%H:%M")
-                        l_line = trans.get("number", trans.get("disassembledName", "?"))
+                        
+                        # STERNCHEN-KILLER: Entfernt das * aus der Liniennummer der API
+                        l_line = str(trans.get("number", trans.get("disassembledName", "?"))).replace("*", "")
+                        
                         delay = round((dt_estimated - dt_planned).total_seconds() / 60)
                         
                         infos = []
@@ -162,7 +166,6 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
-        # HIER SIND DIE ATTRIBUTE FÜR DEIN DASHBOARD ZURÜCK!
         if self._index == 0 and self.coordinator.data:
             return {
                 "departureList": self.coordinator.data[:100], 
