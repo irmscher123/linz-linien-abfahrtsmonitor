@@ -16,10 +16,18 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     name = config_entry.data.get("name")
     gtfs_helper = hass.data[DOMAIN].get("gtfs_helper")
     coordinator = LinzAGCoordinator(hass, async_get_clientsession(hass), stop_id, name, gtfs_helper)
+    
+    # Warte bis GTFS Helper fertig ist
+    count = 0
+    while gtfs_helper.is_updating and count < 30:
+        await asyncio.sleep(5)
+        count += 1
+        
     try:
         await coordinator.async_config_entry_first_refresh()
     except Exception:
-        _LOGGER.warning("Erstes Laden für %s verzögert sich...", name)
+        _LOGGER.warning("Erstes Laden für %s verzögert...", name)
+        
     entities = [LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i) for i in range(19)]
     async_add_entities(entities, False)
 
@@ -31,20 +39,18 @@ class LinzAGCoordinator(DataUpdateCoordinator):
     def _clean_name(self, text):
         if not text: return ""
         if "|" in text: text = text.split("|")[-1]
-        # REGEX: Nur Buchstaben, Zahlen und Leerzeichen erlauben
-        text = re.sub(r'[^a-zA-Z0-9äöüÄÖÜß\s]', '', text)
-        return text.replace("JKU", "").strip()
+        text = text.replace("LinzDonau", "").replace("JKU", "").strip()
+        text = re.sub(r'^[^a-zA-Z0-9äöüÄÖÜß]+', '', text)
+        return text.strip(" .-,")
 
     async def _async_update_data(self):
         try:
-            # 1. Fahrplan laden
             departures = await self._gtfs_helper.get_next_departures(self.stop_name, limit=100)
             now = dt_util.now()
             max_api_horizon = 0
             
-            # 2. Live-Abfrage
             params = {"sessionID": "0", "outputFormat": "rapidJSON", "depType": "stopEvents", "type_dm": "any", "name_dm": self._stop_id, "useRealtime": "1", "limit": "40"}
-            async with asyncio.timeout(10):
+            async with asyncio.timeout(15):
                 response = await self._session.get("https://www.linzag.at/static/XML_DM_REQUEST", params=params, ssl=False)
                 if response.status == 200:
                     data = await response.json(content_type=None)
@@ -54,25 +60,17 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                         dt_p = dt_util.as_local(dt_util.parse_datetime(planned))
                         p_time = dt_p.strftime("%H:%M")
                         max_api_horizon = max(max_api_horizon, int((dt_p - now).total_seconds() / 60))
-                        
                         l_line = str(event["transportation"].get("number", "?")).replace("*", "")
                         delay = round((dt_util.parse_datetime(event.get("departureTimeEstimated", planned)) - dt_util.parse_datetime(planned)).total_seconds() / 60)
                         
-                        # Hinweistexte sammeln
                         infos = [h.get("content") for h in event.get("hints", []) if h.get("content")]
                         for info in event.get("infos", []):
                             for link in info.get("infoLinks", []):
                                 if txt := (link.get("urlText") or link.get("subtitle")): infos.append(txt)
 
                         for entry in departures:
-                            # Matching über Linie + geplante Uhrzeit
                             if entry["line"] == l_line and entry["scheduled"] == p_time:
-                                entry.update({
-                                    "is_realtime": True, 
-                                    "delay": max(0, delay), 
-                                    "cancelled": event.get("isCancelled", False),
-                                    "infos": " +++ ".join(infos)
-                                })
+                                entry.update({"is_realtime": True, "delay": max(0, delay), "cancelled": event.get("isCancelled", False), "infos": " +++ ".join(infos)})
                                 break
 
             final = []
@@ -97,12 +95,14 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
         self._index, self._stop_id, self._name = index, stop_id, name
         self._attr_unique_id = f"linz_ag_{stop_id}_{entry_id}_{index}"
         self._attr_name = f"Abfahrt {index + 1}"
+
     @property
     def state(self):
         deps = self.coordinator.data
         if not deps or len(deps) <= self._index: return "Keine Abfahrt"
         d = deps[self._index]
         return f"{d['line']} {d['direction']} {d['scheduled']} ({d['countdown']} Min)"
+
     @property
     def extra_state_attributes(self):
         if self._index == 0 and self.coordinator.data:
