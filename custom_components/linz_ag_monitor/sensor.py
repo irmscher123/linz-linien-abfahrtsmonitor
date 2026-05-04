@@ -1,110 +1,146 @@
 import logging
+import async_timeout
 import asyncio
-import re
-from datetime import timedelta
+import random
+from datetime import datetime, timedelta
 import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
+from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity, UpdateFailed
 
-from . import DOMAIN
+from .gtfs_helper import GTFSHelper
 
 _LOGGER = logging.getLogger(__name__)
+
+HEADERS = {
+    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
+    "Accept": "application/json"
+}
 
 async def async_setup_entry(hass, config_entry, async_add_entities):
     stop_id = config_entry.data.get("stop_id")
     name = config_entry.data.get("name")
-    gtfs_helper = hass.data[DOMAIN].get("gtfs_helper")
-    coordinator = LinzAGCoordinator(hass, async_get_clientsession(hass), stop_id, name, gtfs_helper)
-    
-    # Warte bis GTFS Helper fertig ist
-    count = 0
-    while gtfs_helper.is_updating and count < 30:
-        await asyncio.sleep(5)
-        count += 1
-        
-    try:
-        await coordinator.async_config_entry_first_refresh()
-    except Exception:
-        _LOGGER.warning("Erstes Laden für %s verzögert...", name)
-        
-    entities = [LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i) for i in range(19)]
+    session = async_get_clientsession(hass)
+    coordinator = LinzAGCoordinator(hass, session, stop_id, name)
+    await asyncio.sleep(random.uniform(1, 5))
+    await coordinator.async_config_entry_first_refresh()
+    entities = [LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i) for i in range(5)]
     async_add_entities(entities, False)
 
 class LinzAGCoordinator(DataUpdateCoordinator):
-    def __init__(self, hass, session, stop_id, name, gtfs_helper):
-        super().__init__(hass, _LOGGER, name=f"LinzAG {name}", update_interval=timedelta(seconds=60))
-        self._session, self._stop_id, self.stop_name, self._gtfs_helper = session, stop_id, name, gtfs_helper
+    def __init__(self, hass, session, stop_id, name):
+        super().__init__(hass, _LOGGER, name=f"LinzAG {name}", update_interval=timedelta(seconds=30))
+        self._session, self._stop_id, self.stop_name = session, stop_id, name
+        self._gtfs_helper = GTFSHelper(hass, stop_id, name)
+        self._url = "https://www.linzag.at/static/XML_DM_REQUEST"
+        self._params = {"sessionID": "0", "locationServerActive": "1", "outputFormat": "rapidJSON", "depType": "stopEvents", "type_dm": "any", "name_dm": self._stop_id, "mode": "direct", "useRealtime": "1", "limit": "40"}
 
     def _clean_name(self, text):
-        if not text: return ""
-        if "|" in text: text = text.split("|")[-1]
-        text = text.replace("LinzDonau", "").replace("JKU", "").strip()
-        text = re.sub(r'^[^a-zA-Z0-9äöüÄÖÜß]+', '', text)
-        return text.strip(" .-,")
+        if not text: return "Unbekannt"
+        text = text.strip()
+        # Fix für Sterne: JKU und Trenner entfernen
+        if "|" in text:
+            text = text.split("|")[-1].strip()
+        prefixes = ["Linz/Donau, ", "Linz/Donau ", "Leonding, ", "Steyregg, ", "Traun OÖ, ", "Traun OÖ ", "Bergham b.Linz, ", "Linz, ", "Linz "]
+        for p in prefixes:
+            if text.startswith(p):
+                text = text[len(p):]
+                break
+        text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
+        if text == "Linz/Donau": text = "Linz"
+        if text == "Traun OÖ": text = "Traun"
+        return text.strip(" ,-")
+
+    async def _nightly_gtfs_update(self, _now):
+        await self._gtfs_helper._download_and_build_db()
 
     async def _async_update_data(self):
         try:
-            departures = await self._gtfs_helper.get_next_departures(self.stop_name, limit=100)
+            await self._gtfs_helper.update_database_if_needed()
+            departures = await self._gtfs_helper.get_next_departures(limit=150)
             now = dt_util.now()
-            max_api_horizon = 0
-            
-            params = {"sessionID": "0", "outputFormat": "rapidJSON", "depType": "stopEvents", "type_dm": "any", "name_dm": self._stop_id, "useRealtime": "1", "limit": "40"}
-            async with asyncio.timeout(15):
-                response = await self._session.get("https://www.linzag.at/static/XML_DM_REQUEST", params=params, ssl=False)
-                if response.status == 200:
-                    data = await response.json(content_type=None)
-                    for event in data.get("stopEvents", []):
-                        planned = event.get("departureTimePlanned")
-                        if not planned: continue
-                        dt_p = dt_util.as_local(dt_util.parse_datetime(planned))
-                        p_time = dt_p.strftime("%H:%M")
-                        max_api_horizon = max(max_api_horizon, int((dt_p - now).total_seconds() / 60))
-                        l_line = str(event["transportation"].get("number", "?")).replace("*", "")
-                        delay = round((dt_util.parse_datetime(event.get("departureTimeEstimated", planned)) - dt_util.parse_datetime(planned)).total_seconds() / 60)
-                        
-                        infos = [h.get("content") for h in event.get("hints", []) if h.get("content")]
-                        for info in event.get("infos", []):
-                            for link in info.get("infoLinks", []):
-                                if txt := (link.get("urlText") or link.get("subtitle")): infos.append(txt)
+            max_api_horizon = 0 # Horizont für Phantom-Filter
 
-                        for entry in departures:
-                            if entry["line"] == l_line and entry["scheduled"] == p_time:
-                                entry.update({"is_realtime": True, "delay": max(0, delay), "cancelled": event.get("isCancelled", False), "infos": " +++ ".join(infos)})
-                                break
+            async with async_timeout.timeout(15):
+                response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False)
+                data = await response.json(content_type=None)
 
-            final = []
-            for d in departures:
-                h, m = map(int, d["scheduled"].split(":"))
+            events = data.get("stopEvents", [])
+            for event in events:
+                trans = event.get("transportation", {})
+                planned_str = event.get("departureTimePlanned")
+                estimated_str = event.get("departureTimeEstimated", planned_str)
+                if not planned_str: continue
+
+                dt_planned = dt_util.parse_datetime(planned_str)
+                dt_estimated = dt_util.parse_datetime(estimated_str)
+                p_time = dt_util.as_local(dt_planned).strftime("%H:%M")
+                l_line = str(trans.get("number", trans.get("disassembledName", "?"))).replace("*", "")
+                delay = round((dt_estimated - dt_planned).total_seconds() / 60)
+                
+                # Horizont tracken
+                max_api_horizon = max(max_api_horizon, int((dt_planned - now).total_seconds() / 60))
+
+                collected_infos = [hint.get("content") for hint in event.get("hints", []) if hint.get("content")]
+                for info in event.get("infos", []):
+                    for link in info.get("infoLinks", []):
+                        if txt := (link.get("urlText") or link.get("subtitle")): collected_infos.append(txt)
+
+                for entry in departures:
+                    if entry["line"] == l_line and entry["scheduled"] == p_time:
+                        entry.update({"is_realtime": True, "delay": max(0, delay), "cancelled": event.get("isCancelled", False), "infos": " +++ ".join(collected_infos)})
+                        entry["direction"] = self._clean_name(trans.get("destination", {}).get("name", "Unbekannt"))
+                        break
+
+            my_station_clean = self._clean_name(self.stop_name).lower()
+            filtered_departures = []
+            for entry in departures:
+                h, m = map(int, entry["scheduled"].split(":"))
                 sched_ts = now.replace(hour=h, minute=m, second=0, microsecond=0)
-                if sched_ts < now and h < 4: sched_ts += timedelta(days=1)
-                diff = int((sched_ts - now).total_seconds() / 60)
-                if diff < (max_api_horizon - 2) and not d.get("is_realtime"): continue
-                cd = diff + d.get("delay", 0)
-                if cd >= -1:
-                    d["countdown"] = max(0, cd)
-                    final.append(d)
-            return sorted(final, key=lambda x: x["countdown"])
+                if sched_ts < now and now.hour > 12 and h < 12: sched_ts += timedelta(days=1)
+                
+                diff_to_plan = int((sched_ts - now).total_seconds() / 60)
+                
+                # PHANTOM FILTER: Wenn in API-Fenster aber nicht in API gefunden -> löschen
+                if diff_to_plan < (max_api_horizon - 2) and not entry["is_realtime"]:
+                    continue
+
+                entry["countdown"] = max(0, diff_to_plan + entry.get("delay", 0))
+                if entry["direction"].lower() != my_station_clean:
+                    filtered_departures.append(entry)
+
+            return sorted(filtered_departures, key=lambda x: x["countdown"])
         except Exception as e:
-            _LOGGER.error("Update Fehler: %s", e)
-            return []
+            _LOGGER.error("Linz AG Sensor Fehler: %s", e)
+            raise UpdateFailed(f"Fehler: {e}")
 
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, stop_id, name, entry_id, index):
         super().__init__(coordinator)
         self._index, self._stop_id, self._name = index, stop_id, name
+        self._attr_device_info = {"identifiers": {("linz_ag_monitor", stop_id)}, "name": name, "manufacturer": "Linz AG Monitor"}
+        self._attr_has_entity_name = True
+        self._attr_name = "Nächste Abfahrt" if index == 0 else f"Abfahrt {index + 1}"
         self._attr_unique_id = f"linz_ag_{stop_id}_{entry_id}_{index}"
-        self._attr_name = f"Abfahrt {index + 1}"
+        self._attr_icon = "mdi:tram"
+
+    async def async_added_to_hass(self):
+        await super().async_added_to_hass()
+        if self._index == 0:
+            self.async_on_remove(async_track_time_change(self.hass, self.coordinator._nightly_gtfs_update, hour=2, minute=0, second=0))
 
     @property
     def state(self):
-        deps = self.coordinator.data
-        if not deps or len(deps) <= self._index: return "Keine Abfahrt"
-        d = deps[self._index]
-        return f"{d['line']} {d['direction']} {d['scheduled']} ({d['countdown']} Min)"
+        departures = self.coordinator.data
+        if not departures or len(departures) <= self._index: return "Keine Abfahrt"
+        dep = departures[self._index]
+        if dep.get("cancelled"): return f"{dep['line']} {dep['direction']} (Fällt aus)"
+        if dep["countdown"] == 0: return f"{dep['line']} {dep['direction']} (Jetzt)"
+        return f"{dep['line']} {dep['direction']} {dep['scheduled']} ({dep['countdown']} Min)"
 
     @property
     def extra_state_attributes(self):
         if self._index == 0 and self.coordinator.data:
-            return {"departureList": self.coordinator.data, "stop_name": self._name, "station_name": self._name}
+            return {"departureList": self.coordinator.data[:100], "stop_id": self._stop_id, "station_name": self._name, "last_update": dt_util.now().strftime("%H:%M:%S")}
         return {}
