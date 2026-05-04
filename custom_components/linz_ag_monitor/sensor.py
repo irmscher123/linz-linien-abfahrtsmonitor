@@ -1,5 +1,6 @@
 import logging
 import asyncio
+import re
 from datetime import timedelta
 import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
@@ -30,14 +31,18 @@ class LinzAGCoordinator(DataUpdateCoordinator):
     def _clean_name(self, text):
         if not text: return ""
         if "|" in text: text = text.split("|")[-1]
-        return text.replace("JKU", "").replace("|", "").strip(" .-,")
+        # REGEX: Nur Buchstaben, Zahlen und Leerzeichen erlauben
+        text = re.sub(r'[^a-zA-Z0-9äöüÄÖÜß\s]', '', text)
+        return text.replace("JKU", "").strip()
 
     async def _async_update_data(self):
         try:
+            # 1. Fahrplan laden
             departures = await self._gtfs_helper.get_next_departures(self.stop_name, limit=100)
             now = dt_util.now()
             max_api_horizon = 0
             
+            # 2. Live-Abfrage
             params = {"sessionID": "0", "outputFormat": "rapidJSON", "depType": "stopEvents", "type_dm": "any", "name_dm": self._stop_id, "useRealtime": "1", "limit": "40"}
             async with asyncio.timeout(10):
                 response = await self._session.get("https://www.linzag.at/static/XML_DM_REQUEST", params=params, ssl=False)
@@ -49,16 +54,18 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                         dt_p = dt_util.as_local(dt_util.parse_datetime(planned))
                         p_time = dt_p.strftime("%H:%M")
                         max_api_horizon = max(max_api_horizon, int((dt_p - now).total_seconds() / 60))
+                        
                         l_line = str(event["transportation"].get("number", "?")).replace("*", "")
                         delay = round((dt_util.parse_datetime(event.get("departureTimeEstimated", planned)) - dt_util.parse_datetime(planned)).total_seconds() / 60)
                         
+                        # Hinweistexte sammeln
                         infos = [h.get("content") for h in event.get("hints", []) if h.get("content")]
                         for info in event.get("infos", []):
                             for link in info.get("infoLinks", []):
                                 if txt := (link.get("urlText") or link.get("subtitle")): infos.append(txt)
 
                         for entry in departures:
-                            # Fehlertoleranter Abgleich: Zeit + Linie müssen stimmen
+                            # Matching über Linie + geplante Uhrzeit
                             if entry["line"] == l_line and entry["scheduled"] == p_time:
                                 entry.update({
                                     "is_realtime": True, 
