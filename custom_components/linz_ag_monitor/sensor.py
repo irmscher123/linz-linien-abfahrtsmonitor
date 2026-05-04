@@ -19,12 +19,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     name = config_entry.data.get("name")
     session = async_get_clientsession(hass)
     
-    # Hole den globalen GTFS Helper aus der __init__.py
     gtfs_helper = hass.data[DOMAIN].get("gtfs_helper")
-    
     coordinator = LinzAGCoordinator(hass, session, stop_id, name, gtfs_helper)
     
-    # Pause wurde komplett entfernt, damit Home Assistant nicht blockiert!
     await coordinator.async_config_entry_first_refresh()
 
     entities = [LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i) for i in range(5)]
@@ -49,30 +46,44 @@ class LinzAGCoordinator(DataUpdateCoordinator):
     def _clean_name(self, text):
         if not text: return "Unbekannt"
         text = text.strip()
-        prefixes = ["Linz/Donau, ", "Linz/Donau ", "Leonding, ", "Steyregg, ", "Traun OÖ, ", "Traun OÖ ", "Bergham b.Linz, ", "Linz, ", "Linz "]
+        
+        if text.startswith("JKU |"):
+            if text.strip() == "JKU |": text = "Universität"
+            else: text = text[len("JKU | "):]
+        elif "|" in text:
+            parts = [part.strip() for part in text.split("|")]
+            text = parts[-1]
+            
+        prefixes = [
+            "Linz/Donau, ", "Linz/Donau ", "Leonding, ", "Leonding ",
+            "Steyregg, ", "Steyregg ", "Traun OÖ, ", "Traun OÖ ", 
+            "Traun, ", "Traun ", "Bergham b.Linz, ", "Bergham b.Linz ",
+            "Linz, ", "Linz "
+        ]
         for p in prefixes:
             if text.startswith(p):
                 text = text[len(p):]
                 break
-        text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
+                
+        suffixes = [" - Traun OÖ", " - Steyregg", " - Bergham b.Linz", " - Leonding"]
+        for s in suffixes:
+            text = text.replace(s, "")
+            
         if text == "Linz/Donau": text = "Linz"
         if text == "Traun OÖ": text = "Traun"
         return text.strip(" ,-")
 
     async def _async_update_data(self):
         try:
-            # 1. Hole alle Plandaten aus lokaler Datenbank
             departures = await self._gtfs_helper.get_next_departures(self.stop_name, limit=50)
             now = dt_util.now()
             
-            # 2. Hole aktuelle Live-Daten von der API (mit nativem Timeout, ohne async_timeout)
             response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False, timeout=15)
             if response.status == 200:
                 try:
                     data = await response.json(content_type=None)
                     events = data.get("stopEvents", [])
                     
-                    # 3. Mische Live-Daten in den Plan
                     for event in events:
                         trans = event.get("transportation", {})
                         planned_str = event.get("departureTimePlanned")
@@ -103,7 +114,6 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 except Exception:
                     pass
 
-            # 4. Countdowns berechnen und filtern
             my_station_clean = self._clean_name(self.stop_name).lower()
             final_departures = []
             
@@ -152,10 +162,14 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
+        # HIER SIND DIE ATTRIBUTE FÜR DEIN DASHBOARD ZURÜCK!
         if self._index == 0 and self.coordinator.data:
             return {
                 "departureList": self.coordinator.data[:100], 
+                "stop_id": self._stop_id,
+                "stop_name": self._name,
                 "station": self._name,
+                "station_name": self._name,
                 "last_update": dt_util.now().strftime("%H:%M:%S")
             }
         return {}
