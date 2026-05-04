@@ -48,13 +48,20 @@ class GTFSHelper:
     def _clean_name(self, text):
         if not text: return "Unbekannt"
         text = text.strip()
+        # Entfernt alles vor und inklusive dem Strich (auch mit Leerzeichen danach)
         if "|" in text:
             text = text.split("|")[-1].strip()
-        prefixes = ["Linz/Donau, ", "Linz/Donau ", "Leonding, ", "Steyregg, ", "Traun OÖ, ", "Traun OÖ ", "Bergham b.Linz, ", "Linz, ", "Linz "]
+        
+        prefixes = ["Linz/Donau, ", "Linz/Donau ", "Leonding, ", "Leonding ", "Steyregg, ", "Steyregg ", "Traun OÖ, ", "Traun OÖ ", "Bergham b.Linz, ", "Linz, ", "Linz "]
         for p in prefixes:
             if text.startswith(p):
                 text = text[len(p):]
                 break
+        
+        to_remove = ["- Steyregg", "- Leonding", "- Traun OÖ", "- Bergham b.Linz"]
+        for r in to_remove:
+            text = text.replace(r, "")
+        
         return text.strip(" ,-")
 
     def _process(self, routes, trips, stops, stop_times, calendar, calendar_dates):
@@ -69,15 +76,8 @@ class GTFSHelper:
         cursor.execute("CREATE TABLE calendar (service_id TEXT, monday INT, tuesday INT, wednesday INT, thursday INT, friday INT, saturday INT, sunday INT, start_date TEXT, end_date TEXT)")
         cursor.execute("CREATE TABLE calendar_dates (service_id TEXT, date TEXT, exception_type TEXT)")
 
-        cursor.executemany(
-            "INSERT OR IGNORE INTO routes VALUES (?, ?)",
-            [(r['route_id'], str(r.get('route_short_name', '?')).replace("*", "")) for r in routes]
-        )
-        
-        cursor.executemany(
-            "INSERT OR IGNORE INTO trips VALUES (?, ?, ?, ?)",
-            [(t['trip_id'], t['route_id'], t['service_id'], self._clean_name(t.get('trip_headsign', 'Unbekannt'))) for t in trips]
-        )
+        cursor.executemany("INSERT OR IGNORE INTO routes VALUES (?, ?)", [(r['route_id'], str(r.get('route_short_name', '?')).replace("*", "")) for r in routes])
+        cursor.executemany("INSERT OR IGNORE INTO trips VALUES (?, ?, ?, ?)", [(t['trip_id'], t['route_id'], t['service_id'], self._clean_name(t.get('trip_headsign', 'Unbekannt'))) for t in trips])
         
         valid_ids = {s['stop_id'] for s in stops if self.stop_name.lower() in s['stop_name'].lower()}
         filtered_st = [(st['trip_id'], st['departure_time'], st['stop_id']) for st in stop_times if st['stop_id'] in valid_ids]
@@ -97,13 +97,13 @@ class GTFSHelper:
         now = datetime.now()
         now_str = now.strftime("%H:%M:%S")
         query_date = now
+        # Tageswechsel-Logik (Fahrten zwischen 00:00 und 04:00 gehören zum Vortag)
         if now.hour < 4: 
             now_str = f"{now.hour + 24:02d}:{now.strftime('%M:%S')}"
             query_date = now - timedelta(days=1)
             
         today_str = query_date.strftime("%Y%m%d")
-        weekdays = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"]
-        today_weekday = weekdays[query_date.weekday()]
+        today_weekday = ["monday", "tuesday", "wednesday", "thursday", "friday", "saturday", "sunday"][query_date.weekday()]
         
         def _query():
             conn = sqlite3.connect(self.db_path)
@@ -111,8 +111,6 @@ class GTFSHelper:
             try:
                 c = conn.execute(f"SELECT service_id FROM calendar WHERE {today_weekday} = 1 AND start_date <= ? AND end_date >= ?", (today_str, today_str))
                 for row in c: valid_services.add(row[0])
-            except Exception: pass
-            try:
                 c = conn.execute("SELECT service_id, exception_type FROM calendar_dates WHERE date = ?", (today_str,))
                 for row in c:
                     if row[1] == '1': valid_services.add(row[0])
@@ -129,8 +127,7 @@ class GTFSHelper:
                 FROM stop_times s 
                 JOIN trips t ON s.trip_id = t.trip_id 
                 JOIN routes r ON t.route_id = r.route_id 
-                WHERE s.departure_time >= ? 
-                AND t.service_id IN ({qs})
+                WHERE s.departure_time >= ? AND t.service_id IN ({qs})
                 ORDER BY s.departure_time ASC LIMIT ?
             """
             res = conn.execute(query, [now_str] + list(valid_services) + [limit]).fetchall()
@@ -138,4 +135,4 @@ class GTFSHelper:
             return res
 
         rows = await self.hass.async_add_executor_job(_query)
-        return [{"line": r[0], "direction": r[1], "scheduled": f"{int(r[2].split(':')[0])%24:02d}:{r[2].split(':')[1]}", "countdown": 0, "delay": 0, "is_realtime": False} for r in rows]
+        return [{"line": r[0], "direction": r[1], "scheduled": f"{int(r[2].split(':')[0])%24:02d}:{r[2].split(':')[1]}", "countdown": 0, "delay": 0, "is_realtime": False, "infos": ""} for r in rows]
