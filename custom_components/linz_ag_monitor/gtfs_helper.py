@@ -19,15 +19,14 @@ class GTFSHelper:
         self.db_path = os.path.join(self.db_dir, "linzag_global.sqlite")
 
     async def update_database_if_needed(self):
-        """Prüft beim Start, ob die DB existiert und aktuell ist."""
         needs_update = True
         if os.path.exists(self.db_path):
             try:
                 def check_db():
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
-                    # Version 2.2 erzwingt den Neubau für saubere Namen ohne '| '
-                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_2_2'")
+                    # Version 2.3 erzwingt radikale Reinigung
+                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_2_3'")
                     res = cursor.fetchone()[0]
                     conn.close()
                     return res > 0
@@ -37,7 +36,7 @@ class GTFSHelper:
                 pass
 
         if needs_update:
-            _LOGGER.warning("Datenbank-Update (Version 2.2) wird durchgeführt...")
+            _LOGGER.warning("Datenbank-Update (Version 2.3) wird durchgeführt...")
             await self.download_and_build_db()
 
     async def _fetch_csv(self, session, filename):
@@ -65,23 +64,30 @@ class GTFSHelper:
                 )
 
     def _clean_name(self, text):
-        """Entfernt alles bis inklusive '| ' und bereinigt JKU-Reste."""
+        """Radikale Reinigung: Löscht alles inklusive Sonderzeichen vor dem Ziel."""
         if not text: return "Unbekannt"
-        text = text.strip()
+        
+        # 1. Alles vor und inklusive '|' wegschmeißen
         if "|" in text:
-            text = text.split("|")[-1].strip()
-        text = text.replace("JKU", "").strip()
+            text = text.split("|")[-1]
+            
+        # 2. Bekannte JKU-Präfixe und Sonderzeichen hart löschen
+        text = text.replace("JKU", "").replace("|", "").strip()
+        
+        # 3. Bekannte Ortspräfixe löschen
         prefixes = ["Linz/Donau, ", "Linz/Donau ", "Leonding ", "Steyregg ", "Traun OÖ ", "Traun ", "Bergham b.Linz ", "Linz "]
         for p in prefixes:
             if text.startswith(p):
                 text = text[len(p):]
                 break
-        return text.replace(",", "").strip(" -")
+        
+        # 4. Finaler Trimm (löscht führende Leerzeichen/Punkte/Striche)
+        return text.strip(" .-,")
 
     def _process(self, routes, trips, stops, stop_times, calendar, calendar_dates):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_2_1", "db_version_2_2"]:
+        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_2_2", "db_version_2_3"]:
             cursor.execute(f"DROP TABLE IF EXISTS {table}")
         
         cursor.execute("CREATE TABLE routes (route_id TEXT PRIMARY KEY, route_short_name TEXT)")
@@ -90,7 +96,7 @@ class GTFSHelper:
         cursor.execute("CREATE TABLE stop_times (trip_id TEXT, departure_time TEXT, stop_id TEXT)")
         cursor.execute("CREATE TABLE calendar (service_id TEXT, monday INT, tuesday INT, wednesday INT, thursday INT, friday INT, saturday INT, sunday INT, start_date TEXT, end_date TEXT)")
         cursor.execute("CREATE TABLE calendar_dates (service_id TEXT, date TEXT, exception_type TEXT)")
-        cursor.execute("CREATE TABLE db_version_2_2 (version INT)")
+        cursor.execute("CREATE TABLE db_version_2_3 (version INT)")
 
         cursor.executemany("INSERT OR IGNORE INTO routes VALUES (?, ?)", [(r['route_id'], str(r.get('route_short_name', '?')).replace("*", "")) for r in routes])
         cursor.executemany("INSERT OR IGNORE INTO trips VALUES (?, ?, ?, ?)", [(t['trip_id'], t['route_id'], t['service_id'], self._clean_name(t.get('trip_headsign', 'Unbekannt'))) for t in trips])
