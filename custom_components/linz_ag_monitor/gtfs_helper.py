@@ -25,11 +25,14 @@ class GTFSHelper:
             await self._download_and_build_db()
 
     async def _fetch_csv(self, session, filename):
-        async with session.get(f"{BASE_GTFS_URL}/{filename}") as response:
-            if response.status == 200:
-                text = await response.text(encoding='utf-8-sig')
-                return list(csv.DictReader(io.StringIO(text)))
+        try:
+            async with session.get(f"{BASE_GTFS_URL}/{filename}") as response:
+                if response.status == 200:
+                    text = await response.text(encoding='utf-8-sig')
+                    return list(csv.DictReader(io.StringIO(text)))
+        except Exception:
             return []
+        return []
 
     async def _download_and_build_db(self):
         async with aiohttp.ClientSession() as session:
@@ -48,16 +51,22 @@ class GTFSHelper:
     def _clean_name(self, text):
         if not text: return "Unbekannt"
         text = text.strip()
-        # Entfernt alles vor und inklusive dem Strich (auch mit Leerzeichen danach)
+        # Entfernt alles vor und inklusive dem Strich |
         if "|" in text:
             text = text.split("|")[-1].strip()
         
-        prefixes = ["Linz/Donau, ", "Linz/Donau ", "Leonding, ", "Leonding ", "Steyregg, ", "Steyregg ", "Traun OÖ, ", "Traun OÖ ", "Bergham b.Linz, ", "Linz, ", "Linz "]
+        # Präfixe am ANFANG entfernen (Leonding, Steyregg etc.)
+        prefixes = [
+            "Linz/Donau, ", "Linz/Donau ", "Leonding, ", "Leonding ", 
+            "Steyregg, ", "Steyregg ", "Traun OÖ, ", "Traun OÖ ", 
+            "Bergham b.Linz, ", "Linz, ", "Linz "
+        ]
         for p in prefixes:
             if text.startswith(p):
                 text = text[len(p):]
                 break
         
+        # Suffixe entfernen
         to_remove = ["- Steyregg", "- Leonding", "- Traun OÖ", "- Bergham b.Linz"]
         for r in to_remove:
             text = text.replace(r, "")
@@ -97,7 +106,6 @@ class GTFSHelper:
         now = datetime.now()
         now_str = now.strftime("%H:%M:%S")
         query_date = now
-        # Tageswechsel-Logik (Fahrten zwischen 00:00 und 04:00 gehören zum Vortag)
         if now.hour < 4: 
             now_str = f"{now.hour + 24:02d}:{now.strftime('%M:%S')}"
             query_date = now - timedelta(days=1)
