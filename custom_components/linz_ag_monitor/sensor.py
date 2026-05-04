@@ -28,23 +28,16 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         self._session, self._stop_id, self.stop_name, self._gtfs_helper = session, stop_id, name, gtfs_helper
 
     def _clean_name(self, text):
-        """Radikale Reinigung für API-Daten."""
-        if not text: return "Unbekannt"
-        if "|" in text:
-            text = text.split("|")[-1]
-        text = text.replace("JKU", "").replace("|", "").strip()
-        prefixes = ["Linz/Donau, ", "Linz/Donau ", "Leonding ", "Steyregg ", "Traun OÖ ", "Traun ", "Bergham b.Linz ", "Linz "]
-        for p in prefixes:
-            if text.startswith(p):
-                text = text[len(p):]
-                break
-        return text.strip(" .-,")
+        if not text: return ""
+        if "|" in text: text = text.split("|")[-1]
+        return text.replace("JKU", "").replace("|", "").strip(" .-,")
 
     async def _async_update_data(self):
         try:
             departures = await self._gtfs_helper.get_next_departures(self.stop_name, limit=100)
             now = dt_util.now()
             max_api_horizon = 0
+            
             params = {"sessionID": "0", "outputFormat": "rapidJSON", "depType": "stopEvents", "type_dm": "any", "name_dm": self._stop_id, "useRealtime": "1", "limit": "40"}
             async with asyncio.timeout(10):
                 response = await self._session.get("https://www.linzag.at/static/XML_DM_REQUEST", params=params, ssl=False)
@@ -58,10 +51,23 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                         max_api_horizon = max(max_api_horizon, int((dt_p - now).total_seconds() / 60))
                         l_line = str(event["transportation"].get("number", "?")).replace("*", "")
                         delay = round((dt_util.parse_datetime(event.get("departureTimeEstimated", planned)) - dt_util.parse_datetime(planned)).total_seconds() / 60)
+                        
+                        infos = [h.get("content") for h in event.get("hints", []) if h.get("content")]
+                        for info in event.get("infos", []):
+                            for link in info.get("infoLinks", []):
+                                if txt := (link.get("urlText") or link.get("subtitle")): infos.append(txt)
+
                         for entry in departures:
+                            # Fehlertoleranter Abgleich: Zeit + Linie müssen stimmen
                             if entry["line"] == l_line and entry["scheduled"] == p_time:
-                                entry.update({"is_realtime": True, "delay": max(0, delay), "cancelled": event.get("isCancelled", False)})
+                                entry.update({
+                                    "is_realtime": True, 
+                                    "delay": max(0, delay), 
+                                    "cancelled": event.get("isCancelled", False),
+                                    "infos": " +++ ".join(infos)
+                                })
                                 break
+
             final = []
             for d in departures:
                 h, m = map(int, d["scheduled"].split(":"))
@@ -75,7 +81,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                     final.append(d)
             return sorted(final, key=lambda x: x["countdown"])
         except Exception as e:
-            raise UpdateFailed(f"Update Fehler: {e}")
+            _LOGGER.error("Update Fehler: %s", e)
+            return []
 
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, stop_id, name, entry_id, index):
