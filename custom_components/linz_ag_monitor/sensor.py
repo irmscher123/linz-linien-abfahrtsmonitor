@@ -2,14 +2,11 @@ import logging
 import async_timeout
 import asyncio
 import random
-from datetime import datetime, timedelta
+from datetime import timedelta
 import homeassistant.util.dt as dt_util
 from homeassistant.components.sensor import SensorEntity
 from homeassistant.helpers.aiohttp_client import async_get_clientsession
-from homeassistant.helpers.event import async_track_time_change
 from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, CoordinatorEntity, UpdateFailed
-
-from .gtfs_helper import GTFSHelper
 
 _LOGGER = logging.getLogger(__name__)
 
@@ -19,7 +16,6 @@ HEADERS = {
     "Accept": "application/json"
 }
 
-
 async def async_setup_entry(hass, config_entry, async_add_entities):
     stop_id = config_entry.data.get("stop_id")
     name = config_entry.data.get("name")
@@ -28,9 +24,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     coordinator = LinzAGCoordinator(hass, session, stop_id, name)
     
     # ---------------------------------------------------------
-    # SPAMSCHUTZ: Warteschlange beim Start (Thundering Herd Protection)
-    # Verhindert, dass bei 20 Haltestellen alle in der selben 
-    # Millisekunde feuern und die Firewall der Linz AG auslösen.
+    # SPAMSCHUTZ: Warteschlange beim Start 
+    # Verhindert, dass alle Haltestellen zeitgleich feuern
     # ---------------------------------------------------------
     await asyncio.sleep(random.uniform(1, 15))
     
@@ -49,12 +44,11 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"LinzAG {name}",
-            update_interval=timedelta(seconds=30)
+            update_interval=timedelta(seconds=60) # Erhöht auf 60s wegen API Limits bei vielen Sensoren
         )
         self._session = session
         self._stop_id = stop_id
         self.stop_name = name
-        self._gtfs_helper = GTFSHelper(hass, stop_id, name)
         self._url = "https://www.linzag.at/static/XML_DM_REQUEST"
         self._params = {
             "sessionID": "0",
@@ -98,19 +92,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         
         return text.strip(" ,-")
 
-    async def _nightly_gtfs_update(self, _now):
-        _LOGGER.info("Starte nächtliches GTFS-Update für %s...", self.stop_name)
-        await self._gtfs_helper._download_and_build_db()
-
     async def _async_update_data(self):
         try:
-            await self._gtfs_helper.update_database_if_needed()
-            departures = await self._gtfs_helper.get_next_departures(limit=150)
-            
-            for entry in departures:
-                entry["infos"] = ""
-                entry["cancelled"] = False
-
             async with async_timeout.timeout(15):
                 response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False)
                 
@@ -124,6 +107,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
             events = data.get("stopEvents", [])
             now = dt_util.now()
+            departures = []
+            my_station_clean = self._clean_name(self.stop_name).lower()
 
             for event in events:
                 trans = event.get("transportation", {})
@@ -139,7 +124,15 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 p_time = dt_util.as_local(dt_planned).strftime("%H:%M")
                 l_line = trans.get("number", trans.get("disassembledName", "?"))
                 delay = round((dt_estimated - dt_planned).total_seconds() / 60)
+                
+                raw_direction = trans.get("destination", {}).get("name", "Unbekannt")
+                direction_clean = self._clean_name(raw_direction)
 
+                # Eigene Haltestelle als Richtung herausfiltern
+                if direction_clean.lower() == my_station_clean:
+                    continue
+
+                # Infos und Störungsmeldungen sammeln
                 collected_infos = []
                 for hint in event.get("hints", []):
                     if content := hint.get("content"):
@@ -150,38 +143,27 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                             collected_infos.append(text)
                 info_string = " +++ ".join(collected_infos)
 
-                for entry in departures:
-                    if entry["line"] == l_line and entry["scheduled"] == p_time:
-                        entry["is_realtime"] = True
-                        entry["delay"] = max(0, delay)
-                        entry["cancelled"] = event.get("isCancelled", False)
-                        entry["infos"] = info_string
-                        
-                        raw_direction = trans.get("destination", {}).get("name", "Unbekannt")
-                        entry["direction"] = self._clean_name(raw_direction)
-                        break
-
-            my_station_clean = self._clean_name(self.stop_name).lower()
-            filtered_departures = []
-            
-            for entry in departures:
-                h, m = map(int, entry["scheduled"].split(":"))
-                sched_ts = now.replace(hour=h, minute=m, second=0, microsecond=0)
+                # Countdown basierend auf geschätzter Live-Zeit berechnen
+                cd_minutes = int((dt_estimated - now).total_seconds() / 60)
                 
-                if sched_ts < now and now.hour > 12 and h < 12:
-                    sched_ts += timedelta(days=1)
-                
-                diff = int((sched_ts - now).total_seconds() / 60) + entry.get("delay", 0)
-                entry["countdown"] = max(0, diff)
-                
-                dest_clean = entry["direction"].lower()
-                if dest_clean == my_station_clean:
+                # Abfahrten, die bereits über 1 Minute in der Vergangenheit liegen, ignorieren
+                if cd_minutes < -1:
                     continue
-                    
-                filtered_departures.append(entry)
 
-            filtered_departures.sort(key=lambda x: x["countdown"])
-            return filtered_departures
+                departures.append({
+                    "line": l_line,
+                    "direction": direction_clean,
+                    "scheduled": p_time,
+                    "countdown": max(0, cd_minutes),
+                    "delay": max(0, delay),
+                    "is_realtime": "departureTimeEstimated" in event,
+                    "cancelled": event.get("isCancelled", False),
+                    "infos": info_string
+                })
+
+            # Sortieren nach echter Wartezeit
+            departures.sort(key=lambda x: x["countdown"])
+            return departures
 
         except UpdateFailed:
             raise
@@ -213,17 +195,6 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
             
         self._attr_unique_id = f"linz_ag_{stop_id}_{entry_id}_{index}"
         self._attr_icon = "mdi:tram"
-
-    async def async_added_to_hass(self):
-        await super().async_added_to_hass()
-        if self._index == 0:
-            self.async_on_remove(
-                async_track_time_change(
-                    self.hass, 
-                    self.coordinator._nightly_gtfs_update, 
-                    hour=2, minute=0, second=0
-                )
-            )
 
     @property
     def state(self):
