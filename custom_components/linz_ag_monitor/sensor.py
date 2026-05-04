@@ -62,7 +62,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
     async def _async_update_data(self):
         try:
             # 1. Hole alle Plandaten aus lokaler Datenbank
-            departures = await self._gtfs_helper.get_next_departures(self._stop_id, limit=50)
+            departures = await self._gtfs_helper.get_next_departures(self.stop_name, limit=50)
             now = dt_util.now()
             
             # 2. Hole aktuelle Live-Daten von der API (mit nativem Timeout, ohne async_timeout)
