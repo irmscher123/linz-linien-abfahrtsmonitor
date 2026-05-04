@@ -26,8 +26,8 @@ class GTFSHelper:
                 def check_db():
                     conn = sqlite3.connect(self.db_path)
                     cursor = conn.cursor()
-                    # Version 2.1 erzwingt den Neubau mit der aggressiven Namensbereinigung
-                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_2_1'")
+                    # Version 2.2 erzwingt den Neubau für saubere Namen ohne '| '
+                    cursor.execute("SELECT count(*) FROM sqlite_master WHERE type='table' AND name='db_version_2_2'")
                     res = cursor.fetchone()[0]
                     conn.close()
                     return res > 0
@@ -37,7 +37,7 @@ class GTFSHelper:
                 pass
 
         if needs_update:
-            _LOGGER.warning("Datenbank-Update (Version 2.1) wird durchgeführt...")
+            _LOGGER.warning("Datenbank-Update (Version 2.2) wird durchgeführt...")
             await self.download_and_build_db()
 
     async def _fetch_csv(self, session, filename):
@@ -65,7 +65,7 @@ class GTFSHelper:
                 )
 
     def _clean_name(self, text):
-        """Aggressive Reinigung für JKU und Präfixe."""
+        """Entfernt alles bis inklusive '| ' und bereinigt JKU-Reste."""
         if not text: return "Unbekannt"
         text = text.strip()
         if "|" in text:
@@ -81,7 +81,7 @@ class GTFSHelper:
     def _process(self, routes, trips, stops, stop_times, calendar, calendar_dates):
         conn = sqlite3.connect(self.db_path)
         cursor = conn.cursor()
-        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_1_9", "db_version_2_1"]:
+        for table in ["stop_times", "trips", "routes", "calendar", "calendar_dates", "stops", "db_version_2_1", "db_version_2_2"]:
             cursor.execute(f"DROP TABLE IF EXISTS {table}")
         
         cursor.execute("CREATE TABLE routes (route_id TEXT PRIMARY KEY, route_short_name TEXT)")
@@ -90,7 +90,7 @@ class GTFSHelper:
         cursor.execute("CREATE TABLE stop_times (trip_id TEXT, departure_time TEXT, stop_id TEXT)")
         cursor.execute("CREATE TABLE calendar (service_id TEXT, monday INT, tuesday INT, wednesday INT, thursday INT, friday INT, saturday INT, sunday INT, start_date TEXT, end_date TEXT)")
         cursor.execute("CREATE TABLE calendar_dates (service_id TEXT, date TEXT, exception_type TEXT)")
-        cursor.execute("CREATE TABLE db_version_2_1 (version INT)")
+        cursor.execute("CREATE TABLE db_version_2_2 (version INT)")
 
         cursor.executemany("INSERT OR IGNORE INTO routes VALUES (?, ?)", [(r['route_id'], str(r.get('route_short_name', '?')).replace("*", "")) for r in routes])
         cursor.executemany("INSERT OR IGNORE INTO trips VALUES (?, ?, ?, ?)", [(t['trip_id'], t['route_id'], t['service_id'], self._clean_name(t.get('trip_headsign', 'Unbekannt'))) for t in trips])
