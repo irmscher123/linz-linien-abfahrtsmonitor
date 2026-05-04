@@ -48,21 +48,14 @@ class GTFSHelper:
     def _clean_name(self, text):
         if not text: return "Unbekannt"
         text = text.strip()
-        # Aggressive JKU und Trenner-Bereinigung
         if "|" in text:
             text = text.split("|")[-1].strip()
-        
         prefixes = ["Linz/Donau, ", "Linz/Donau ", "Leonding, ", "Steyregg, ", "Traun OÖ, ", "Traun OÖ ", "Bergham b.Linz, ", "Linz, ", "Linz "]
         for p in prefixes:
             if text.startswith(p):
                 text = text[len(p):]
                 break
-        
-        to_remove = ["- Steyregg", "Steyregg", "- Leonding", "Leonding", "- Traun OÖ", "Traun OÖ", "- Bergham b.Linz", "Bergham b.Linz"]
-        for r in to_remove:
-            text = text.replace(r, "")
-        
-        return text.replace(",", "").strip("- ").strip()
+        return text.strip(" ,-")
 
     def _process(self, routes, trips, stops, stop_times, calendar, calendar_dates):
         conn = sqlite3.connect(self.db_path)
@@ -76,7 +69,6 @@ class GTFSHelper:
         cursor.execute("CREATE TABLE calendar (service_id TEXT, monday INT, tuesday INT, wednesday INT, thursday INT, friday INT, saturday INT, sunday INT, start_date TEXT, end_date TEXT)")
         cursor.execute("CREATE TABLE calendar_dates (service_id TEXT, date TEXT, exception_type TEXT)")
 
-        # Korrektur: Liniennummern von Sternchen befreien
         cursor.executemany(
             "INSERT OR IGNORE INTO routes VALUES (?, ?)",
             [(r['route_id'], str(r.get('route_short_name', '?')).replace("*", "")) for r in routes]
@@ -98,7 +90,6 @@ class GTFSHelper:
 
         cursor.execute("CREATE INDEX idx_st ON stop_times (stop_id, departure_time)")
         conn.commit()
-        conn.execute("VACUUM")
         conn.close()
 
     async def get_next_departures(self, limit=150):
