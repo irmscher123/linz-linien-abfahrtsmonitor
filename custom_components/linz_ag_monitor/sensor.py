@@ -23,7 +23,12 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     coordinator = LinzAGCoordinator(hass, session, stop_id, name)
     
+    # ---------------------------------------------------------
+    # SPAMSCHUTZ: Warteschlange beim Start 
+    # Verhindert, dass alle Haltestellen zeitgleich feuern
+    # ---------------------------------------------------------
     await asyncio.sleep(random.uniform(1, 15))
+    
     await coordinator.async_config_entry_first_refresh()
 
     entities = []
@@ -32,13 +37,14 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         
     async_add_entities(entities, False)
 
+
 class LinzAGCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, session, stop_id, name):
         super().__init__(
             hass,
             _LOGGER,
             name=f"LinzAG {name}",
-            update_interval=timedelta(seconds=60)
+            update_interval=timedelta(seconds=60) # Erhöht auf 60s wegen API Limits bei vielen Sensoren
         )
         self._session = session
         self._stop_id = stop_id
@@ -57,13 +63,15 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         }
 
     def _clean_name(self, text):
+        """Entfernt Orts-Präfixe nur am Anfang, lässt sie am Ende stehen."""
         if not text:
             return "Unbekannt"
         
         text = text.strip()
+        
         prefixes = [
             "Linz/Donau, ", "Linz/Donau ",
-            "Leonding, ", "Rufling, ",
+            "Leonding, ",
             "Steyregg, ",
             "Traun OÖ, ", "Traun OÖ ",
             "Bergham b.Linz, ",
@@ -76,7 +84,6 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 break
                 
         text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
-        text = text.replace("JKU | ", "")
         
         if text == "Linz/Donau":
             text = "Linz"
@@ -121,9 +128,11 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 raw_direction = trans.get("destination", {}).get("name", "Unbekannt")
                 direction_clean = self._clean_name(raw_direction)
 
+                # Eigene Haltestelle als Richtung herausfiltern
                 if direction_clean.lower() == my_station_clean:
                     continue
 
+                # Infos und Störungsmeldungen sammeln
                 collected_infos = []
                 for hint in event.get("hints", []):
                     if content := hint.get("content"):
@@ -134,8 +143,10 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                             collected_infos.append(text)
                 info_string = " +++ ".join(collected_infos)
 
+                # Countdown basierend auf geschätzter Live-Zeit berechnen
                 cd_minutes = int((dt_estimated - now).total_seconds() / 60)
                 
+                # Abfahrten, die bereits über 1 Minute in der Vergangenheit liegen, ignorieren
                 if cd_minutes < -1:
                     continue
 
@@ -150,6 +161,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                     "infos": info_string
                 })
 
+            # Sortieren nach echter Wartezeit
             departures.sort(key=lambda x: x["countdown"])
             return departures
 
@@ -158,6 +170,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         except Exception as e:
             _LOGGER.error("Linz AG Sensor Fehler: %s", e)
             raise UpdateFailed(f"Fehler beim Abrufen der Daten: {e}")
+
 
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, stop_id, name, entry_id, index):
@@ -173,14 +186,12 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
             "model": "Haltestelle"
         }
         
-        # WICHTIG: False zwingt Home Assistant, den Haltestellennamen nicht abzuschneiden!
-        self._attr_has_entity_name = False
+        self._attr_has_entity_name = True
         
-        # WICHTIG: Hier steht {name} mit drin, damit die ID "sensor.mozartschule_abfahrt_2" wird
         if index == 0:
-            self._attr_name = f"{name} Nächste Abfahrt"
+            self._attr_name = "Nächste Abfahrt"
         else:
-            self._attr_name = f"{name} Abfahrt {index + 1}"
+            self._attr_name = f"Abfahrt {index + 1}"
             
         self._attr_unique_id = f"linz_ag_{stop_id}_{entry_id}_{index}"
         self._attr_icon = "mdi:tram"
