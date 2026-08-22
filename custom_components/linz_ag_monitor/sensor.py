@@ -187,14 +187,14 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
             "model": "Haltestelle"
         }
         
-        self._attr_has_entity_name = True
+        self._attr_has_entity_name = False
         
         if index == 0:
-            self._attr_name = "Nächste Abfahrt"
+            self._attr_name = f"{name} Nächste Abfahrt"
         else:
-            self._attr_name = f"Abfahrt {index + 1}"
+            self._attr_name = f"{name} Abfahrt {index + 1}"
             
-        self._attr_unique_id = f"linz_ag_{stop_id}_{index}"
+        self._attr_unique_id = f"linz_ag_{stop_id}_{entry_id}_{index}"
         self._attr_icon = "mdi:tram"
 
     @property
