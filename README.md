@@ -89,3 +89,7 @@ font_size: 20
 dest_size: 18
 filter: "1,2"
 sortierung: "echtzeit"
+
+
+## Frontend Karte (Linz Linien Card)
+Die Custom Lovelace Card (`linz-linien-combined.js`) ist jetzt direkt in dieser Integration enthalten und wird **automatisch** geladen. Eine manuelle Installation der Karte ist nicht mehr erforderlich!
