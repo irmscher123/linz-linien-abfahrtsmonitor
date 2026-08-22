@@ -187,7 +187,7 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
             "model": "Haltestelle"
         }
         
-        self._attr_has_entity_name = False
+        self.has_entity_name = False
         
         if index == 0:
             self._attr_name = f"{name} Nächste Abfahrt"
