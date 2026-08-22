@@ -71,7 +71,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         
         prefixes = [
             "Linz/Donau, ", "Linz/Donau ",
-            "Leonding, ", "Rufling, ",
+            "Leonding, ",
             "Steyregg, ",
             "Traun OÖ, ", "Traun OÖ ",
             "Bergham b.Linz, ",
@@ -84,7 +84,6 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 break
                 
         text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
-        text = text.replace("JKU | ", "")
         
         if text == "Linz/Donau":
             text = "Linz"
@@ -187,7 +186,8 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
             "model": "Haltestelle"
         }
         
-        self.has_entity_name = False
+        # WICHTIG: Muss False sein, damit die Haltestelle zwingend im Namen auftaucht
+        self._attr_has_entity_name = False
         
         if index == 0:
             self._attr_name = f"{name} Nächste Abfahrt"
