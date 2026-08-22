@@ -1,15 +1,13 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.5-blue.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-1.6-blue.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
-
-
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/logo2026.png" width="200" alt="Linz Linien Logo">
 
-<img src="https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/dashboards.png" width="800" alt="Linz Linien Dashboards">
+<img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/dashboards.png" width="800" alt="Linz Linien Dashboards">
 
 **Der moderne Abfahrtsmonitor für Home Assistant.**  
 Live‑Daten der Linz AG Linien, smarte Hybrid-Berechnung, einfache Einrichtung und hochgradig anpassbare Dashboard‑Karten.
@@ -50,18 +48,11 @@ Bevor Sie Dashboard‑Karten nutzen, fügen Sie bitte zunächst die Integration 
 
 ---
 
-## 📥 Dashboard‑Karten (separates Repo) 🗂️
+## 📥 Dashboard‑Karten (Integriert) 🗂️
 
-Die Dashboard‑Karten (UI/JS‑Dateien) werden für eine saubere Code-Basis in einem separaten Repository verwaltet:  
-👉 **[github.com/irmscher123/linz-linien-card](https://github.com/irmscher123/linz-linien-card)**
+Die Custom Lovelace Card (`linz-linien-combined.js`) ist jetzt direkt in dieser Integration enthalten und wird **automatisch** geladen. Eine manuelle Installation der Karte oder ein separates Repository ist nicht mehr erforderlich!
 
-**Installationsmöglichkeiten für die Dashboard‑Karten:**
-- **Option 1 — HACS (empfohlen):**  
-  Fügen Sie das UI‑Repo als "Custom Repository" in HACS hinzu (Kategorie: Lovelace / Frontend) und installieren Sie die Karte.  
-- **Option 2 — Manuell (Download Raw):**  
-  Laden Sie `linz-monitor-combined.js` herunter und speichern Sie die Datei in `/config/www/`. Fügen Sie sie in Lovelace unter Ressourcen als *JavaScript Module* hinzu (`/local/linz-monitor-combined.js`).  
-
-*Hinweis zur Migration:* Falls Sie noch die alten separaten v1/v2/v3 JS-Dateien nutzen, entfernen Sie diese bitte aus Ihren Ressourcen und nutzen Sie ab sofort nur noch die neue `linz-monitor-combined.js`.
+*Hinweis zur Migration:* Falls Sie noch die alten separaten v1/v2/v3 JS-Dateien nutzen, entfernen Sie diese bitte aus Ihren Ressourcen und nutzen Sie ab sofort nur noch die neue kombinierte Karte.
 
 ---
 
@@ -69,7 +60,7 @@ Die Dashboard‑Karten (UI/JS‑Dateien) werden für eine saubere Code-Basis in 
 
 | Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) | LED-Wall |
 | :---: | :---: | :---: | :---: |
-| ![v1 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v1.png) | ![v2 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v2.png) | ![v3 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/v3.png) | ![led-wall Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-card/main/pictures/ledwall.png) |
+| ![v1 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/v1.png) | ![v2 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/v2.png) | ![v3 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/v3.png) | ![led-wall Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/ledwall.png) |
 
 ---
 
@@ -89,7 +80,3 @@ font_size: 20
 dest_size: 18
 filter: "1,2"
 sortierung: "echtzeit"
-
-
-## Frontend Karte (Linz Linien Card)
-Die Custom Lovelace Card (`linz-linien-combined.js`) ist jetzt direkt in dieser Integration enthalten und wird **automatisch** geladen. Eine manuelle Installation der Karte ist nicht mehr erforderlich!
