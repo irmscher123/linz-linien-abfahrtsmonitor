@@ -23,16 +23,10 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     coordinator = LinzAGCoordinator(hass, session, stop_id, name)
     
-    # Kurze Pause beim Start
-    await asyncio.sleep(random.uniform(0.5, 2.0))
-    
     await coordinator.async_config_entry_first_refresh()
 
-    entities = []
-    for i in range(5):
-        entities.append(LinzAGDepartureSensor(coordinator, stop_id, name, i))
-        
-    async_add_entities(entities, False)
+    # Erstellt nur mehr genau EINE Entitaet pro Haltestelle (wie frueher)
+    async_add_entities([LinzAGDepartureSensor(coordinator, stop_id, name)], False)
 
 
 class LinzAGCoordinator(DataUpdateCoordinator):
@@ -41,7 +35,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"LinzAG {name}",
-            update_interval=timedelta(seconds=60)
+            update_interval=timedelta(seconds=10) # 10 Sekunden Live-Sync
         )
         self._session = session
         self._stop_id = stop_id
@@ -60,7 +54,6 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         }
 
     def _clean_name(self, text):
-        """Entfernt Orts-Praefixe nur am Anfang."""
         if not text:
             return "Unbekannt"
         
@@ -100,7 +93,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 try:
                     data = await response.json(content_type=None)
                 except Exception:
-                    raise UpdateFailed("API blockiert / liefert kein gueltiges JSON (Spamschutz aktiv)")
+                    raise UpdateFailed("API blockiert / liefert kein gueltiges JSON")
 
             events = data.get("stopEvents", [])
             now = dt_util.now()
@@ -165,9 +158,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
 
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
-    def __init__(self, coordinator, stop_id, name, index):
+    def __init__(self, coordinator, stop_id, name):
         super().__init__(coordinator)
-        self._index = index
         self._stop_id = stop_id
         self._name = name
         
@@ -180,36 +172,33 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
         
         self._attr_has_entity_name = False
         
-        if index == 0:
-            self._attr_name = f"{name} Nächste Abfahrt"
-        else:
-            self._attr_name = f"{name} Abfahrt {index + 1}"
+        # Exakter Name wie frueher
+        self._attr_name = f"{name} nächste Abfahrt"
             
-        self._attr_unique_id = f"linz_ag_{stop_id}_{index}"
+        # Saubere Unique ID
+        self._attr_unique_id = f"linz_ag_{stop_id}"
         self._attr_icon = "mdi:tram"
 
     @property
     def state(self):
         departures = self.coordinator.data
-        if not departures or len(departures) <= self._index:
-            return "Keine Abfahrt"
+        if not departures or len(departures) == 0:
+            return "Keine Abfahrten"
             
-        dep = departures[self._index]
+        dep = departures[0]
         line = dep["line"]
         direction = dep["direction"]
-        sched = dep["scheduled"]
-        cd = dep["countdown"]
         
         if dep.get("cancelled"):
             return f"{line} {direction} (Fällt aus)"
-        elif cd == 0:
+        elif dep["countdown"] == 0:
             return f"{line} {direction} (Jetzt)"
         else:
-            return f"{line} {direction} {sched} ({cd} Min)"
+            return f"{line} {direction} ({dep['countdown']} Min)"
 
     @property
     def extra_state_attributes(self):
-        if self._index == 0 and self.coordinator.data:
+        if self.coordinator.data:
             return {
                 "departureList": self.coordinator.data[:100], 
                 "stop_id": self._stop_id,
