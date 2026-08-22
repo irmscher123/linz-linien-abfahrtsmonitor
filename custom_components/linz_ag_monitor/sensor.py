@@ -71,7 +71,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         
         prefixes = [
             "Linz/Donau, ", "Linz/Donau ",
-            "Leonding, ",
+            "Leonding, ", "Rufling, ",
             "Steyregg, ",
             "Traun OÖ, ", "Traun OÖ ",
             "Bergham b.Linz, ",
@@ -84,6 +84,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 break
                 
         text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
+        text = text.replace("JKU | ", "")
         
         if text == "Linz/Donau":
             text = "Linz"
@@ -186,12 +187,12 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
             "model": "Haltestelle"
         }
         
-        self._attr_has_entity_name = False
+        self._attr_has_entity_name = True
         
         if index == 0:
-            self._attr_name = f"{name} nächste Abfahrt"
+            self._attr_name = "Nächste Abfahrt"
         else:
-            self._attr_name = f"{name} Abfahrt {index + 1}"
+            self._attr_name = f"Abfahrt {index + 1}"
             
         self._attr_unique_id = f"linz_ag_{stop_id}_{index}"
         self._attr_icon = "mdi:tram"
