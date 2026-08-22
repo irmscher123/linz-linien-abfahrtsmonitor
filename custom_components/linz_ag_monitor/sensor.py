@@ -23,13 +23,19 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     coordinator = LinzAGCoordinator(hass, session, stop_id, name)
     
-    # Kurze Pause beim Start, um die API zu schonen
-    await asyncio.sleep(random.uniform(0.5, 2.0))
+    # ---------------------------------------------------------
+    # SPAMSCHUTZ: Warteschlange beim Start 
+    # Verhindert, dass alle Haltestellen zeitgleich feuern
+    # ---------------------------------------------------------
+    await asyncio.sleep(random.uniform(1, 15))
     
     await coordinator.async_config_entry_first_refresh()
 
-    # Erstellt nur mehr genau EINE Entitaet pro Haltestelle (wie frueher)
-    async_add_entities([LinzAGDepartureSensor(coordinator, stop_id, name)], False)
+    entities = []
+    for i in range(5):
+        entities.append(LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i))
+        
+    async_add_entities(entities, False)
 
 
 class LinzAGCoordinator(DataUpdateCoordinator):
@@ -38,7 +44,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             hass,
             _LOGGER,
             name=f"LinzAG {name}",
-            update_interval=timedelta(seconds=10) # 10 Sekunden Live-Sync
+            update_interval=timedelta(seconds=60) # Erhöht auf 60s wegen API Limits bei vielen Sensoren
         )
         self._session = session
         self._stop_id = stop_id
@@ -53,10 +59,11 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             "name_dm": self._stop_id,
             "mode": "direct",
             "useRealtime": "1",
-            "limit": "40" # Holt bis zu 40 Abfahrten
+            "limit": "40"
         }
 
     def _clean_name(self, text):
+        """Entfernt Orts-Präfixe nur am Anfang, lässt sie am Ende stehen."""
         if not text:
             return "Unbekannt"
         
@@ -96,7 +103,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 try:
                     data = await response.json(content_type=None)
                 except Exception:
-                    raise UpdateFailed("API blockiert / liefert kein gueltiges JSON")
+                    raise UpdateFailed("API blockiert / liefert kein gültiges JSON (Spamschutz aktiv)")
 
             events = data.get("stopEvents", [])
             now = dt_util.now()
@@ -121,9 +128,11 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 raw_direction = trans.get("destination", {}).get("name", "Unbekannt")
                 direction_clean = self._clean_name(raw_direction)
 
+                # Eigene Haltestelle als Richtung herausfiltern
                 if direction_clean.lower() == my_station_clean:
                     continue
 
+                # Infos und Störungsmeldungen sammeln
                 collected_infos = []
                 for hint in event.get("hints", []):
                     if content := hint.get("content"):
@@ -134,8 +143,10 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                             collected_infos.append(text)
                 info_string = " +++ ".join(collected_infos)
 
+                # Countdown basierend auf geschätzter Live-Zeit berechnen
                 cd_minutes = int((dt_estimated - now).total_seconds() / 60)
                 
+                # Abfahrten, die bereits über 1 Minute in der Vergangenheit liegen, ignorieren
                 if cd_minutes < -1:
                     continue
 
@@ -150,6 +161,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                     "infos": info_string
                 })
 
+            # Sortieren nach echter Wartezeit
             departures.sort(key=lambda x: x["countdown"])
             return departures
 
@@ -161,8 +173,9 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
 
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
-    def __init__(self, coordinator, stop_id, name):
+    def __init__(self, coordinator, stop_id, name, entry_id, index):
         super().__init__(coordinator)
+        self._index = index
         self._stop_id = stop_id
         self._name = name
         
@@ -173,37 +186,38 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
             "model": "Haltestelle"
         }
         
-        # Ganz wichtig, damit Home Assistant den Namen verwendet, den wir wollen:
         self._attr_has_entity_name = False
         
-        # Exakter Name wie frueher, damit die Entity ID "sensor.name_nachste_abfahrt" wird
-        self._attr_name = f"{name} nächste Abfahrt"
+        if index == 0:
+            self._attr_name = f"{name} nächste Abfahrt"
+        else:
+            self._attr_name = f"{name} Abfahrt {index + 1}"
             
-        # Saubere Unique ID
-        self._attr_unique_id = f"linz_ag_{stop_id}"
+        self._attr_unique_id = f"linz_ag_{stop_id}_{index}"
         self._attr_icon = "mdi:tram"
 
     @property
     def state(self):
         departures = self.coordinator.data
-        if not departures or len(departures) == 0:
-            return "Keine Abfahrten"
+        if not departures or len(departures) <= self._index:
+            return "Keine Abfahrt"
             
-        dep = departures[0]
+        dep = departures[self._index]
         line = dep["line"]
         direction = dep["direction"]
+        sched = dep["scheduled"]
+        cd = dep["countdown"]
         
         if dep.get("cancelled"):
             return f"{line} {direction} (Fällt aus)"
-        elif dep["countdown"] == 0:
+        elif cd == 0:
             return f"{line} {direction} (Jetzt)"
         else:
-            return f"{line} {direction} ({dep['countdown']} Min)"
+            return f"{line} {direction} {sched} ({cd} Min)"
 
     @property
     def extra_state_attributes(self):
-        # Hier werden ALLE Abfahrten in das Attribut departureList gepackt
-        if self.coordinator.data:
+        if self._index == 0 and self.coordinator.data:
             return {
                 "departureList": self.coordinator.data[:100], 
                 "stop_id": self._stop_id,
