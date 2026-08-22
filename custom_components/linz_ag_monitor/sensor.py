@@ -189,9 +189,9 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
         self._attr_has_entity_name = False
         
         if index == 0:
-            self._attr_name = f"{name} nächste Abfahrt"
+            self._attr_name = "Nächste Abfahrt"
         else:
-            self._attr_name = f"{name} Abfahrt {index + 1}"
+            self._attr_name = f"Abfahrt {index + 1}"
             
         self._attr_unique_id = f"linz_ag_{stop_id}_{index}"
         self._attr_icon = "mdi:tram"
