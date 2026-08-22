@@ -23,6 +23,9 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     coordinator = LinzAGCoordinator(hass, session, stop_id, name)
     
+    # Kurze Pause beim Start, um die API zu schonen
+    await asyncio.sleep(random.uniform(0.5, 2.0))
+    
     await coordinator.async_config_entry_first_refresh()
 
     # Erstellt nur mehr genau EINE Entitaet pro Haltestelle (wie frueher)
@@ -50,7 +53,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             "name_dm": self._stop_id,
             "mode": "direct",
             "useRealtime": "1",
-            "limit": "40"
+            "limit": "40" # Holt bis zu 40 Abfahrten
         }
 
     def _clean_name(self, text):
@@ -170,9 +173,10 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
             "model": "Haltestelle"
         }
         
+        # Ganz wichtig, damit Home Assistant den Namen verwendet, den wir wollen:
         self._attr_has_entity_name = False
         
-        # Exakter Name wie frueher
+        # Exakter Name wie frueher, damit die Entity ID "sensor.name_nachste_abfahrt" wird
         self._attr_name = f"{name} nächste Abfahrt"
             
         # Saubere Unique ID
@@ -198,6 +202,7 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
 
     @property
     def extra_state_attributes(self):
+        # Hier werden ALLE Abfahrten in das Attribut departureList gepackt
         if self.coordinator.data:
             return {
                 "departureList": self.coordinator.data[:100], 
