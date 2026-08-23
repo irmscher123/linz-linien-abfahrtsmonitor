@@ -23,12 +23,8 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     
     coordinator = LinzAGCoordinator(hass, session, stop_id, name)
     
-    # ---------------------------------------------------------
-    # SPAMSCHUTZ: Warteschlange beim Start 
-    # Verhindert, dass alle Haltestellen zeitgleich feuern
-    # ---------------------------------------------------------
+    # Spamschutz beim Start
     await asyncio.sleep(random.uniform(1, 15))
-    
     await coordinator.async_config_entry_first_refresh()
 
     entities = []
@@ -37,14 +33,25 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
         
     async_add_entities(entities, False)
 
-
 class LinzAGCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, session, stop_id, name):
+        
+        # --- API ID KORREKTUR ---
+        # Egal was Home Assistant gespeichert hat, wir extrahieren hier die reine Nummer für die API!
+        api_stop_id = str(stop_id)
+        if "L=" in api_stop_id:
+            for part in api_stop_id.split("@"):
+                if part.startswith("L="):
+                    api_stop_id = part[2:]
+                    break
+        if ":" in api_stop_id:
+            api_stop_id = api_stop_id.split(":")[-1]
+            
         super().__init__(
             hass,
             _LOGGER,
             name=f"LinzAG {name}",
-            update_interval=timedelta(seconds=60) # Erhöht auf 60s wegen API Limits bei vielen Sensoren
+            update_interval=timedelta(seconds=60)
         )
         self._session = session
         self._stop_id = stop_id
@@ -56,22 +63,20 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             "outputFormat": "rapidJSON",
             "depType": "stopEvents",
             "type_dm": "any",
-            "name_dm": self._stop_id,
+            "name_dm": api_stop_id, # Hier wird die gesäuberte ID an die Linz AG gesendet
             "mode": "direct",
             "useRealtime": "1",
             "limit": "40"
         }
 
     def _clean_name(self, text):
-        """Entfernt Orts-Präfixe nur am Anfang, lässt sie am Ende stehen."""
         if not text:
             return "Unbekannt"
         
         text = text.strip()
-        
         prefixes = [
             "Linz/Donau, ", "Linz/Donau ",
-            "Leonding, ",
+            "Leonding, ", "Rufling, ",
             "Steyregg, ",
             "Traun OÖ, ", "Traun OÖ ",
             "Bergham b.Linz, ",
@@ -84,6 +89,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 break
                 
         text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
+        text = text.replace("JKU | ", "")
         
         if text == "Linz/Donau":
             text = "Linz"
@@ -103,7 +109,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 try:
                     data = await response.json(content_type=None)
                 except Exception:
-                    raise UpdateFailed("API blockiert / liefert kein gültiges JSON (Spamschutz aktiv)")
+                    raise UpdateFailed("API blockiert / liefert kein gültiges JSON")
 
             events = data.get("stopEvents", [])
             now = dt_util.now()
@@ -128,11 +134,9 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 raw_direction = trans.get("destination", {}).get("name", "Unbekannt")
                 direction_clean = self._clean_name(raw_direction)
 
-                # Eigene Haltestelle als Richtung herausfiltern
                 if direction_clean.lower() == my_station_clean:
                     continue
 
-                # Infos und Störungsmeldungen sammeln
                 collected_infos = []
                 for hint in event.get("hints", []):
                     if content := hint.get("content"):
@@ -143,10 +147,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                             collected_infos.append(text)
                 info_string = " +++ ".join(collected_infos)
 
-                # Countdown basierend auf geschätzter Live-Zeit berechnen
                 cd_minutes = int((dt_estimated - now).total_seconds() / 60)
                 
-                # Abfahrten, die bereits über 1 Minute in der Vergangenheit liegen, ignorieren
                 if cd_minutes < -1:
                     continue
 
@@ -161,7 +163,6 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                     "infos": info_string
                 })
 
-            # Sortieren nach echter Wartezeit
             departures.sort(key=lambda x: x["countdown"])
             return departures
 
@@ -170,7 +171,6 @@ class LinzAGCoordinator(DataUpdateCoordinator):
         except Exception as e:
             _LOGGER.error("Linz AG Sensor Fehler: %s", e)
             raise UpdateFailed(f"Fehler beim Abrufen der Daten: {e}")
-
 
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
     def __init__(self, coordinator, stop_id, name, entry_id, index):
@@ -193,7 +193,7 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
         else:
             self._attr_name = f"Abfahrt {index + 1}"
             
-        self._attr_unique_id = f"linz_ag_{stop_id}_{entry_id}_{index}"
+        self._attr_unique_id = f"linz_ag_{stop_id}_{index}"
         self._attr_icon = "mdi:tram"
 
     @property
