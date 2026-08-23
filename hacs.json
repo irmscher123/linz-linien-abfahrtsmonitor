@@ -1,7 +1,12 @@
 {
   "name": "Linz Linien Abfahrtsmonitor",
-  "render_readme": true,
   "content_in_root": false,
   "zip_release": false,
-  "filename": "linz_ag_monitor.zip"
+  "filename": "linz_ag_monitor.zip",
+  "render_readme": true,
+  "hacs": {
+    "type": "integration",
+    "description": "Abfahrtsmonitor für Linz Linien in Home Assistant",
+    "icon": "logo.png"
+  }
 }
