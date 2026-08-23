@@ -6,7 +6,7 @@
   "render_readme": true,
   "hacs": {
     "type": "integration",
-    "description": "Abfahrtsmonitor für Linz Linien in Home Assistant",
+    "description": "Abfahrtsmonitor der LinzAG Linien in Home Assistant",
     "icon": "logo.png"
   }
 }
