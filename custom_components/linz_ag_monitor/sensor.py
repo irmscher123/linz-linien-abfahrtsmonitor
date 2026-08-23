@@ -89,7 +89,13 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 break
                 
         text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
-        text = text.replace("JKU | ", "")
+        
+        # --- KORREKTUR FÜR JKU ---
+        if text.startswith("JKU | "):
+            if text.strip() == "JKU |":
+                text = "Universität"
+            else:
+                text = text[len("JKU | "):]
         
         if text == "Linz/Donau":
             text = "Linz"
