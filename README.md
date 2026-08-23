@@ -10,24 +10,23 @@
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/dashboards.png" width="800" alt="Linz Linien Dashboards">
 
 **Der moderne Abfahrtsmonitor für Home Assistant.**  
-Live‑Daten der Linz AG Linien, smarte Hybrid-Berechnung, einfache Einrichtung und hochgradig anpassbare Dashboard‑Karten.
+Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche und hochgradig anpassbare Dashboard‑Karten.
 
 ---
 
-## 🚀 NEU im Major Update (v1.0)
-* **Hybrid-Engine (GTFS + Live):** Kombiniert den lokalen Offline-Fahrplan (GTFS) mit der Linz AG Echtzeit-API. So werden weit in die Zukunft reichende Fahrten angezeigt, ohne das API-Limit (40 Einträge) zu sprengen.
+## 🚀 NEU in dieser Version
+* **100% Live-API & Kartensuche:** Kein lokaler GTFS-Datenbank-Ballast mehr! Die Integration läuft nun komplett über die direkte Linz AG API, was sie extrem schnell und ressourcenschonend macht. Haltestellen können jetzt auch bequem über eine interaktive Umkreissuche (Karte) gefunden werden.
 * **Vom Sensor zum "Gerät":** Pro Haltestelle wird nun ein echtes Home Assistant *Gerät (Device)* angelegt, das automatisch **5 übersichtliche Sensoren** für die nächsten 5 Abfahrten enthält.
 * **Klartext-Anzeige:** Keine nackten Zahlen mehr! Sensoren zeigen direkt lesbaren Text (z.B. `1 Universität 14:30 (5 Min)` oder `3 Traun (Jetzt)`) – perfekt für Apple Watch oder kompakte Dashboards.
 * **Saubere Namen & Duplikat-Filter:** Unerwünschte Zusätze wie *"Linz/Donau"* oder *"Leonding"* werden aus Zielen herausgefiltert. Die clevere Suche zeigt jede Haltestelle nur noch exakt einmal an.
-* **10-Sekunden Live-Sync:** Ein zentraler DataCoordinator aktualisiert die Echtzeitdaten exakt alle 10 Sekunden schonend für alle Sensoren gleichzeitig.
+* **Smartes Live-Sync:** Ein zentraler DataCoordinator aktualisiert die Echtzeitdaten exakt alle 60 Sekunden schonend für alle Sensoren gleichzeitig, ohne das API-Limit zu sprengen.
 
 ---
 
 ## ✨ Features
 
-- ⚡ Echtzeit‑Daten inkl. Verspätungen und Baustellen-Infos  
-- 🔍 Smart Search für Haltestellen (kein Suchen nach kryptischen IDs)
-- 🗄️ Automatisches, lokales Datenbank-Management (`VACUUM` für minimalen Speicherplatz)
+- ⚡ 100% Echtzeit‑Daten inkl. Verspätungen und Baustellen-Infos  
+- 🔍 Smart Search für Haltestellen (Textsuche oder interaktive GPS-Umkreissuche)
 - 🎨 Vier Design‑Varianten (Maxi, Midi, Mini, LED Wall) in einer einzigen flexiblen Karte zusammengeführt  
 - 📱 Responsive: Perfekt für Tablets, Wallpanels & Smartphones  
 - ⚙️ Komplette UI‑Konfiguration via Lovelace Editor
@@ -40,11 +39,11 @@ Bevor Sie Dashboard‑Karten nutzen, fügen Sie bitte zunächst die Integration 
 
 1. Gehen Sie zu **Einstellungen** > **Geräte & Dienste** > **Integration hinzufügen**.  
 2. Suchen Sie nach **Linz AG Monitor**.  
-3. Geben Sie den Namen der Haltestelle ein (z. B. `Simonystraße`).  
-4. Wählen Sie den korrekten Treffer aus der Liste.  
-5. **Fertig:** Sie haben nun ein neues *Gerät*, das 5 Sensoren enthält (z.B. `sensor.simonystrasse_nachste_abfahrt`, `sensor.simonystrasse_abfahrt_2`, etc.).
+3. Wählen Sie zwischen der **klassischen Textsuche** oder der **interaktiven Kartensuche**.
+4. Wählen Sie den korrekten Treffer aus dem Dropdown-Menü aus.  
+5. **Fertig:** Sie haben nun ein neues *Gerät*, das 5 Sensoren enthält (z.B. `sensor.haltestelle_hauptbahnhof_nachste_abfahrt`, `sensor.haltestelle_hauptbahnhof_abfahrt_2`, etc.).
 
-> **WICHTIG für das Dashboard:** Der Sensor **"Nächste Abfahrt"** (`sensor.ihre_haltestelle_nachste_abfahrt`) enthält im Hintergrund die unsichtbaren `departureList`-Attribute für die Custom Cards. Wählen Sie in den Lovelace-Karten immer diesen ersten Sensor aus!
+> **WICHTIG für das Dashboard:** Der Sensor **"Nächste Abfahrt"** (`sensor.haltestelle_ihre_station_nachste_abfahrt`) enthält im Hintergrund die unsichtbaren `departureList`-Attribute für die Custom Cards. Wählen Sie in den Lovelace-Karten immer diesen ersten Sensor aus!
 
 ---
 
@@ -72,7 +71,7 @@ Falls Sie den YAML-Modus bevorzugen, hier ein Beispiel für das kompakte **Midi-
 
 ```yaml
 type: custom:linz-monitor-combined
-entity: sensor.simonystrasse_nachste_abfahrt
+entity: sensor.haltestelle_hauptbahnhof_nachste_abfahrt
 layout: midi
 anzahl: 8
 row_height: 38
