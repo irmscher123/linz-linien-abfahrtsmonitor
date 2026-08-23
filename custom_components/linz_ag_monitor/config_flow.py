@@ -41,21 +41,34 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 
         # Eigene Behandlung für „JKU | “
         if text.startswith("JKU | "):
-            # Entferne alleinstehenden „JKU | “
             if text.strip() == "JKU |":
                 text = "Universität"
             else:
-                # z.B. "JKU | Universität" -> "Universität"
                 text = text[len("JKU | "):]
         
         # Störende Suffixe bei Fahrtrichtungen entfernen
         text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
         
-        # Falls als Ziel exakt nur der Stadtname übergeben wird
         if text == "Linz/Donau": text = "Linz"
         if text == "Traun OÖ": text = "Traun"
         
         return text.strip(" ,-")
+
+    def _extract_stop_id(self, p):
+        """Extrahiert die echte numerische ID (z.B. 60400001) aus dem API-Salat."""
+        raw_id = p.get("id", "")
+        stop_id = raw_id
+        # Sucht im String A=1@...L=60400001@... nach der eigentlichen ID
+        if "L=" in raw_id:
+            for part in raw_id.split("@"):
+                if part.startswith("L="):
+                    stop_id = part[2:]
+                    break
+        
+        if not stop_id:
+            stop_id = p.get("stateless")
+            
+        return stop_id
 
     async def async_step_user(self, user_input=None):
         """Erster Schritt: Auswahl zwischen Text- und Kartensuche."""
@@ -93,7 +106,8 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 seen_names = set()
                 
                 for p in points:
-                    stop_id = p.get("stateless") or p.get("id")
+                    # Hier wird nun die saubere, 8-stellige ID geholt!
+                    stop_id = self._extract_stop_id(p)
                     stop_name = p.get("name")
                     
                     if stop_id and stop_name:
@@ -144,7 +158,8 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
                 
                 for p in pins:
                     if str(p.get("type", "")).upper() == "STOP":
-                        stop_id = p.get("stateless") or p.get("id")
+                        # Hier wird nun die saubere, 8-stellige ID geholt!
+                        stop_id = self._extract_stop_id(p)
                         stop_name = p.get("desc") or p.get("name")
                         
                         if stop_id and stop_name:
