@@ -1,35 +1,26 @@
 import logging
-from pathlib import Path
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.core import HomeAssistant
-from homeassistant.components.http import StaticPathConfig
-
-_LOGGER = logging.getLogger(__name__)
 
 DOMAIN = "linz_ag_monitor"
 PLATFORMS = ["sensor"]
 
-URL_BASE = "/linz_ag_monitor"
+_LOGGER = logging.getLogger(__name__)
 
 async def async_setup(hass: HomeAssistant, config: dict):
-    """Set up the Linz AG Monitor component."""
-    frontend_path = Path(__file__).parent / "frontend"
-    
-    if frontend_path.exists():
-        await hass.http.async_register_static_paths([
-            StaticPathConfig(
-                URL_BASE,
-                str(frontend_path),
-                cache_headers=True
-            )
-        ])
-        _LOGGER.debug("Linz AG Monitor Frontend-Ressourcen registriert unter: %s", URL_BASE)
-    
+    """Set up the Linz AG component."""
+    hass.data.setdefault(DOMAIN, {})
     return True
 
-async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
+async def async_setup_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Set up Linz AG from a config entry."""
+    hass.data[DOMAIN][entry.entry_id] = entry.data
     await hass.config_entries.async_forward_entry_setups(entry, PLATFORMS)
     return True
 
-async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry) -> bool:
-    return await hass.config_entries.async_forward_entry_unload(entry, "sensor")
+async def async_unload_entry(hass: HomeAssistant, entry: ConfigEntry):
+    """Unload a config entry."""
+    unload_ok = await hass.config_entries.async_unload_platforms(entry, PLATFORMS)
+    if unload_ok:
+        hass.data[DOMAIN].pop(entry.entry_id, None)
+    return unload_ok
