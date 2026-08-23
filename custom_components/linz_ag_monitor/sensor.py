@@ -28,6 +28,7 @@ async def async_setup_entry(hass, config_entry, async_add_entities):
     await coordinator.async_config_entry_first_refresh()
 
     entities = []
+    # Generiert exakt 5 Entitäten
     for i in range(5):
         entities.append(LinzAGDepartureSensor(coordinator, stop_id, name, config_entry.entry_id, i))
         
@@ -37,7 +38,6 @@ class LinzAGCoordinator(DataUpdateCoordinator):
     def __init__(self, hass, session, stop_id, name):
         
         # --- API ID KORREKTUR ---
-        # Egal was Home Assistant gespeichert hat, wir extrahieren hier die reine Nummer für die API!
         api_stop_id = str(stop_id)
         if "L=" in api_stop_id:
             for part in api_stop_id.split("@"):
@@ -63,7 +63,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             "outputFormat": "rapidJSON",
             "depType": "stopEvents",
             "type_dm": "any",
-            "name_dm": api_stop_id, # Hier wird die gesäuberte ID an die Linz AG gesendet
+            "name_dm": api_stop_id, 
             "mode": "direct",
             "useRealtime": "1",
             "limit": "40"
@@ -90,7 +90,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 
         text = text.replace(" - Traun OÖ", "").replace(" - Steyregg", "").replace(" - Bergham b.Linz", "")
         
-        # --- KORREKTUR FÜR JKU ---
+        # --- DEINE KORREKTUR FÜR JKU ---
         if text.startswith("JKU | "):
             if text.strip() == "JKU |":
                 text = "Universität"
@@ -187,17 +187,23 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
         
         self._attr_device_info = {
             "identifiers": {("linz_ag_monitor", stop_id)},
-            "name": name,
+            "name": f"Haltestelle {name}",
             "manufacturer": "Linz AG Monitor",
-            "model": "Haltestelle"
+            "model": "Abfahrtsmonitor"
         }
         
         self._attr_has_entity_name = True
         
+        # Bereinigt den Namen für die Entity ID (z.B. "Hauptbahnhof" -> "hauptbahnhof")
+        clean_id_name = name.lower().replace(" ", "_").replace("-", "_").replace("/", "_").replace(".", "").replace("ä", "ae").replace("ö", "oe").replace("ü", "ue").replace("ß", "ss")
+        
+        # Erzwingt die exakte Namensgebung in Home Assistant
         if index == 0:
             self._attr_name = "Nächste Abfahrt"
+            self.entity_id = f"sensor.haltestelle_{clean_id_name}_nachste_abfahrt"
         else:
             self._attr_name = f"Abfahrt {index + 1}"
+            self.entity_id = f"sensor.haltestelle_{clean_id_name}_abfahrt_{index + 1}"
             
         self._attr_unique_id = f"linz_ag_{stop_id}_{index}"
         self._attr_icon = "mdi:tram"
