@@ -4,9 +4,4 @@
   "zip_release": false,
   "filename": "linz_ag_monitor.zip",
   "render_readme": true,
-  "hacs": {
-    "type": "integration",
-    "description": "Abfahrtsmonitor der LinzAG Linien in Home Assistant",
-    "icon": "logo.png"
-  }
 }
