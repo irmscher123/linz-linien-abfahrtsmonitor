@@ -273,6 +273,7 @@ class LinzMonitorCardV1 extends HTMLElement {
       if (!isStandard && STANDARD_ROUTES_V1[cleanL]) {
         const dest = d.direction.toLowerCase();
         if ((cleanL === "3" || cleanL === "3a") && (dest.includes("neue welt") || dest.includes("remise kleinmünchen"))) lineT = cleanL + "a";
+        else if (cleanL === "11" && dest.includes("stadtfriedhof")) lineT = "11s";
         else lineT = cleanL + "*";
       }
 

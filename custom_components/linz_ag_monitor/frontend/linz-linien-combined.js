@@ -76,7 +76,7 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
        const state = this._hass.states[this._config.entity];
        const deps = state.attributes.departureList || [];
        
-       const lines = [...new Set(deps.map(d => d.line.replace('*','')))].sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
+       const lines = [...new Set(deps.filter(d => d.line).map(d => String(d.line).replace('*','')))].sort((a,b) => a.localeCompare(b, undefined, {numeric: true}));
        const dirs = [...new Set(deps.map(d => d.direction))].sort();
 
        const activeLines = (this._config.filter || "").split(',').map(s=>s.trim()).filter(Boolean);
@@ -328,6 +328,9 @@ class LinzMonitorCombined extends HTMLElement {
       badge_size: 24,
       ...config 
     };
+    // Layout bei jeder Konfig-Änderung neu aufbauen, sonst bleiben CSS-Werte
+    // (Zeilenhöhe, Schriftgröße, LED-Farbe, Schriftart) bis zum Neuladen alt.
+    this._currentLayout = null;
     
     // FONT FIX: Lädt Exo 2 als Standard, wenn das Feld leer gelassen wurde!
     if (this._config.layout === 'led') {
@@ -367,7 +370,7 @@ class LinzMonitorCombined extends HTMLElement {
       return filters.some(f => d.includes(f));
     };
 
-    departures = departures.filter(d => matchesLine(d.line) && matchesDirection(d.direction));
+    departures = departures.filter(d => d && d.line && d.scheduled).filter(d => matchesLine(d.line) && matchesDirection(d.direction));
 
     // 2. MEMORY
     const currentKeys = new Set(departures.map(d => `${d.line}-${d.scheduled}-${d.direction}`));
@@ -456,17 +459,19 @@ class LinzMonitorCombined extends HTMLElement {
 
   // --- DIE KORRIGIERTE _getRouteName FUNKTION ---
   _getRouteName(d) {
-      const cleanL = d.line.replace("*", "");
+      const cleanL = String(d.line || "").replace("*", "");
       // Bereinigt unsichtbare Leerzeichen und gleicht alles in Kleinbuchstaben ab
       const dest = (d.direction || "").trim().toLowerCase();
       
       const isStandard = (STANDARD_ROUTES[cleanL] || []).some(s => s.trim().toLowerCase() === dest);
       
       if (!isStandard && STANDARD_ROUTES[cleanL]) {
-        if ((cleanL === "3" || cleanL === "3a") && (dest.includes("neue welt") || dest.includes("ferihumerstraße") || dest.includes("remise kleinmünchen"))) {
+        if (cleanL === "3" && (dest.includes("neue welt") || dest.includes("ferihumerstraße") || dest.includes("remise kleinmünchen"))) {
           return cleanL + "a";
         } else if (cleanL === "33" && dest.includes("rudolfstraße")) {
           return "33a"; 
+        } else if (cleanL === "11" && dest.includes("stadtfriedhof")) {
+          return "11s";
         } else {
           return cleanL + "*";
         }
@@ -580,7 +585,7 @@ class LinzMonitorCombined extends HTMLElement {
     this._updateClockDisplay();
 
     // *** BUGFIX FÜR DEN DATEI-EDITOR IN HOME ASSISTANT ***
-    const filterRegex = new RegExp("Linz/Donau|Leonding|Linz", "gi");
+    const filterRegex = /^(Linz\/Donau|Leonding|Linz)[,\s]+/i;
     const defaultName = (state.attributes.stop_name || "").replace(filterRegex, "").trim();
     const finalName = this._config.stop_name_override || defaultName;
     if(this.querySelector("#led-title").innerText !== finalName) this.querySelector("#led-title").innerText = finalName;
@@ -765,7 +770,7 @@ class LinzMonitorCombined extends HTMLElement {
     const container = this.querySelector("#maxi-list");
     
     // *** BUGFIX FÜR DEN DATEI-EDITOR IN HOME ASSISTANT ***
-    const filterRegex = new RegExp("Linz/Donau|Leonding|Linz", "gi");
+    const filterRegex = /^(Linz\/Donau|Leonding|Linz)[,\s]+/i;
     const defaultName = (state.attributes.stop_name || "").replace(filterRegex, "").trim();
     
     this.querySelector("#maxi-title").innerText = this._config.stop_name_override || defaultName;
@@ -942,7 +947,7 @@ class LinzMonitorCombined extends HTMLElement {
     const list = this.querySelector("#midi-list");
     
     // *** BUGFIX FÜR DEN DATEI-EDITOR IN HOME ASSISTANT ***
-    const filterRegex = new RegExp("Linz/Donau|Leonding|Linz", "gi");
+    const filterRegex = /^(Linz\/Donau|Leonding|Linz)[,\s]+/i;
     const defaultName = (state.attributes.stop_name || "").replace(filterRegex, "").trim();
     
     this.querySelector("#midi-title").innerText = this._config.stop_name_override || defaultName;
@@ -1091,7 +1096,7 @@ class LinzMonitorCombined extends HTMLElement {
     const list = this.querySelector("#mini-list");
     
     // *** BUGFIX FÜR DEN DATEI-EDITOR IN HOME ASSISTANT ***
-    const filterRegex = new RegExp("Linz/Donau|Leonding|Linz", "gi");
+    const filterRegex = /^(Linz\/Donau|Leonding|Linz)[,\s]+/i;
     const defaultName = (state.attributes.stop_name || "").replace(filterRegex, "").trim();
     
     this.querySelector("#mini-title").innerText = this._config.stop_name_override || defaultName;
@@ -1189,7 +1194,7 @@ if (!customElements.get("linz-monitor-combined")) {
 }
 
 window.customCards = window.customCards || [];
-window.customCards.push({
+if (!window.customCards.some(c => c.type === "linz-monitor-combined")) window.customCards.push({
   type: "linz-monitor-combined",
   name: "LinzAG Linien Monitor",
   description: "Maxi, Midi, Mini und LED Wall in einer Karte.",

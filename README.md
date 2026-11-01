@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.6-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-1.6.1-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -13,6 +13,12 @@
 Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche und hochgradig anpassbare Dashboard‑Karten.
 
 ---
+
+## 🆕 Neu in v1.6.1
+* **Linie 11s:** Fahrten der Linie 11 zum Stadtfriedhof werden als `11s` statt `11*` angezeigt.
+* **Karte wird automatisch geladen** – kein manueller Ressourcen-Eintrag mehr nötig.
+* **Stabiler & sicherer:** SSL-Zertifikatsprüfung aktiv, saubere Verbindungsfreigabe, kein doppeltes Anlegen derselben Haltestelle, Abfahrtsliste wird nicht mehr in die Verlaufsdatenbank geschrieben.
+* **Bugfixes:** Haltestellennamen wie „Linzer Straße" werden nicht mehr verstümmelt; Änderungen im Karten-Editor (Zeilenhöhe, Schrift, LED-Farbe) wirken sofort; `hacs.json` repariert.
 
 ## 🚀 NEU in dieser Version
 * **100% Live-API & Kartensuche:** Kein lokaler GTFS-Datenbank-Ballast mehr! Die Integration läuft nun komplett über die direkte Linz AG API, was sie extrem schnell und ressourcenschonend macht. Haltestellen können jetzt auch bequem über eine interaktive Umkreissuche (Karte) gefunden werden.
@@ -79,3 +85,4 @@ font_size: 20
 dest_size: 18
 filter: "1,2"
 sortierung: "echtzeit"
+```
