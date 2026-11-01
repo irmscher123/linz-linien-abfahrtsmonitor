@@ -1,6 +1,6 @@
 import logging
-import async_timeout
 import asyncio
+import aiohttp
 import random
 from datetime import timedelta
 import homeassistant.util.dt as dt_util
@@ -58,6 +58,9 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             update_interval=timedelta(seconds=60) # Erhöht auf 60s wegen API Limits bei vielen Sensoren
         )
         self._session = session
+        # Zertifikat wird geprüft. Nur falls die Linz AG ein fehlerhaftes
+        # Zertifikat ausliefert, wird (mit Warnung im Log) ohne Prüfung weitergemacht.
+        self._ssl_verify = True
         self._stop_id = stop_id
         self.stop_name = name
         self._url = "https://www.linzag.at/static/XML_DM_REQUEST"
@@ -72,6 +75,19 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             "useRealtime": "1",
             "limit": "40"
         }
+
+    async def _fetch(self):
+        """Ein Abruf der Abfahrten, Antwort wird sauber freigegeben."""
+        async with asyncio.timeout(15):
+            async with self._session.get(
+                self._url, params=self._params, headers=HEADERS, ssl=self._ssl_verify
+            ) as response:
+                if response.status != 200:
+                    raise UpdateFailed(f"API antwortet mit Status {response.status}")
+                try:
+                    return await response.json(content_type=None)
+                except Exception:
+                    raise UpdateFailed("API blockiert / liefert kein gültiges JSON (Spamschutz aktiv)")
 
     def _clean_name(self, text):
         """Entfernt Orts-Präfixe nur am Anfang, lässt sie am Ende stehen."""
@@ -112,16 +128,16 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
     async def _async_update_data(self):
         try:
-            async with async_timeout.timeout(15):
-                response = await self._session.get(self._url, params=self._params, headers=HEADERS, ssl=False)
-                
-                if response.status != 200:
-                    raise UpdateFailed(f"API antwortet mit Status {response.status}")
-                
-                try:
-                    data = await response.json(content_type=None)
-                except Exception:
-                    raise UpdateFailed("API blockiert / liefert kein gültiges JSON (Spamschutz aktiv)")
+            try:
+                data = await self._fetch()
+            except aiohttp.ClientConnectorCertificateError as err:
+                if not self._ssl_verify:
+                    raise
+                _LOGGER.warning(
+                    "Linz AG: SSL-Zertifikat ungültig (%s) – Abfrage erfolgt ab jetzt ohne Zertifikatsprüfung", err
+                )
+                self._ssl_verify = False
+                data = await self._fetch()
 
             events = data.get("stopEvents", [])
             now = dt_util.now()
@@ -129,6 +145,8 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             my_station_clean = self._clean_name(self.stop_name).lower()
 
             for event in events:
+                if not isinstance(event, dict):
+                    continue
                 trans = event.get("transportation", {})
                 planned_str = event.get("departureTimePlanned")
                 estimated_str = event.get("departureTimeEstimated", planned_str)
@@ -137,7 +155,9 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                     continue
 
                 dt_planned = dt_util.parse_datetime(planned_str)
-                dt_estimated = dt_util.parse_datetime(estimated_str)
+                dt_estimated = dt_util.parse_datetime(estimated_str) or dt_planned
+                if dt_planned is None:
+                    continue
                 
                 p_time = dt_util.as_local(dt_planned).strftime("%H:%M")
                 l_line = trans.get("number", trans.get("disassembledName", "?"))
@@ -191,6 +211,9 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 
 
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
+    # Die große Abfahrtsliste nicht in die Recorder-Datenbank schreiben
+    # (bis zu 100 Einträge, ändert sich jede Minute -> bläht die DB auf).
+    _unrecorded_attributes = frozenset({"departureList", "last_update"})
     def __init__(self, coordinator, stop_id, name, entry_id, index):
         super().__init__(coordinator)
         self._index = index
@@ -215,7 +238,7 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
         self._attr_icon = "mdi:tram"
 
     @property
-    def state(self):
+    def native_value(self):
         departures = self.coordinator.data
         if not departures or len(departures) <= self._index:
             return "Keine Abfahrt"

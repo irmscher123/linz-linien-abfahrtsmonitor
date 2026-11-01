@@ -1,10 +1,15 @@
 {
   "domain": "linz_ag_monitor",
   "name": "Linz AG Monitor",
-  "version": "1.6",
+  "version": "1.6.1",
   "documentation": "https://github.com/irmscher123/linz-linien-abfahrtsmonitor",
-  "dependencies": [],
-  "codeowners": ["@irmscher123"],
+  "dependencies": [
+    "frontend",
+    "http"
+  ],
+  "codeowners": [
+    "@irmscher123"
+  ],
   "requirements": [],
   "iot_class": "cloud_polling",
   "config_flow": true

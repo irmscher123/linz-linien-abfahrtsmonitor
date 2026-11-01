@@ -1,3 +1,4 @@
+import aiohttp
 import voluptuous as vol
 import logging
 from homeassistant import config_entries
@@ -17,6 +18,22 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     def __init__(self):
         self.found_stops = {}
+
+    async def _get_json(self, url, params):
+        """GET mit Zertifikatsprüfung; nur bei ungültigem Zertifikat Fallback ohne Prüfung."""
+        session = async_get_clientsession(self.hass)
+        timeout = aiohttp.ClientTimeout(total=15)
+        for ssl_verify in (True, False):
+            try:
+                async with session.get(url, params=params, headers=HEADERS, ssl=ssl_verify, timeout=timeout) as response:
+                    if response.status != 200:
+                        return None
+                    return await response.json(content_type=None)
+            except aiohttp.ClientConnectorCertificateError as err:
+                if not ssl_verify:
+                    raise
+                _LOGGER.warning("Linz AG: SSL-Zertifikat ungültig (%s) – Suche ohne Zertifikatsprüfung", err)
+        return None
 
     def _clean_name(self, text):
         """Entfernt Orts-Präfixe nur am Anfang, lässt sie am Ende stehen."""
@@ -79,7 +96,6 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
 
     async def _search_api_text(self, search_term):
         """Sucht über den klassischen Namen."""
-        session = async_get_clientsession(self.hass)
         url = "https://www.linzag.at/static/XML_STOPFINDER_REQUEST"
         params = {
             "sessionID": "0",
@@ -92,44 +108,41 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         }
         
         try:
-            async with session.get(url, params=params, headers=HEADERS, ssl=False, timeout=15) as response:
-                if response.status != 200:
-                    return "cannot_connect"
-                
-                data = await response.json(content_type=None)
-                points = data.get("stopFinder", {}).get("points", [])
-                
-                if isinstance(points, dict):
-                    points = [points]
+            data = await self._get_json(url, params)
+            if data is None:
+                return "cannot_connect"
+            points = data.get("stopFinder", {}).get("points", [])
+            
+            if isinstance(points, dict):
+                points = [points]
 
-                self.found_stops = {}
-                seen_names = set()
+            self.found_stops = {}
+            seen_names = set()
+            
+            for p in points:
+                # Hier wird nun die saubere, 8-stellige ID geholt!
+                stop_id = self._extract_stop_id(p)
+                stop_name = p.get("name")
                 
-                for p in points:
-                    # Hier wird nun die saubere, 8-stellige ID geholt!
-                    stop_id = self._extract_stop_id(p)
-                    stop_name = p.get("name")
-                    
-                    if stop_id and stop_name:
-                        clean_name = self._clean_name(stop_name)
-                        if clean_name and clean_name not in seen_names:
-                            seen_names.add(clean_name)
-                            self.found_stops[stop_id] = {
-                                "display": clean_name,
-                                "clean": clean_name
-                            }
+                if stop_id and stop_name:
+                    clean_name = self._clean_name(stop_name)
+                    if clean_name and clean_name not in seen_names:
+                        seen_names.add(clean_name)
+                        self.found_stops[stop_id] = {
+                            "display": clean_name,
+                            "clean": clean_name
+                        }
 
-                if not self.found_stops:
-                    return "no_stops_found"
-                return None
-                
+            if not self.found_stops:
+                return "no_stops_found"
+            return None
+            
         except Exception as e:
             _LOGGER.error("Linz AG Textsuche Fehler: %s", e)
             return "cannot_connect"
 
     async def _search_api_coords(self, lat, lon, radius):
         """Sucht über die GPS Umkreissuche der Linz AG."""
-        session = async_get_clientsession(self.hass)
         url = "https://www.linzag.at/static/XML_COORD_REQUEST"
         params = {
             "sessionID": "0",
@@ -143,42 +156,40 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         }
         
         try:
-            async with session.get(url, params=params, headers=HEADERS, ssl=False, timeout=15) as response:
-                if response.status != 200:
-                    return "cannot_connect"
-                
-                data = await response.json(content_type=None)
-                pins = data.get("pins", [])
-                
-                if isinstance(pins, dict):
-                    pins = [pins]
+            data = await self._get_json(url, params)
+            if data is None:
+                return "cannot_connect"
+            pins = data.get("pins", [])
+            
+            if isinstance(pins, dict):
+                pins = [pins]
 
-                self.found_stops = {}
-                seen_names = set()
-                
-                for p in pins:
-                    if str(p.get("type", "")).upper() == "STOP":
-                        # Hier wird nun die saubere, 8-stellige ID geholt!
-                        stop_id = self._extract_stop_id(p)
-                        stop_name = p.get("desc") or p.get("name")
-                        
-                        if stop_id and stop_name:
-                            clean_name = self._clean_name(stop_name)
-                            if clean_name and clean_name not in seen_names:
-                                seen_names.add(clean_name)
-                                
-                                dist = p.get("distance")
-                                display_name = f"{clean_name} ({dist}m)" if dist else clean_name
-                                
-                                self.found_stops[stop_id] = {
-                                    "display": display_name,
-                                    "clean": clean_name
-                                }
+            self.found_stops = {}
+            seen_names = set()
+            
+            for p in pins:
+                if str(p.get("type", "")).upper() == "STOP":
+                    # Hier wird nun die saubere, 8-stellige ID geholt!
+                    stop_id = self._extract_stop_id(p)
+                    stop_name = p.get("desc") or p.get("name")
+                    
+                    if stop_id and stop_name:
+                        clean_name = self._clean_name(stop_name)
+                        if clean_name and clean_name not in seen_names:
+                            seen_names.add(clean_name)
+                            
+                            dist = p.get("distance")
+                            display_name = f"{clean_name} ({dist}m)" if dist else clean_name
+                            
+                            self.found_stops[stop_id] = {
+                                "display": display_name,
+                                "clean": clean_name
+                            }
 
-                if not self.found_stops:
-                    return "no_stops_found"
-                return None
-                
+            if not self.found_stops:
+                return "no_stops_found"
+            return None
+            
         except Exception as e:
             _LOGGER.error("Linz AG Umkreissuche Fehler: %s", e)
             return "cannot_connect"
@@ -236,6 +247,10 @@ class LinzAGFlowHandler(config_entries.ConfigFlow, domain=DOMAIN):
         if user_input is not None:
             stop_id = user_input["stop_id"]
             stop_info = self.found_stops[stop_id]
+
+            # Doppelte Einrichtung derselben Haltestelle verhindern
+            await self.async_set_unique_id(str(stop_id))
+            self._abort_if_unique_id_configured()
             
             return self.async_create_entry(
                 title=stop_info["clean"],
