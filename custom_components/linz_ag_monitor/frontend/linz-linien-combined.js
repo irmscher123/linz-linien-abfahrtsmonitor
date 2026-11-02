@@ -46,6 +46,20 @@ const STANDARD_ROUTES = {
   '108': ['Simonystraße', 'Lunzerstraße Ost']
 };
 
+/* --- EIGENE DATEIEN (Logo, Schrift) liegen neben dieser Datei --- */
+const LINZ_ASSET_BASE = (() => {
+  try { return new URL(".", document.currentScript.src).href; } catch (e) { return "/linz_ag_monitor/"; }
+})();
+
+// Punktmatrix-Schrift "Doto" (OFL) mit eckigen Punkten – einmalig registrieren
+const loadLinzDotFont = () => {
+  if (document.getElementById("linz-dot-font")) return;
+  const st = document.createElement("style");
+  st.id = "linz-dot-font";
+  st.textContent = `@font-face { font-family: 'LinzDot'; src: url('${LINZ_ASSET_BASE}fonts/doto.woff2') format('woff2-variations'), url('${LINZ_ASSET_BASE}fonts/doto.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }`;
+  document.head.appendChild(st);
+};
+
 /* --- FONT LOADER --- */
 const loadGoogleFont = (fontName) => {
   if (!fontName || ['Skyfont', 'Arial','Verdana','Helvetica','sans-serif','serif','monospace'].includes(fontName)) return;
@@ -166,7 +180,7 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
           <input id="stele_lines" class="std-input" type="text" value="${this._config.stele_lines || ''}" placeholder="z.B. 27,41,43">
         </div>
         <div class="form-row">
-          <label>🖼️ Bild unten (URL, optional – z.B. dein eigenes Logo)</label>
+          <label>🖼️ Bild unten rechts (URL, leer = Linz AG Linien Logo)</label>
           <input id="stele_footer_image" class="std-input" type="text" value="${this._config.stele_footer_image || ''}" placeholder="https://… oder /local/…">
         </div>
         <div class="hint-text">Tipp: „Anzahl der Zeilen“ auf 3 oder 4 stellen – wie an der echten Haltestelle.</div>
@@ -356,8 +370,8 @@ class LinzMonitorCombined extends HTMLElement {
     if (this._config.layout === 'led') {
        loadGoogleFont("DotGothic16");
     } else if (this._config.layout === 'stele') {
-       loadGoogleFont("DotGothic16");
-       loadGoogleFont("Exo 2");
+       loadLinzDotFont();
+       loadGoogleFont("DotGothic16"); // Ersatz, falls die eigene Schrift nicht geladen werden kann
     } else {
        loadGoogleFont(this._config.font_family || "Exo 2");
     }
@@ -1257,36 +1271,38 @@ class LinzMonitorCombined extends HTMLElement {
             border: 1px solid #c7cacc; border-top: none; border-radius: 0 0 2.4cqw 2.4cqw;
             padding: 3.4cqw 4.6cqw 4cqw;
           }
-          .st-labels { display: grid; grid-template-columns: 15% 1fr auto; align-items: end; font-size: 3.9cqw; line-height: 1.15; margin-bottom: 1.8cqw; color: #2a2a28; }
+          .st-labels { display: grid; grid-template-columns: calc(1.4cqw + 15.4cqw) 1fr auto; align-items: end; font-size: 3.9cqw; line-height: 1.15; margin-bottom: 1.8cqw; color: #2a2a28; }
           .st-labels .lab-time { text-align: right; }
 
           .st-rows { display: flex; flex-direction: column; gap: 2.8cqw; }
           .st-row {
-            height: 8.4cqw; background-color: #101311; border-radius: 0.6cqw;
-            box-shadow: inset 0 0 0 0.35cqw #1e2421;
-            background-image: radial-gradient(circle, rgba(77,255,94,0.07) 32%, transparent 38%);
-            background-size: 0.95cqw 0.95cqw;
-            display: grid; grid-template-columns: 15% 1fr 20%; align-items: center;
-            padding: 0 1.8cqw; box-sizing: border-box; overflow: hidden;
-            font-family: 'DotGothic16', 'Courier New', monospace; font-size: 5.4cqw; line-height: 1;
-            color: var(--st-led); text-shadow: 0 0 0.6cqw color-mix(in srgb, var(--st-led) 70%, transparent);
-            letter-spacing: 0.05em;
+            height: 8.6cqw; background-color: #0c0f0d; border-radius: 0.5cqw;
+            box-shadow: inset 0 0 0 0.35cqw #1a1f1c;
+            display: grid; grid-template-columns: 4ch 1fr 5ch; align-items: stretch;
+            padding: 0.7cqw 1.4cqw; box-sizing: border-box; overflow: hidden;
+            font-family: 'LinzDot', 'DotGothic16', 'Courier New', monospace;
+            font-variation-settings: "ROND" 0; font-weight: 900;
+            font-size: 6.4cqw; line-height: 1;
+            color: var(--st-led); text-shadow: 0 0 0.5cqw color-mix(in srgb, var(--st-led) 65%, transparent);
+            letter-spacing: 0;
           }
-          .st-row .c-line { text-align: right; padding-right: 2.6cqw; }
-          .st-row .c-dest { white-space: nowrap; overflow: hidden; text-overflow: clip; }
-          .st-row .c-min { text-align: right; white-space: nowrap; }
+          /* dunkle Zeichenfelder (1 Feld = 1 Zeichen) wie bei der echten LED-Anzeige */
+          .st-row > span {
+            display: flex; align-items: center; white-space: nowrap; overflow: hidden; min-width: 0;
+            background-image: linear-gradient(90deg, color-mix(in srgb, var(--st-led) 11%, #0c0f0d) 0 86%, transparent 86%);
+            background-size: 1ch 88%; background-repeat: repeat-x; background-position: left center;
+          }
+          .st-row .c-line { justify-content: flex-end; padding-right: 1ch; }
+          .st-row .c-dest { justify-content: flex-start; text-overflow: clip; }
+          .st-row .c-min { justify-content: flex-end; background-position: right center; }
           .st-row.empty { color: transparent; text-shadow: none; }
           .st-blink { animation: stBlink 1s steps(1) infinite; }
           @keyframes stBlink { 50% { opacity: 0; } }
 
           /* --- Fußbereich --- */
-          .st-foot { position: relative; margin-top: 5cqw; text-align: center; min-height: 10cqw; }
-          .st-mark { display: inline-block; text-align: left; line-height: 1; }
-          .st-mark .m1 { font-family: 'Exo 2', Arial, sans-serif; font-weight: 600; font-size: 8.4cqw; letter-spacing: 0.14em; color: #4b4b4b; }
-          .st-mark .m1 b { color: #e4572e; font-weight: 600; }
-          .st-mark .m2 { font-family: 'Exo 2', Arial, sans-serif; font-weight: 600; font-size: 4.3cqw; letter-spacing: 0.98em; color: #e4572e; margin-top: 0.6cqw; padding-left: 0.2em; }
-          .st-foot img { max-width: 70%; max-height: 16cqw; object-fit: contain; }
-          .st-clock { position: absolute; right: 0; bottom: 0; font-size: 3.6cqw; color: #8a8d8f; font-variant-numeric: tabular-nums; }
+          .st-foot { position: relative; margin-top: 6cqw; min-height: 10cqw; display: flex; justify-content: flex-end; align-items: flex-end; }
+          .st-foot img { width: 62%; max-height: 18cqw; object-fit: contain; object-position: right bottom; display: block; }
+          .st-clock { position: absolute; left: 0; bottom: 0; font-size: 3.6cqw; color: #8a8d8f; font-variant-numeric: tabular-nums; }
         </style>
         <ha-card class="st-card">
           <div class="st-wrap">
@@ -1300,9 +1316,7 @@ class LinzMonitorCombined extends HTMLElement {
               <div class="st-labels"><span>Linie</span><span>Ziel</span><span class="lab-time">Abfahrt<br>in Min.</span></div>
               <div class="st-rows" id="st-rows"></div>
               <div class="st-foot">
-                ${this._config.stele_footer_image
-                  ? `<img src="${esc(this._config.stele_footer_image)}" alt="">`
-                  : `<div class="st-mark"><div class="m1">LIN<b>Z</b> AG</div><div class="m2">LINIEN</div></div>`}
+                <img src="${esc(this._config.stele_footer_image || (LINZ_ASSET_BASE + "linzag-linien.png"))}" alt="Linz AG Linien">
                 ${this._config.stele_clock !== false ? `<div class="st-clock" id="clock"></div>` : ``}
               </div>
             </div>
@@ -1336,7 +1350,7 @@ class LinzMonitorCombined extends HTMLElement {
     let html = "";
     for (let i = 0; i < count; i++) {
       const d = visible[i];
-      if (!d) { html += `<div class="st-row empty"></div>`; continue; }
+      if (!d) { html += `<div class="st-row empty"><span class="c-line"></span><span class="c-dest"></span><span class="c-min"></span></div>`; continue; }
       const infoLow = (d.infos || "").toLowerCase();
       const isCancelled = d.canceled || d.cancelled || infoLow.includes("fällt aus") || infoLow.includes("entfällt");
       const isNow = d.countdown === 0 && !isCancelled;

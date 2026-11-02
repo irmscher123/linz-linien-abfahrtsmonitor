@@ -15,7 +15,7 @@ Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche u
 ---
 
 ## 🆕 Neu in v1.8.0
-* **5. Design „Haltestellen-Säule“:** Originalgetreuer Nachbau der Linz AG Anzeige an der Haltestelle – H-Schild, Haltestellenname, Linien-Zeile und grüne LED-Zeilen (nur die Tafel, ohne Mast).
+* **5. Design „Haltestellen-Säule“:** Originalgetreuer Nachbau der Linz AG Anzeige an der Haltestelle – H-Schild, Haltestellenname, Linien-Zeile und grüne LED-Zeilen in Punktmatrix-Schrift mit eckigen Punkten und Linz AG Linien Logo (nur die Tafel, ohne Mast). Schrift und Logo werden lokal aus der Integration geladen.
 * **Brand-Icons in korrekter Größe** (256/512 px) für eine scharfe Anzeige in HACS und Home Assistant.
 
 ## 🆕 Neu in v1.6.1
@@ -101,5 +101,5 @@ anzahl: 4                    # Anzahl der LED-Zeilen (wie am Original 3–4)
 stele_led_color: "#4dff5e"   # Farbe der LED-Schrift
 stele_clock: true            # kleine Uhrzeit unten rechts
 stele_lines: ""              # Linien-Zeile, leer = automatisch (z.B. "27,41,43")
-stele_footer_image: ""       # optional eigenes Bild statt Schriftzug unten
+stele_footer_image: ""       # optional eigenes Bild statt Linz AG Logo unten rechts
 ```
