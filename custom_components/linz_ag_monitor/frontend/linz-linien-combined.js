@@ -58,7 +58,20 @@ const STELE_CELL_H = 16;
 const STELE_GLYPH_W = 8;
 const STELE_FONT_PX = 16.5;
 const STELE_BASELINE = 12.6;
-const STELE_THRESHOLD = 90;
+const STELE_THRESHOLD = 110;
+const STELE_FONT_WEIGHT = "normal";   // "bold" = dickere Zeichen
+
+// Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
+const STELE_DEST_SHORT = [
+  [/^Fernheizkraftwerk$/i, "Fernheizwerk"],
+  [/^Remise Kleinmünchen$/i, "Kleinmünchen"],
+  [/^Trauner Kreuzung\s*P\s*(\+|&|und)\s*R$/i, "Trauner Kreuzung"],
+];
+const steleShortDest = (t) => {
+  const s = String(t || "").trim();
+  for (const [re, short] of STELE_DEST_SHORT) if (re.test(s)) return short;
+  return s;
+};
 
 /* --- FONT LOADER --- */
 const loadGoogleFont = (fontName) => {
@@ -1359,7 +1372,7 @@ class LinzMonitorCombined extends HTMLElement {
       else minTxt = String(d.countdown);
 
       // Ziel + Sonderinformationen wechseln sich im Zielfeld ab
-      const segments = [String(d.direction || "")];
+      const segments = [steleShortDest(d.direction)];
       if (isCancelled) segments.push("Fällt aus");
       const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
       if (!isCancelled && info.length > 2) segments.push(info);
@@ -1475,7 +1488,7 @@ class LinzMonitorCombined extends HTMLElement {
     // Text klein rastern (1 Pixel = 1 LED-Punkt)
     rc.clearRect(0, 0, W, H);
     rc.fillStyle = "#fff";
-    rc.font = `bold ${STELE_FONT_PX}px Arial, Helvetica, sans-serif`;
+    rc.font = `${STELE_FONT_WEIGHT} ${STELE_FONT_PX}px Arial, Helvetica, sans-serif`;
     rc.textBaseline = "alphabetic";
     Array.from(text).slice(0, STELE_COLS).forEach((c, i) => {
       if (c === " ") return;
