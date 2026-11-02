@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.6.2-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-1.8.0-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -13,6 +13,10 @@
 Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche und hochgradig anpassbare Dashboard‑Karten.
 
 ---
+
+## 🆕 Neu in v1.8.0
+* **5. Design „Haltestellen-Säule“:** Originalgetreuer Nachbau der Linz AG Anzeige an der Haltestelle – H-Schild, Haltestellenname, Linien-Zeile und grüne LED-Zeilen (nur die Tafel, ohne Mast).
+* **Brand-Icons in korrekter Größe** (256/512 px) für eine scharfe Anzeige in HACS und Home Assistant.
 
 ## 🆕 Neu in v1.6.1
 * **Linie 11s:** Fahrten der Linie 11 zum Stadtfriedhof werden als `11s` statt `11*` angezeigt.
@@ -33,7 +37,7 @@ Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche u
 
 - ⚡ 100% Echtzeit‑Daten inkl. Verspätungen und Baustellen-Infos  
 - 🔍 Smart Search für Haltestellen (Textsuche oder interaktive GPS-Umkreissuche)
-- 🎨 Vier Design‑Varianten (Maxi, Midi, Mini, LED Wall) in einer einzigen flexiblen Karte zusammengeführt  
+- 🎨 Fünf Design‑Varianten (Maxi, Midi, Mini, LED Wall, Haltestellen-Säule) in einer einzigen flexiblen Karte zusammengeführt  
 - 📱 Responsive: Perfekt für Tablets, Wallpanels & Smartphones  
 - ⚙️ Komplette UI‑Konfiguration via Lovelace Editor
 
@@ -63,15 +67,15 @@ Die Custom Lovelace Card (`linz-linien-combined.js`) ist jetzt direkt in dieser 
 
 ## 🖼️ Vorschau der Layouts
 
-| Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) | LED-Wall |
-| :---: | :---: | :---: | :---: |
-| ![v1 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/v1.png) | ![v2 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/v2.png) | ![v3 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/v3.png) | ![led-wall Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/ledwall.png) |
+| Design V1 (Maxi) | Design V2 (Midi) | Design V3 (Mini) | LED-Wall | Haltestellen-Säule |
+| :---: | :---: | :---: | :---: | :---: |
+| ![v1 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/v1.png) | ![v2 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/v2.png) | ![v3 Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/v3.png) | ![led-wall Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/ledwall.png) | ![Haltestellen-Säule Preview](https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/haltestelle.png) |
 
 ---
 
 ## ⚙️ Verwendung & Konfiguration im Dashboard
 
-Eine Karte, vier Varianten! Sie können die Karte komplett grafisch im Home Assistant UI-Editor anpassen (inklusive dynamischer Linien- und Richtungs-Filter per Klick!). 
+Eine Karte, fünf Varianten! Sie können die Karte komplett grafisch im Home Assistant UI-Editor anpassen (inklusive dynamischer Linien- und Richtungs-Filter per Klick!). 
 
 Falls Sie den YAML-Modus bevorzugen, hier ein Beispiel für das kompakte **Midi-Layout**:
 
@@ -85,4 +89,17 @@ font_size: 20
 dest_size: 18
 filter: "1,2"
 sortierung: "echtzeit"
+```
+
+### Beispiel: Haltestellen-Säule
+
+```yaml
+type: custom:linz-monitor-combined
+entity: sensor.haltestelle_hauptbahnhof_nachste_abfahrt
+layout: stele
+anzahl: 4                    # Anzahl der LED-Zeilen (wie am Original 3–4)
+stele_led_color: "#4dff5e"   # Farbe der LED-Schrift
+stele_clock: true            # kleine Uhrzeit unten rechts
+stele_lines: ""              # Linien-Zeile, leer = automatisch (z.B. "27,41,43")
+stele_footer_image: ""       # optional eigenes Bild statt Schriftzug unten
 ```

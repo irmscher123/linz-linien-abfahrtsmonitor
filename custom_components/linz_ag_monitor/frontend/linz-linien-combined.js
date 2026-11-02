@@ -152,6 +152,25 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
            <input id="led_color" class="std-input" type="text" value="${this._config.led_color || '#FF9900'}" placeholder="Standard: #FF9900 (Orange)">
         </div>
        `;
+    } else if (mode === "stele") {
+       specificHtml = `
+        <div class="grid-2">
+          <div>
+            <label>💡 LED Farbe</label>
+            <input id="stele_led_color" class="std-input" type="text" value="${this._config.stele_led_color || '#4dff5e'}" placeholder="Standard: #4dff5e (Grün)">
+          </div>
+          <label class="toggle-box"><input id="stele_clock" class="std-input" type="checkbox" ${this._config.stele_clock !== false ? 'checked' : ''}><span>Uhrzeit unten anzeigen</span></label>
+        </div>
+        <div class="form-row">
+          <label>🔤 Linien-Zeile (leer = automatisch aus den Abfahrten)</label>
+          <input id="stele_lines" class="std-input" type="text" value="${this._config.stele_lines || ''}" placeholder="z.B. 27,41,43">
+        </div>
+        <div class="form-row">
+          <label>🖼️ Bild unten (URL, optional – z.B. dein eigenes Logo)</label>
+          <input id="stele_footer_image" class="std-input" type="text" value="${this._config.stele_footer_image || ''}" placeholder="https://… oder /local/…">
+        </div>
+        <div class="hint-text">Tipp: „Anzahl der Zeilen“ auf 3 oder 4 stellen – wie an der echten Haltestelle.</div>
+       `;
     }
 
     this.innerHTML = `
@@ -206,6 +225,7 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
                 <option value="midi" ${mode === 'midi' ? 'selected' : ''}>Midi (Compact)</option>
                 <option value="mini" ${mode === 'mini' ? 'selected' : ''}>Mini (Minimal)</option>
                 <option value="led" ${mode === 'led' ? 'selected' : ''}>LED Wall (Matrix)</option>
+                <option value="stele" ${mode === 'stele' ? 'selected' : ''}>Haltestellen-Säule</option>
               </select>
            </div>
            <div>
@@ -222,7 +242,7 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
          <div class="grid-2" style="margin-top: 20px;">
            <div>
              <label>Anzahl der Zeilen</label>
-             <input id="anzahl" class="std-input" type="number" value="${this._config.anzahl || 7}">
+             <input id="anzahl" class="std-input" type="number" value="${this._config.anzahl || (mode === "stele" ? 4 : 7)}">
            </div>
            <div>
              <label>Sortierung</label>
@@ -312,7 +332,7 @@ class LinzMonitorCombined extends HTMLElement {
   setConfig(config) {
     this._config = { 
       layout: "maxi",
-      anzahl: 7, 
+      anzahl: config.layout === "stele" ? 4 : 7, 
       sortierung: "echtzeit", 
       time_format: "countdown",
       filter: "", 
@@ -335,6 +355,9 @@ class LinzMonitorCombined extends HTMLElement {
     // FONT FIX: Lädt Exo 2 als Standard, wenn das Feld leer gelassen wurde!
     if (this._config.layout === 'led') {
        loadGoogleFont("DotGothic16");
+    } else if (this._config.layout === 'stele') {
+       loadGoogleFont("DotGothic16");
+       loadGoogleFont("Exo 2");
     } else {
        loadGoogleFont(this._config.font_family || "Exo 2");
     }
@@ -409,6 +432,8 @@ class LinzMonitorCombined extends HTMLElement {
         this._renderMidi(state, combined);
     } else if (layout === "led") {
         this._renderLed(state, combined);
+    } else if (layout === "stele") {
+        this._renderStele(state, combined);
     } else {
         this._renderMaxi(state, combined);
     }
@@ -1186,6 +1211,148 @@ class LinzMonitorCombined extends HTMLElement {
     Array.from(list.children).forEach(c => { if (!activeIds.includes(c.getAttribute("data-id"))) list.removeChild(c); });
   }
 
+  /* ==================================================================================
+     RENDER: HALTESTELLEN-SÄULE (Nachbau der Linz AG Anzeige an der Haltestelle)
+     Nur die Tafel selbst – ohne Mast, ohne Kartenhintergrund.
+     ================================================================================== */
+  _renderStele(state, departures) {
+    const LED = this._config.stele_led_color || "#4dff5e";
+    const esc = (t) => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+
+    if (!this.querySelector("ha-card") || this._currentLayout !== 'stele') {
+      this._currentLayout = 'stele';
+      this._steleRowsHtml = null;
+      this.innerHTML = `
+        <style>
+          ha-card.st-card {
+            background: transparent !important; box-shadow: none !important; border: none !important;
+            display: block; width: 100%; padding: 0 !important; overflow: visible !important; container-type: inline-size;
+            --st-led: ${LED};
+          }
+          .st-wrap { width: 100%; font-family: Arial, "Helvetica Neue", Helvetica, sans-serif; color: #1d1d1b; }
+
+          /* --- Kopf mit Bogen --- */
+          .st-head {
+            position: relative; background: linear-gradient(180deg, #ffffff 0%, #f1f1ef 100%);
+            border: 1px solid #c7cacc; border-bottom: none;
+            border-radius: 50% 50% 0 0 / 34cqw 34cqw 0 0;
+            padding: 5cqw 6cqw 2.6cqw; text-align: center;
+            box-shadow: inset 0 -0.6cqw 0 rgba(0,0,0,0.04);
+          }
+          .st-h {
+            width: 19cqw; height: 19cqw; margin: 0 auto 2cqw; border-radius: 50%;
+            background: #f6b70f; border: 1.6cqw solid #1f8a55; box-sizing: border-box;
+            display: flex; align-items: center; justify-content: center;
+            color: #1b6b43; font-weight: 700; font-size: 13cqw; line-height: 1; font-family: Arial, sans-serif;
+          }
+          .st-name { font-weight: 700; font-size: 6.6cqw; line-height: 1.15; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .st-lines { text-align: left; font-size: 4.6cqw; margin-top: 1.6cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+          /* --- Fuge zwischen Kopf und Anzeige --- */
+          .st-joint { height: 1.4cqw; background: linear-gradient(180deg, #b9bcbe, #dfe1e2); border-left: 1px solid #c7cacc; border-right: 1px solid #c7cacc; }
+
+          /* --- Anzeigefeld --- */
+          .st-body {
+            background: linear-gradient(180deg, #fbfbfa 0%, #f0f0ee 100%);
+            border: 1px solid #c7cacc; border-top: none; border-radius: 0 0 2.4cqw 2.4cqw;
+            padding: 3.4cqw 4.6cqw 4cqw;
+          }
+          .st-labels { display: grid; grid-template-columns: 15% 1fr auto; align-items: end; font-size: 3.9cqw; line-height: 1.15; margin-bottom: 1.8cqw; color: #2a2a28; }
+          .st-labels .lab-time { text-align: right; }
+
+          .st-rows { display: flex; flex-direction: column; gap: 2.8cqw; }
+          .st-row {
+            height: 8.4cqw; background-color: #101311; border-radius: 0.6cqw;
+            box-shadow: inset 0 0 0 0.35cqw #1e2421;
+            background-image: radial-gradient(circle, rgba(77,255,94,0.07) 32%, transparent 38%);
+            background-size: 0.95cqw 0.95cqw;
+            display: grid; grid-template-columns: 15% 1fr 20%; align-items: center;
+            padding: 0 1.8cqw; box-sizing: border-box; overflow: hidden;
+            font-family: 'DotGothic16', 'Courier New', monospace; font-size: 5.4cqw; line-height: 1;
+            color: var(--st-led); text-shadow: 0 0 0.6cqw color-mix(in srgb, var(--st-led) 70%, transparent);
+            letter-spacing: 0.05em;
+          }
+          .st-row .c-line { text-align: right; padding-right: 2.6cqw; }
+          .st-row .c-dest { white-space: nowrap; overflow: hidden; text-overflow: clip; }
+          .st-row .c-min { text-align: right; white-space: nowrap; }
+          .st-row.empty { color: transparent; text-shadow: none; }
+          .st-blink { animation: stBlink 1s steps(1) infinite; }
+          @keyframes stBlink { 50% { opacity: 0; } }
+
+          /* --- Fußbereich --- */
+          .st-foot { position: relative; margin-top: 5cqw; text-align: center; min-height: 10cqw; }
+          .st-mark { display: inline-block; text-align: left; line-height: 1; }
+          .st-mark .m1 { font-family: 'Exo 2', Arial, sans-serif; font-weight: 600; font-size: 8.4cqw; letter-spacing: 0.14em; color: #4b4b4b; }
+          .st-mark .m1 b { color: #e4572e; font-weight: 600; }
+          .st-mark .m2 { font-family: 'Exo 2', Arial, sans-serif; font-weight: 600; font-size: 4.3cqw; letter-spacing: 0.98em; color: #e4572e; margin-top: 0.6cqw; padding-left: 0.2em; }
+          .st-foot img { max-width: 70%; max-height: 16cqw; object-fit: contain; }
+          .st-clock { position: absolute; right: 0; bottom: 0; font-size: 3.6cqw; color: #8a8d8f; font-variant-numeric: tabular-nums; }
+        </style>
+        <ha-card class="st-card">
+          <div class="st-wrap">
+            <div class="st-head">
+              <div class="st-h">H</div>
+              <div class="st-name" id="st-title"></div>
+              <div class="st-lines" id="st-lines"></div>
+            </div>
+            <div class="st-joint"></div>
+            <div class="st-body">
+              <div class="st-labels"><span>Linie</span><span>Ziel</span><span class="lab-time">Abfahrt<br>in Min.</span></div>
+              <div class="st-rows" id="st-rows"></div>
+              <div class="st-foot">
+                ${this._config.stele_footer_image
+                  ? `<img src="${esc(this._config.stele_footer_image)}" alt="">`
+                  : `<div class="st-mark"><div class="m1">LIN<b>Z</b> AG</div><div class="m2">LINIEN</div></div>`}
+                ${this._config.stele_clock !== false ? `<div class="st-clock" id="clock"></div>` : ``}
+              </div>
+            </div>
+          </div>
+        </ha-card>
+      `;
+    }
+
+    this._updateClockDisplay();
+
+    // Titel
+    const filterRegex = /^(Linz\/Donau|Leonding|Linz)[,\s]+/i;
+    const defaultName = (state.attributes.stop_name || "").replace(filterRegex, "").trim();
+    const title = this._config.stop_name_override || defaultName;
+    const titleEl = this.querySelector("#st-title");
+    if (titleEl.textContent !== title) titleEl.textContent = title;
+
+    // Linien-Zeile: manuell oder automatisch aus allen Abfahrten der Haltestelle
+    let lines = (this._config.stele_lines || "").split(",").map(s => s.trim()).filter(Boolean);
+    if (!lines.length) {
+      const all = (state.attributes.departureList || []).filter(d => d && d.line).map(d => String(d.line).replace("*", ""));
+      lines = [...new Set(all)].sort((a, b) => a.localeCompare(b, undefined, { numeric: true }));
+    }
+    const linesText = lines.length ? `${lines.length === 1 ? "Linie" : "Linien"} ${lines.join(",")}` : "";
+    const linesEl = this.querySelector("#st-lines");
+    if (linesEl.textContent !== linesText) linesEl.textContent = linesText;
+
+    // Zeilen (bereits abgefahrene Fahrten zeigt die echte Anzeige nicht)
+    const count = Math.max(1, Number(this._config.anzahl) || 4);
+    const visible = departures.filter(d => !d.isGone).slice(0, count);
+    let html = "";
+    for (let i = 0; i < count; i++) {
+      const d = visible[i];
+      if (!d) { html += `<div class="st-row empty"></div>`; continue; }
+      const infoLow = (d.infos || "").toLowerCase();
+      const isCancelled = d.canceled || d.cancelled || infoLow.includes("fällt aus") || infoLow.includes("entfällt");
+      const isNow = d.countdown === 0 && !isCancelled;
+      let minTxt;
+      if (isCancelled) minTxt = "--";
+      else if (isNow) minTxt = `<span class="st-blink">0</span>`;
+      else if (this._config.time_format === "absolute" || d.countdown >= 60) minTxt = esc(d.scheduled);
+      else minTxt = esc(d.countdown);
+      html += `<div class="st-row${isCancelled ? " cancelled" : ""}"><span class="c-line">${esc(this._getRouteName(d))}</span><span class="c-dest">${esc(isCancelled ? "Fällt aus" : d.direction)}</span><span class="c-min">${minTxt}</span></div>`;
+    }
+    if (html !== this._steleRowsHtml) {
+      this._steleRowsHtml = html;
+      this.querySelector("#st-rows").innerHTML = html;
+    }
+  }
+
   getCardSize() { return (this._config.anzahl || 7) + 1; }
 }
 
@@ -1197,6 +1364,6 @@ window.customCards = window.customCards || [];
 if (!window.customCards.some(c => c.type === "linz-monitor-combined")) window.customCards.push({
   type: "linz-monitor-combined",
   name: "LinzAG Linien Monitor",
-  description: "Maxi, Midi, Mini und LED Wall in einer Karte.",
+  description: "Maxi, Midi, Mini, LED Wall und Haltestellen-Säule in einer Karte.",
   preview: true
 });
