@@ -15,7 +15,7 @@ Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche u
 ---
 
 ## 🆕 Neu in v1.8.3
-* **Haltestellen-Säule:** dünnere LED-Zeichen, Kurznamen wie an der echten Anzeige (Fernheizwerk, Kleinmünchen, Trauner Kreuzung) und feste 24-Felder-Zeilen wie am Original – Linie (Feld 1–3), Zusatz wie `a`, `*`, `s` (Feld 4), Ziel bzw. Sonderinformation (Feld 6–20, läuft bei Überlänge Feld für Feld durch), Abfahrtsminuten (Feld 21–24). Zusatzinfos wie „Verspätung bitte Geduld“ wechseln sich mit dem Ziel ab. Doppelt so feine LED-Punkte.
+* **Haltestellen-Säule:** dünnere LED-Zeichen, Kurznamen wie an der echten Anzeige (Fernheizwerk, Kleinmünchen, Trauner Kreuzung) und feste 24-Felder-Zeilen wie am Original – Linie (Feld 1–3), Zusatz wie `a`, `*`, `s` (Feld 4), Ziel bzw. Sonderinformation (Feld 6–21, läuft bei Überlänge Feld für Feld durch), Abfahrtsminuten (Feld 22–24, max. 99 Minuten). Zusatzinfos wie „Verspätung bitte Geduld“ wechseln sich mit dem Ziel ab. Doppelt so feine LED-Punkte.
 
 ## 🆕 Neu in v1.8.0
 * **5. Design „Haltestellen-Säule“:** Originalgetreuer Nachbau der Linz AG Anzeige an der Haltestelle – H-Schild, Haltestellenname, Linien-Zeile und grüne LED-Zeilen mit fester 24-Felder-Matrix (feine Punkte, 8 × 14 pro Zeichen, Laufschrift für lange Ziele und Zusatzinfos) und Linz AG Linien Logo (nur die Tafel, ohne Mast). Das Logo wird lokal aus der Integration geladen.
@@ -93,15 +93,16 @@ Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz A
 | 1–3 | Liniennummer (rechtsbündig) | `11`, `3`, `N82` |
 | 4 | Zusatzbezeichnung | `s`, `a`, `b`, `*` |
 | 5 | leer | |
-| 6–20 | Ziel bzw. Sonderinformation (15 Felder) | `Stadtfriedhof` |
-| 21–24 | Abfahrt in Minuten (rechtsbündig) | `0` (blinkt), `12`, `115` |
+| 6–21 | Ziel bzw. Sonderinformation (16 Felder) | `Trauner Kreuzung` |
+| 22–24 | Abfahrt in Minuten (rechtsbündig, max. 99) | `0` (blinkt), `5`, `12` |
 
-* **Laufschrift:** Ist ein Ziel oder eine Information länger als 15 Felder, läuft der Text Feld für Feld nach links – mit kurzer Pause am Anfang und am Ende, damit jedes Wort lesbar ist.
+* **Laufschrift:** Ist ein Ziel oder eine Information länger als 16 Felder, läuft der Text Feld für Feld nach links – mit kurzer Pause am Anfang und am Ende, damit jedes Wort lesbar ist.
 * **Sonderinformationen** wie „Verspätung bitte Geduld“ oder „Fällt aus“ wechseln sich im Zielfeld mit dem Ziel ab.
 * **Kurznamen wie an der echten Anzeige** (nur in diesem Design): Fernheizkraftwerk → *Fernheizwerk*, Remise Kleinmünchen → *Kleinmünchen*, Trauner Kreuzung P+R → *Trauner Kreuzung*.
 * **Feine LED-Punkte:** 8 × 14 Punkte pro Zeichen, quadratisch mit schmaler Fuge.
 * **Kopf:** H-Schild, Haltestellenname und Linien-Zeile (automatisch aus den Abfahrten oder selbst eingetragen).
 * **Unten rechts** das Linz AG Linien Logo (wird lokal aus der Integration geladen), optional eine kleine Uhrzeit links.
+* Wie an der echten Anzeige erscheinen nur Abfahrten bis 99 Minuten; die Anzeige ist immer in Minuten.
 * Die Tafel passt sich der Kartenbreite an – vom Smartphone bis zum Wandtablet.
 
 ---

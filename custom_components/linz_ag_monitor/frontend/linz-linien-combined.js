@@ -59,6 +59,7 @@ const STELE_GLYPH_W = 8;
 const STELE_FONT_PX = 16.5;
 const STELE_BASELINE = 12.6;
 const STELE_THRESHOLD = 110;
+const STELE_MIN_W = 3;               // Abfahrtsminuten: Feld 22-24
 const STELE_FONT_WEIGHT = "normal";   // "bold" = dickere Zeichen
 
 // Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
@@ -196,7 +197,7 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
           <label>🖼️ Bild unten rechts (URL, leer = Linz AG Linien Logo)</label>
           <input id="stele_footer_image" class="std-input" type="text" value="${this._config.stele_footer_image || ''}" placeholder="https://… oder /local/…">
         </div>
-        <div class="hint-text">Tipp: „Anzahl der Zeilen“ auf 3 oder 4 stellen – wie an der echten Haltestelle. Jede Zeile hat 24 Felder: Linie (1-3), Zusatz (4), Ziel/Info (6-20), Minuten (21-24).</div>
+        <div class="hint-text">Tipp: „Anzahl der Zeilen“ auf 3 oder 4 stellen – wie an der echten Haltestelle. Jede Zeile hat 24 Felder: Linie (1-3), Zusatz (4), Ziel/Info (6-21), Minuten (22-24, max. 99).</div>
        `;
     }
 
@@ -1345,11 +1346,12 @@ class LinzMonitorCombined extends HTMLElement {
 
     // Zeilen aufbauen – 24 Felder:
     //   1-3 Liniennummer (rechtsbündig) | 4 Zusatz (a, *, s, b …) | 5 leer
-    //   6-20 Ziel bzw. Sonderinformation (15 Felder, läuft Feld für Feld, wenn zu lang)
-    //   21-24 Abfahrtsminuten (rechtsbündig)
+    //   6-21 Ziel bzw. Sonderinformation (16 Felder, läuft Feld für Feld, wenn zu lang)
+    //   22-24 Abfahrtsminuten (rechtsbündig, max. 99 – wie an der echten Anzeige)
     // Bereits abgefahrene Fahrten zeigt die echte Anzeige nicht.
     const count = Math.max(1, Number(this._config.anzahl) || 4);
-    const visible = departures.filter(d => !d.isGone).slice(0, count);
+    // Die echte Anzeige zeigt nur Abfahrten bis 99 Minuten
+    const visible = departures.filter(d => !d.isGone && !(typeof d.countdown === "number" && d.countdown > 99)).slice(0, count);
     const rows = [];
     for (let i = 0; i < count; i++) {
       const d = visible[i];
@@ -1368,7 +1370,6 @@ class LinzMonitorCombined extends HTMLElement {
       let minTxt;
       if (isCancelled) minTxt = "--";
       else if (isNow) minTxt = "0";
-      else if (this._config.time_format === "absolute" || d.countdown >= 1000) minTxt = String(d.scheduled || "");
       else minTxt = String(d.countdown);
 
       // Ziel + Sonderinformationen wechseln sich im Zielfeld ab
@@ -1449,8 +1450,8 @@ class LinzMonitorCombined extends HTMLElement {
     this._steleRows.forEach((row, r) => {
       let text = "";
       if (row.prefix) {
-        const minW = Math.max(4, row.min.length);           // Felder 21-24 (Uhrzeit "21:15" nimmt Feld 20 dazu)
-        const fieldW = STELE_COLS - 5 - minW;               // normal 15 Felder (6-20)
+        const minW = STELE_MIN_W;                           // Felder 22-24
+        const fieldW = STELE_COLS - 5 - minW;               // 16 Felder (6-21)
         const min = (row.blink && !blinkOn) ? "" : row.min;
         text = row.prefix + this._steleField(row, fieldW, now) + min.padStart(minW);
       }
