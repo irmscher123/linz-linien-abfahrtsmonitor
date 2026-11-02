@@ -54,10 +54,24 @@ const LINZ_ASSET_BASE = (() => {
 // LED-Raster der Haltestellen-Säule: 24 Zeichen, Zeichenfeld 10 x 16 Punkte, Glyphe 8 x 14 Punkte
 const STELE_COLS = 24;
 const STELE_DOT = 2;                  // 1 Schrift-Punkt = 2 x 2 LED-Punkte ("doppelte Punkte")
-const STELE_CELL_W = 12;              // Zeichenfeld: 5 x 2 = 10 Punkte + je 1 Rand
-const STELE_CELL_H = 18;              // 8 x 2 = 16 Punkte + je 1 Rand
+const STELE_PIX_W = 12;               // ein Kästchen hat 12 x 20 Pixel (wie an der echten Anzeige)
+const STELE_PIX_H = 20;
+const STELE_CELL_GAP = 1;             // dunkle Fuge zwischen den Kästchen (in Pixeln)
+const STELE_CELL_W = STELE_PIX_W + STELE_CELL_GAP;
+const STELE_CELL_H = STELE_PIX_H + STELE_CELL_GAP;
+const STELE_GLYPH_X = 1;              // Schrift (5x8 x 2 = 10 x 16 Pixel) im Kästchen: 1 Pixel Rand links
+const STELE_GLYPH_Y = 2;              // 2 Pixel Rand oben
 const STELE_MIN_W = 3;                // Abfahrtsminuten: Feld 22-24
 const STELE_DOT_ASPECT = 1;           // 1 = quadratische LED-Punkte (größer = höhere, schlankere Zeichen)
+// Aussehen der LED-Anzeige:
+//   mode     "full" = jeder Schrift-Punkt als 2x2 feine Punkte, "thinH" = waagrechte Striche 1 Punkt,
+//            "led" = ein großes LED pro Schrift-Punkt
+//   fill     Größe der leuchtenden Punkte (0-1, kleiner = mehr Abstand)
+//   grid     Helligkeit der unbeleuchteten Pixel im Hintergrund (0 = aus)
+//   gridMode Raster im Hintergrund ("led" = ein großes Feld pro Schrift-Punkt, sonst wie mode)
+//   gridFill Größe der Hintergrund-Pixel
+//   glow     Stärke des Leuchtens um die Schrift
+const STELE_LOOK = { mode: "full", fill: 0.76, grid: 0.11, gridMode: "full", gridFill: 0.60, glow: 1.2 };
 // 5x8-LED-Schrift wie an der echten Anzeige (Zeile 0-6 Zeichen, Zeile 7 Unterlänge).
 // Jede Zeile = 5 Bits (links = höchstes Bit). Jeder Schrift-Punkt wird als 2x2 feine LED-Punkte gezeichnet.
 const STELE_FONT = {
@@ -278,6 +292,10 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
             <input id="stele_led_color" class="std-input" type="text" value="${this._config.stele_led_color || '#4dff5e'}" placeholder="Standard: #4dff5e (Grün)">
           </div>
           <label class="toggle-box"><input id="stele_clock" class="std-input" type="checkbox" ${this._config.stele_clock !== false ? 'checked' : ''}><span>Uhrzeit unten anzeigen</span></label>
+        </div>
+        <div class="grid-2">
+          <label class="toggle-box"><input id="stele_compact" class="std-input" type="checkbox" ${this._config.stele_compact === true ? 'checked' : ''}><span>Kompakt (Badge): nur LED-Zeilen</span></label>
+          <label class="toggle-box"><input id="stele_labels" class="std-input" type="checkbox" ${this._config.stele_labels !== false ? 'checked' : ''}><span>Spaltenköpfe (Linie / Ziel / Abfahrt)</span></label>
         </div>
         <div class="form-row">
           <label>🔤 Linien-Zeile (leer = automatisch aus den Abfahrten)</label>
@@ -1338,6 +1356,9 @@ class LinzMonitorCombined extends HTMLElement {
     const LED = this._config.stele_led_color || "#4dff5e";
     const esc = (t) => String(t ?? "").replace(/[&<>"']/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
+    const compact = this._config.stele_compact === true;
+    const showLabels = this._config.stele_labels !== false;
+
     if (!this.querySelector("ha-card") || this._currentLayout !== 'stele') {
       this._currentLayout = 'stele';
       this._steleDrawn = [];
@@ -1376,6 +1397,9 @@ class LinzMonitorCombined extends HTMLElement {
             border: 1px solid #c7cacc; border-top: none; border-radius: 0 0 2.4cqw 2.4cqw;
             padding: 3.4cqw 4.6cqw 4cqw;
           }
+          /* Kompakt (Badge): nur Anzeigefeld, rundum abgerundet, schmaler Rand */
+          .st-compact .st-body { border-top: 1px solid #c7cacc; border-radius: 2cqw; padding: 2cqw 2.6cqw 2.6cqw; }
+          .st-compact .st-body.no-labels { padding-top: 2.6cqw; }
           /* Spaltenköpfe exakt über dem 24-Zeichen-Raster: "Ziel" beginnt bei Zeichen 5 */
           .st-labels { display: grid; grid-template-columns: calc(1.2% + 97.6% * 5 / 24) 1fr auto; align-items: end; font-size: 3.9cqw; line-height: 1.15; margin-bottom: 1.8cqw; color: #2a2a28; }
           .st-labels .lab-time { text-align: right; }
@@ -1386,8 +1410,8 @@ class LinzMonitorCombined extends HTMLElement {
             box-shadow: inset 0 0 0 0.3cqw #1a1f1c;
             padding: 0.6cqw 1.2%; box-sizing: border-box; line-height: 0;
           }
-          /* 24 Zeichen x (12 x 18 Punkte) -> Seitenverhältnis 288 : 18 (bei STELE_DOT_ASPECT 1) */
-          .st-row canvas { display: block; width: 100%; aspect-ratio: ${288 / (18 * STELE_DOT_ASPECT)} / 1; }
+          /* 24 Kästchen à 12 x 20 Pixel (+ Fuge) */
+          .st-row canvas { display: block; width: 100%; aspect-ratio: ${(STELE_COLS * STELE_CELL_W) / (STELE_CELL_H * STELE_DOT_ASPECT)} / 1; }
 
           /* --- Fußbereich --- */
           .st-foot { position: relative; margin-top: 6cqw; min-height: 10cqw; display: flex; justify-content: flex-end; align-items: flex-end; }
@@ -1395,20 +1419,22 @@ class LinzMonitorCombined extends HTMLElement {
           .st-clock { position: absolute; left: 0; bottom: 0; font-size: 3.6cqw; color: #8a8d8f; font-variant-numeric: tabular-nums; }
         </style>
         <ha-card class="st-card">
-          <div class="st-wrap">
+          <div class="st-wrap${compact ? " st-compact" : ""}">
+            ${compact ? `` : `
             <div class="st-head">
               <div class="st-h">H</div>
               <div class="st-name" id="st-title"></div>
               <div class="st-lines" id="st-lines"></div>
             </div>
-            <div class="st-joint"></div>
-            <div class="st-body">
-              <div class="st-labels"><span>Linie</span><span>Ziel</span><span class="lab-time">Abfahrt<br>in Min.</span></div>
+            <div class="st-joint"></div>`}
+            <div class="st-body${showLabels ? "" : " no-labels"}">
+              ${showLabels ? `<div class="st-labels"><span>Linie</span><span>Ziel</span><span class="lab-time">Abfahrt<br>in Min.</span></div>` : ``}
               <div class="st-rows" id="st-rows"></div>
+              ${compact ? `` : `
               <div class="st-foot">
                 <img src="${esc(this._config.stele_footer_image || (LINZ_ASSET_BASE + "linzag-linien.png"))}" alt="Linz AG Linien">
                 ${this._config.stele_clock !== false ? `<div class="st-clock" id="clock"></div>` : ``}
-              </div>
+              </div>`}
             </div>
           </div>
         </ha-card>
@@ -1422,7 +1448,7 @@ class LinzMonitorCombined extends HTMLElement {
     const defaultName = (state.attributes.stop_name || "").replace(filterRegex, "").trim();
     const title = this._config.stop_name_override || defaultName;
     const titleEl = this.querySelector("#st-title");
-    if (titleEl.textContent !== title) titleEl.textContent = title;
+    if (titleEl && titleEl.textContent !== title) titleEl.textContent = title;
 
     // Linien-Zeile: manuell oder automatisch aus allen Abfahrten der Haltestelle
     let lines = (this._config.stele_lines || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -1432,7 +1458,7 @@ class LinzMonitorCombined extends HTMLElement {
     }
     const linesText = lines.length ? `${lines.length === 1 ? "Linie" : "Linien"} ${lines.join(",")}` : "";
     const linesEl = this.querySelector("#st-lines");
-    if (linesEl.textContent !== linesText) linesEl.textContent = linesText;
+    if (linesEl && linesEl.textContent !== linesText) linesEl.textContent = linesText;
 
     // Zeilen aufbauen – 24 Felder:
     //   1-3 Liniennummer (rechtsbündig) | 4 Zusatz (a, *, s, b …) | 5 leer
@@ -1572,43 +1598,73 @@ class LinzMonitorCombined extends HTMLElement {
     const dot = cw / W, dotY = dot * STELE_DOT_ASPECT;
 
     // Hintergrund + dunkle Zeichenfelder (alle gleich groß)
+    const look = STELE_LOOK;
     ctx.fillStyle = "#0b0e0c";
     ctx.fillRect(0, 0, cw, ch);
     ctx.fillStyle = cellColor;
     for (let i = 0; i < STELE_COLS; i++) {
-      ctx.fillRect((i * PX + 0.5) * dot, 0.5 * dotY, (PX - 1) * dot, (PY - 1) * dotY);
+      ctx.fillRect((i * PX + STELE_CELL_GAP / 2) * dot, (STELE_CELL_GAP / 2) * dotY, STELE_PIX_W * dot, STELE_PIX_H * dotY);
+    }
+    const gapX = dot * (1 - look.fill) / 2, gapY = dotY * (1 - look.fill) / 2;
+
+    // unbeleuchtete Pixel des LED-Boards ganz leicht sichtbar
+    if (look.grid > 0) {
+      const gm = look.gridMode || look.mode, gf = look.gridFill ?? look.fill;
+      const ggX = dot * (1 - gf) / 2, ggY = dotY * (1 - gf) / 2;
+      ctx.beginPath();
+      for (let i = 0; i < STELE_COLS; i++) {
+        // ganzes Kästchen: 12 x 20 Pixel
+        for (let r = 0; r < STELE_PIX_H; r++) for (let c = 0; c < STELE_PIX_W; c++) {
+          if (gm === "led" && (r % D || c % D)) continue;
+          const x = i * PX + STELE_CELL_GAP / 2 + c, y = STELE_CELL_GAP / 2 + r;
+          if (gm === "led") ctx.rect(x * dot + ggX * D, y * dotY + ggY * D, D * dot - 2 * ggX * D, D * dotY - 2 * ggY * D);
+          else ctx.rect(x * dot + ggX, y * dotY + ggY, dot - 2 * ggX, dotY - 2 * ggY);
+        }
+      }
+      ctx.fillStyle = LED;
+      ctx.globalAlpha = look.grid;
+      ctx.fill();
+      ctx.globalAlpha = 1;
     }
 
     // leuchtende Punkte
-    const gap = dot * 0.12;
     ctx.beginPath();
     Array.from(text).slice(0, STELE_COLS).forEach((c, i) => {
       let g = STELE_FONT[c];
       if (!g) {
-        const plain = c.normalize("NFD").replace(/[̀-ͯ]/g, "");   // é -> e usw.
+        const plain = c.normalize("NFD").replace(/[\u0300-\u036f]/g, "");   // é -> e usw.
         g = STELE_FONT[plain] || STELE_FONT[plain.toUpperCase()] || null;
       }
       if (!g) return;
+      const on = (r, col) => r >= 0 && r < 8 && col >= 0 && col < 5 && !!(g[r] & (16 >> col));
       for (let r = 0; r < 8; r++) {
-        const bits = g[r];
-        if (!bits) continue;
         for (let col = 0; col < 5; col++) {
-          if (!(bits & (16 >> col))) continue;
+          if (!on(r, col)) continue;
+          const x0 = i * PX + STELE_CELL_GAP / 2 + STELE_GLYPH_X + col * D, y0 = STELE_CELL_GAP / 2 + STELE_GLYPH_Y + r * D;
+          if (look.mode === "led") {            // ein großes LED pro Schrift-Punkt
+            ctx.rect(x0 * dot + gapX * D, y0 * dotY + gapY * D, D * dot - 2 * gapX * D, D * dotY - 2 * gapY * D);
+            continue;
+          }
           for (let dy = 0; dy < D; dy++) for (let dx = 0; dx < D; dx++) {
-            const x = i * PX + 1 + col * D + dx, y = 1 + r * D + dy;
-            ctx.rect(x * dot + gap, y * dotY + gap, dot - 2 * gap, dotY - 2 * gap);
+            // "thinH": waagrechte Striche nur 1 Punkt hoch, senkrechte bleiben durchgehend
+            if (look.mode === "thinH" && dy > 0 && !on(r + 1, col)) continue;
+            const x = x0 + dx, y = y0 + dy;
+            ctx.rect(x * dot + gapX, y * dotY + gapY, dot - 2 * gapX, dotY - 2 * gapY);
           }
         }
       }
     });
     ctx.fillStyle = LED;
     ctx.shadowColor = LED;
-    ctx.shadowBlur = dot * 1.2;
+    ctx.shadowBlur = dot * (look.glow ?? 1.2);
     ctx.fill();
     ctx.shadowBlur = 0;
   }
 
-  getCardSize() { return (this._config.anzahl || 7) + 1; }
+  getCardSize() {
+    if (this._config.layout === "stele" && this._config.stele_compact) return Math.max(1, Math.ceil((this._config.anzahl || 1) / 2));
+    return (this._config.anzahl || 7) + 1;
+  }
 }
 
 if (!customElements.get("linz-monitor-combined")) {

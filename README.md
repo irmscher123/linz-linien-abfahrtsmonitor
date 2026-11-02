@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.8.4-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-1.8.5-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -13,6 +13,10 @@
 Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche und hochgradig anpassbare Dashboard‑Karten.
 
 ---
+
+## 🆕 Neu in v1.8.5
+* **Haltestellen-Säule – Kompakt-Modus (Badge):** nur die LED-Zeile(n), ohne Kopf und Logo – z. B. als einzeilige Anzeige im Dashboard. Spaltenköpfe ein-/ausblendbar.
+* **LED-Board wie am Original:** jedes Kästchen hat 12 × 20 Pixel, die unbeleuchteten Pixel sind ganz leicht sichtbar.
 
 ## 🆕 Neu in v1.8.4
 * **Haltestellen-Säule:** neue 5 × 7-LED-Schrift wie am Original (jeder Punkt doppelt), Kurznamen wie an der echten Anzeige (Fernheizwerk, Kleinmünchen, Trauner Kreuzung, Stieglbauernstr.) und feste 24-Felder-Zeilen wie am Original – Linie (Feld 1–3), Zusatz wie `a`, `*`, `s` (Feld 4), Ziel bzw. Sonderinformation (Feld 6–21, läuft bei Überlänge Feld für Feld durch), Abfahrtsminuten (Feld 22–24, max. 99 Minuten). Zusatzinfos wie „Verspätung bitte Geduld“ wechseln sich mit dem Ziel ab. 
@@ -99,10 +103,14 @@ Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz A
 * **Laufschrift:** Ist ein Ziel oder eine Information länger als 16 Felder, läuft der Text Feld für Feld nach links – mit kurzer Pause am Anfang und am Ende, damit jedes Wort lesbar ist.
 * **Sonderinformationen** wie „Verspätung bitte Geduld“ oder „Fällt aus“ wechseln sich im Zielfeld mit dem Ziel ab.
 * **Kurznamen wie an der echten Anzeige** (nur in diesem Design): Fernheizkraftwerk → *Fernheizwerk*, Remise Kleinmünchen → *Kleinmünchen*, Trauner Kreuzung P+R → *Trauner Kreuzung*, Stieglbauernstraße → *Stieglbauernstr.*
-* **LED-Schrift wie am Original:** klassische 5 × 7-Punkt-Schrift, jeder Schrift-Punkt als 2 × 2 feine LED-Punkte gezeichnet – Striche 2 Punkte dick, inkl. Ä, Ö, Ü, ß.
+* **LED-Board wie am Original:** jedes Kästchen hat 12 × 20 Pixel; die unbeleuchteten Pixel schimmern ganz leicht durch. Die Schrift ist eine klassische 5 × 7-Punkt-Schrift, jeder Schrift-Punkt als 2 × 2 Pixel – Striche 2 Pixel dick, inkl. Ä, Ö, Ü, ß.
 * **Kopf:** H-Schild, Haltestellenname und Linien-Zeile (automatisch aus den Abfahrten oder selbst eingetragen).
 * **Unten rechts** das Linz AG Linien Logo (wird lokal aus der Integration geladen), optional eine kleine Uhrzeit links.
 * Wie an der echten Anzeige erscheinen nur Abfahrten bis 99 Minuten; die Anzeige ist immer in Minuten.
+* **Kompakt-Modus (Badge):** nur die LED-Zeile(n) ohne Kopf und Logo – mit `anzahl: 1` eine einzeilige Anzeige:
+
+  <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/haltestelle-kompakt.png" width="420" alt="Haltestellen-Säule Kompakt">
+
 * Die Tafel passt sich der Kartenbreite an – vom Smartphone bis zum Wandtablet.
 
 ---
@@ -136,4 +144,6 @@ stele_led_color: "#4dff5e"   # Farbe der LED-Schrift
 stele_clock: true            # kleine Uhrzeit unten links
 stele_lines: ""              # Linien-Zeile, leer = automatisch (z.B. "27,41,43")
 stele_footer_image: ""       # optional eigenes Bild statt Linz AG Logo unten rechts
+stele_compact: false         # true = nur LED-Zeilen (Badge), ohne Kopf und Logo
+stele_labels: true           # Spaltenköpfe "Linie / Ziel / Abfahrt in Min." anzeigen
 ```

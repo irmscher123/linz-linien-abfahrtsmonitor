@@ -8,7 +8,7 @@ from homeassistant.helpers import config_validation as cv
 
 DOMAIN = "linz_ag_monitor"
 PLATFORMS = ["sensor"]
-VERSION = "1.8.4"
+VERSION = "1.8.5"
 
 URL_BASE = "/linz_ag_monitor"
 CARD_FILE = "linz-linien-combined.js"
