@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.8.0-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-1.8.1-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -14,8 +14,11 @@ Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche u
 
 ---
 
+## 🆕 Neu in v1.8.1
+* **Haltestellen-Säule:** feste 24-Zeichen-Zeilen mit gleich großen Zeichenfeldern und doppelt so feinen LED-Punkten.
+
 ## 🆕 Neu in v1.8.0
-* **5. Design „Haltestellen-Säule“:** Originalgetreuer Nachbau der Linz AG Anzeige an der Haltestelle – H-Schild, Haltestellenname, Linien-Zeile und grüne LED-Zeilen in Punktmatrix-Schrift mit eckigen Punkten und Linz AG Linien Logo (nur die Tafel, ohne Mast). Schrift und Logo werden lokal aus der Integration geladen.
+* **5. Design „Haltestellen-Säule“:** Originalgetreuer Nachbau der Linz AG Anzeige an der Haltestelle – H-Schild, Haltestellenname, Linien-Zeile und grüne LED-Zeilen mit fester 24-Zeichen-Matrix (feine Punkte, 8 × 14 pro Zeichen) und Linz AG Linien Logo (nur die Tafel, ohne Mast). Das Logo wird lokal aus der Integration geladen.
 * **Brand-Icons in korrekter Größe** (256/512 px) für eine scharfe Anzeige in HACS und Home Assistant.
 
 ## 🆕 Neu in v1.6.1
