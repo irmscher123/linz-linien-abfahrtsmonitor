@@ -51,14 +51,14 @@ const LINZ_ASSET_BASE = (() => {
   try { return new URL(".", document.currentScript.src).href; } catch (e) { return "/linz_ag_monitor/"; }
 })();
 
-// Punktmatrix-Schrift "Doto" (OFL) mit eckigen Punkten – einmalig registrieren
-const loadLinzDotFont = () => {
-  if (document.getElementById("linz-dot-font")) return;
-  const st = document.createElement("style");
-  st.id = "linz-dot-font";
-  st.textContent = `@font-face { font-family: 'LinzDot'; src: url('${LINZ_ASSET_BASE}fonts/doto.woff2') format('woff2-variations'), url('${LINZ_ASSET_BASE}fonts/doto.woff2') format('woff2'); font-weight: 100 900; font-display: swap; }`;
-  document.head.appendChild(st);
-};
+// LED-Raster der Haltestellen-Säule: 24 Zeichen, Zeichenfeld 10 x 16 Punkte, Glyphe 8 x 14 Punkte
+const STELE_COLS = 24;
+const STELE_CELL_W = 10;
+const STELE_CELL_H = 16;
+const STELE_GLYPH_W = 8;
+const STELE_FONT_PX = 16.5;
+const STELE_BASELINE = 12.6;
+const STELE_THRESHOLD = 90;
 
 /* --- FONT LOADER --- */
 const loadGoogleFont = (fontName) => {
@@ -183,7 +183,7 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
           <label>🖼️ Bild unten rechts (URL, leer = Linz AG Linien Logo)</label>
           <input id="stele_footer_image" class="std-input" type="text" value="${this._config.stele_footer_image || ''}" placeholder="https://… oder /local/…">
         </div>
-        <div class="hint-text">Tipp: „Anzahl der Zeilen“ auf 3 oder 4 stellen – wie an der echten Haltestelle.</div>
+        <div class="hint-text">Tipp: „Anzahl der Zeilen“ auf 3 oder 4 stellen – wie an der echten Haltestelle. Jede Zeile hat 24 Felder: Linie (1-3), Zusatz (4), Ziel/Info (6-20), Minuten (21-24).</div>
        `;
     }
 
@@ -339,6 +339,8 @@ class LinzMonitorCombined extends HTMLElement {
   
   disconnectedCallback() {
     if (this._clockTimer) clearInterval(this._clockTimer);
+    if (this._steleRO) { this._steleRO.disconnect(); this._steleRO = null; }
+    if (this._steleTimer) { clearInterval(this._steleTimer); this._steleTimer = null; }
     this._animTimers.forEach(t => clearTimeout(t));
     this._animTimers.clear();
   }
@@ -370,8 +372,7 @@ class LinzMonitorCombined extends HTMLElement {
     if (this._config.layout === 'led') {
        loadGoogleFont("DotGothic16");
     } else if (this._config.layout === 'stele') {
-       loadLinzDotFont();
-       loadGoogleFont("DotGothic16"); // Ersatz, falls die eigene Schrift nicht geladen werden kann
+       // LED-Zeilen werden selbst gezeichnet – keine zusätzliche Schrift nötig
     } else {
        loadGoogleFont(this._config.font_family || "Exo 2");
     }
@@ -1235,7 +1236,7 @@ class LinzMonitorCombined extends HTMLElement {
 
     if (!this.querySelector("ha-card") || this._currentLayout !== 'stele') {
       this._currentLayout = 'stele';
-      this._steleRowsHtml = null;
+      this._steleDrawn = [];
       this.innerHTML = `
         <style>
           ha-card.st-card {
@@ -1271,33 +1272,18 @@ class LinzMonitorCombined extends HTMLElement {
             border: 1px solid #c7cacc; border-top: none; border-radius: 0 0 2.4cqw 2.4cqw;
             padding: 3.4cqw 4.6cqw 4cqw;
           }
-          .st-labels { display: grid; grid-template-columns: calc(1.4cqw + 15.4cqw) 1fr auto; align-items: end; font-size: 3.9cqw; line-height: 1.15; margin-bottom: 1.8cqw; color: #2a2a28; }
+          /* Spaltenköpfe exakt über dem 24-Zeichen-Raster: "Ziel" beginnt bei Zeichen 5 */
+          .st-labels { display: grid; grid-template-columns: calc(1.2% + 97.6% * 5 / 24) 1fr auto; align-items: end; font-size: 3.9cqw; line-height: 1.15; margin-bottom: 1.8cqw; color: #2a2a28; }
           .st-labels .lab-time { text-align: right; }
 
           .st-rows { display: flex; flex-direction: column; gap: 2.8cqw; }
           .st-row {
-            height: 8.6cqw; background-color: #0c0f0d; border-radius: 0.5cqw;
-            box-shadow: inset 0 0 0 0.35cqw #1a1f1c;
-            display: grid; grid-template-columns: 4ch 1fr 5ch; align-items: stretch;
-            padding: 0.7cqw 1.4cqw; box-sizing: border-box; overflow: hidden;
-            font-family: 'LinzDot', 'DotGothic16', 'Courier New', monospace;
-            font-variation-settings: "ROND" 0; font-weight: 900;
-            font-size: 6.4cqw; line-height: 1;
-            color: var(--st-led); text-shadow: 0 0 0.5cqw color-mix(in srgb, var(--st-led) 65%, transparent);
-            letter-spacing: 0;
+            background-color: #0b0e0c; border-radius: 0.5cqw;
+            box-shadow: inset 0 0 0 0.3cqw #1a1f1c;
+            padding: 0.6cqw 1.2%; box-sizing: border-box; line-height: 0;
           }
-          /* dunkle Zeichenfelder (1 Feld = 1 Zeichen) wie bei der echten LED-Anzeige */
-          .st-row > span {
-            display: flex; align-items: center; white-space: nowrap; overflow: hidden; min-width: 0;
-            background-image: linear-gradient(90deg, color-mix(in srgb, var(--st-led) 11%, #0c0f0d) 0 86%, transparent 86%);
-            background-size: 1ch 88%; background-repeat: repeat-x; background-position: left center;
-          }
-          .st-row .c-line { justify-content: flex-end; padding-right: 1ch; }
-          .st-row .c-dest { justify-content: flex-start; text-overflow: clip; }
-          .st-row .c-min { justify-content: flex-end; background-position: right center; }
-          .st-row.empty { color: transparent; text-shadow: none; }
-          .st-blink { animation: stBlink 1s steps(1) infinite; }
-          @keyframes stBlink { 50% { opacity: 0; } }
+          /* 24 Zeichen x (10 x 16 Punkte) -> Seitenverhältnis 240:16 */
+          .st-row canvas { display: block; width: 100%; aspect-ratio: 15 / 1; }
 
           /* --- Fußbereich --- */
           .st-foot { position: relative; margin-top: 6cqw; min-height: 10cqw; display: flex; justify-content: flex-end; align-items: flex-end; }
@@ -1344,27 +1330,181 @@ class LinzMonitorCombined extends HTMLElement {
     const linesEl = this.querySelector("#st-lines");
     if (linesEl.textContent !== linesText) linesEl.textContent = linesText;
 
-    // Zeilen (bereits abgefahrene Fahrten zeigt die echte Anzeige nicht)
+    // Zeilen aufbauen – 24 Felder:
+    //   1-3 Liniennummer (rechtsbündig) | 4 Zusatz (a, *, s, b …) | 5 leer
+    //   6-20 Ziel bzw. Sonderinformation (15 Felder, läuft Feld für Feld, wenn zu lang)
+    //   21-24 Abfahrtsminuten (rechtsbündig)
+    // Bereits abgefahrene Fahrten zeigt die echte Anzeige nicht.
     const count = Math.max(1, Number(this._config.anzahl) || 4);
     const visible = departures.filter(d => !d.isGone).slice(0, count);
-    let html = "";
+    const rows = [];
     for (let i = 0; i < count; i++) {
       const d = visible[i];
-      if (!d) { html += `<div class="st-row empty"><span class="c-line"></span><span class="c-dest"></span><span class="c-min"></span></div>`; continue; }
+      if (!d) { rows.push({ id: `leer-${i}`, prefix: "", segments: [""], min: "", blink: false }); continue; }
       const infoLow = (d.infos || "").toLowerCase();
       const isCancelled = d.canceled || d.cancelled || infoLow.includes("fällt aus") || infoLow.includes("entfällt");
       const isNow = d.countdown === 0 && !isCancelled;
+
+      // Liniennummer + Zusatzbezeichnung trennen ("11s" -> "11" + "s", "27*" -> "27" + "*", "N82" bleibt)
+      const name = String(this._getRouteName(d) || "");
+      const m = /^(.{1,3}?)([a-zA-Z*])$/.exec(name);
+      const base = (m && /\d/.test(m[1])) ? m[1] : name.slice(0, 3);
+      const suffix = (m && /\d/.test(m[1])) ? m[2] : "";
+      const prefix = base.padStart(3) + (suffix || " ") + " ";
+
       let minTxt;
       if (isCancelled) minTxt = "--";
-      else if (isNow) minTxt = `<span class="st-blink">0</span>`;
-      else if (this._config.time_format === "absolute" || d.countdown >= 60) minTxt = esc(d.scheduled);
-      else minTxt = esc(d.countdown);
-      html += `<div class="st-row${isCancelled ? " cancelled" : ""}"><span class="c-line">${esc(this._getRouteName(d))}</span><span class="c-dest">${esc(isCancelled ? "Fällt aus" : d.direction)}</span><span class="c-min">${minTxt}</span></div>`;
+      else if (isNow) minTxt = "0";
+      else if (this._config.time_format === "absolute" || d.countdown >= 1000) minTxt = String(d.scheduled || "");
+      else minTxt = String(d.countdown);
+
+      // Ziel + Sonderinformationen wechseln sich im Zielfeld ab
+      const segments = [String(d.direction || "")];
+      if (isCancelled) segments.push("Fällt aus");
+      const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
+      if (!isCancelled && info.length > 2) segments.push(info);
+
+      rows.push({
+        id: `${name}|${d.direction}|${d.scheduled}`,
+        prefix, segments, min: minTxt, blink: isNow,
+      });
     }
-    if (html !== this._steleRowsHtml) {
-      this._steleRowsHtml = html;
-      this.querySelector("#st-rows").innerHTML = html;
+
+    const rowsEl = this.querySelector("#st-rows");
+    if (rowsEl.children.length !== count) {
+      rowsEl.innerHTML = Array.from({ length: count }, () => `<div class="st-row"><canvas></canvas></div>`).join("");
+      if (!this._steleRO && window.ResizeObserver) {
+        this._steleRO = new ResizeObserver(() => { this._steleDrawn = []; this._steleTick(); });
+      }
+      if (this._steleRO) { this._steleRO.disconnect(); this._steleRO.observe(rowsEl); }
     }
+    this._steleDrawn = this._steleDrawn || [];
+    this._steleAnim = this._steleAnim || new Map();
+    // Laufschrift-Zustand nur für noch sichtbare Fahrten behalten
+    const ids = new Set(rows.map(r => r.id));
+    for (const k of this._steleAnim.keys()) if (!ids.has(k)) this._steleAnim.delete(k);
+    this._steleRows = rows;
+
+    if (!this._steleTimer) this._steleTimer = setInterval(() => this._steleTick(), 100);
+    this._steleTick();
+  }
+
+  /* Zielfeld-Text zum Zeitpunkt "now": kurze Texte stehen, lange laufen Feld für Feld nach links */
+  _steleField(row, width, now) {
+    const HOLD_START = 2000, HOLD_END = 1500, STEP = 330, SHOW_SHORT = 6000;
+    let st = this._steleAnim.get(row.id);
+    if (!st || st.segCount !== row.segments.length) {
+      st = { seg: 0, off: 0, phase: "start", until: now + HOLD_START, segCount: row.segments.length };
+      this._steleAnim.set(row.id, st);
+    }
+    let guard = 0;
+    while (now >= st.until && guard++ < 200) {
+      const text = row.segments[st.seg] || "";
+      const overflow = text.length - width;
+      if (overflow <= 0) {
+        // passt: eine Weile stehen lassen, dann ggf. zur nächsten Information
+        if (row.segments.length === 1) { st.until = now + 1e9; break; }
+        st.seg = (st.seg + 1) % row.segments.length; st.off = 0; st.phase = "start";
+        st.until += (row.segments[st.seg].length > width) ? HOLD_START : SHOW_SHORT;
+      } else if (st.phase === "start") {
+        st.phase = "scroll"; st.until += STEP;
+      } else if (st.phase === "scroll") {
+        st.off++;
+        if (st.off >= overflow) { st.phase = "end"; st.until += HOLD_END; }
+        else st.until += STEP;
+      } else {
+        st.seg = (st.seg + 1) % row.segments.length; st.off = 0; st.phase = "start";
+        st.until += (row.segments[st.seg].length > width) ? HOLD_START : SHOW_SHORT;
+      }
+    }
+    const text = row.segments[st.seg] || "";
+    return text.slice(st.off, st.off + width).padEnd(width);
+  }
+
+  /* Takt für Laufschrift und Blinken – zeichnet nur Zeilen neu, die sich geändert haben */
+  _steleTick() {
+    if (this._currentLayout !== "stele" || !this._steleRows) {
+      if (this._steleTimer) { clearInterval(this._steleTimer); this._steleTimer = null; }
+      return;
+    }
+    const rowsEl = this.querySelector("#st-rows");
+    if (!rowsEl) return;
+    const now = Date.now();
+    const blinkOn = Math.floor(now / 500) % 2 === 0;
+    const LED = this._config.stele_led_color || "#4dff5e";
+    const canvases = rowsEl.querySelectorAll("canvas");
+    this._steleRows.forEach((row, r) => {
+      let text = "";
+      if (row.prefix) {
+        const minW = Math.max(4, row.min.length);           // Felder 21-24 (Uhrzeit "21:15" nimmt Feld 20 dazu)
+        const fieldW = STELE_COLS - 5 - minW;               // normal 15 Felder (6-20)
+        const min = (row.blink && !blinkOn) ? "" : row.min;
+        text = row.prefix + this._steleField(row, fieldW, now) + min.padStart(minW);
+      }
+      const key = text + "|" + LED;
+      if (this._steleDrawn[r] !== key && canvases[r]) {
+        this._steleDrawn[r] = key;
+        this._drawSteleRow(canvases[r], text, LED);
+      }
+    });
+  }
+
+  /* Eine LED-Zeile zeichnen: 24 Zeichenfelder, je 8 x 14 leuchtende Punkte ("doppelte" Auflösung) */
+  _drawSteleRow(cv, text, LED) {
+    const PX = STELE_CELL_W, PY = STELE_CELL_H, W = STELE_COLS * PX, H = PY;
+    if (!this._steleRaster) {
+      this._steleRaster = document.createElement("canvas");
+      this._steleRaster.width = W; this._steleRaster.height = H;
+    }
+    const rc = this._steleRaster.getContext("2d", { willReadFrequently: true });
+
+    const m = /^#?([0-9a-f]{6})$/i.exec(String(LED).trim());
+    let cellColor = "#132016";
+    if (m) {
+      const n = parseInt(m[1], 16), mix = (c, bg) => Math.round(bg + (c - bg) * 0.10);
+      cellColor = `rgb(${mix(n >> 16 & 255, 11)},${mix(n >> 8 & 255, 14)},${mix(n & 255, 12)})`;
+    }
+
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = cv.clientWidth || 300;
+    const cw = Math.max(W, Math.round(cssW * dpr)), ch = Math.round(cw * H / W);
+    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+    const ctx = cv.getContext("2d");
+    const dot = cw / W;
+
+    // Text klein rastern (1 Pixel = 1 LED-Punkt)
+    rc.clearRect(0, 0, W, H);
+    rc.fillStyle = "#fff";
+    rc.font = `bold ${STELE_FONT_PX}px Arial, Helvetica, sans-serif`;
+    rc.textBaseline = "alphabetic";
+    Array.from(text).slice(0, STELE_COLS).forEach((c, i) => {
+      if (c === " ") return;
+      const w = Math.min(rc.measureText(c).width, STELE_GLYPH_W);
+      rc.fillText(c, i * PX + 1 + (STELE_GLYPH_W - w) / 2, STELE_BASELINE, STELE_GLYPH_W);
+    });
+    const px = rc.getImageData(0, 0, W, H).data;
+
+    // Hintergrund + dunkle Zeichenfelder (alle gleich groß)
+    ctx.fillStyle = "#0b0e0c";
+    ctx.fillRect(0, 0, cw, ch);
+    ctx.fillStyle = cellColor;
+    for (let i = 0; i < STELE_COLS; i++) {
+      ctx.fillRect((i * PX + 0.5) * dot, 0.5 * dot, (PX - 1) * dot, (PY - 1) * dot);
+    }
+
+    // leuchtende Punkte (quadratisch, schmale Fuge, leichtes Leuchten)
+    const gap = dot * 0.14;
+    ctx.beginPath();
+    for (let y = 0; y < H; y++) {
+      for (let x = 0; x < W; x++) {
+        if (px[(y * W + x) * 4 + 3] > STELE_THRESHOLD) ctx.rect(x * dot + gap, y * dot + gap, dot - 2 * gap, dot - 2 * gap);
+      }
+    }
+    ctx.fillStyle = LED;
+    ctx.shadowColor = LED;
+    ctx.shadowBlur = dot * 1.2;
+    ctx.fill();
+    ctx.shadowBlur = 0;
   }
 
   getCardSize() { return (this._config.anzahl || 7) + 1; }
