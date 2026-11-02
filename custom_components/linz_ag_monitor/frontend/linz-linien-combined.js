@@ -53,20 +53,110 @@ const LINZ_ASSET_BASE = (() => {
 
 // LED-Raster der Haltestellen-Säule: 24 Zeichen, Zeichenfeld 10 x 16 Punkte, Glyphe 8 x 14 Punkte
 const STELE_COLS = 24;
-const STELE_CELL_W = 10;
-const STELE_CELL_H = 16;
-const STELE_GLYPH_W = 8;
-const STELE_FONT_PX = 16.5;
-const STELE_BASELINE = 12.6;
-const STELE_THRESHOLD = 110;
-const STELE_MIN_W = 3;               // Abfahrtsminuten: Feld 22-24
-const STELE_FONT_WEIGHT = "normal";   // "bold" = dickere Zeichen
+const STELE_DOT = 2;                  // 1 Schrift-Punkt = 2 x 2 LED-Punkte ("doppelte Punkte")
+const STELE_CELL_W = 12;              // Zeichenfeld: 5 x 2 = 10 Punkte + je 1 Rand
+const STELE_CELL_H = 18;              // 8 x 2 = 16 Punkte + je 1 Rand
+const STELE_MIN_W = 3;                // Abfahrtsminuten: Feld 22-24
+const STELE_DOT_ASPECT = 1;           // 1 = quadratische LED-Punkte (größer = höhere, schlankere Zeichen)
+// 5x8-LED-Schrift wie an der echten Anzeige (Zeile 0-6 Zeichen, Zeile 7 Unterlänge).
+// Jede Zeile = 5 Bits (links = höchstes Bit). Jeder Schrift-Punkt wird als 2x2 feine LED-Punkte gezeichnet.
+const STELE_FONT = {
+  "0": [14,17,19,21,25,17,14,0],
+  "1": [4,12,4,4,4,4,14,0],
+  "2": [14,17,1,2,4,8,31,0],
+  "3": [31,2,4,2,1,17,14,0],
+  "4": [2,6,10,18,31,2,2,0],
+  "5": [31,16,30,1,1,17,14,0],
+  "6": [6,8,16,30,17,17,14,0],
+  "7": [31,1,2,4,8,8,8,0],
+  "8": [14,17,17,14,17,17,14,0],
+  "9": [14,17,17,15,1,2,12,0],
+  "A": [14,17,17,17,31,17,17,0],
+  "B": [30,17,17,30,17,17,30,0],
+  "C": [14,17,16,16,16,17,14,0],
+  "D": [28,18,17,17,17,18,28,0],
+  "E": [31,16,16,30,16,16,31,0],
+  "F": [31,16,16,30,16,16,16,0],
+  "G": [14,17,16,23,17,17,15,0],
+  "H": [17,17,17,31,17,17,17,0],
+  "I": [14,4,4,4,4,4,14,0],
+  "J": [7,2,2,2,2,18,12,0],
+  "K": [17,18,20,24,20,18,17,0],
+  "L": [16,16,16,16,16,16,31,0],
+  "M": [17,27,21,21,17,17,17,0],
+  "N": [17,17,25,21,19,17,17,0],
+  "O": [14,17,17,17,17,17,14,0],
+  "P": [30,17,17,30,16,16,16,0],
+  "Q": [14,17,17,17,21,18,13,0],
+  "R": [30,17,17,30,20,18,17,0],
+  "S": [15,16,16,14,1,1,30,0],
+  "T": [31,4,4,4,4,4,4,0],
+  "U": [17,17,17,17,17,17,14,0],
+  "V": [17,17,17,17,17,10,4,0],
+  "W": [17,17,17,21,21,21,10,0],
+  "X": [17,17,10,4,10,17,17,0],
+  "Y": [17,17,10,4,4,4,4,0],
+  "Z": [31,1,2,4,8,16,31,0],
+  "Ä": [10,0,14,17,31,17,17,0],
+  "Ö": [10,0,14,17,17,17,14,0],
+  "Ü": [10,0,17,17,17,17,14,0],
+  "a": [0,0,14,1,15,17,15,0],
+  "b": [16,16,22,25,17,17,30,0],
+  "c": [0,0,14,16,16,17,14,0],
+  "d": [1,1,13,19,17,17,15,0],
+  "e": [0,0,14,17,31,16,14,0],
+  "f": [6,9,8,28,8,8,8,0],
+  "g": [0,0,15,17,17,15,1,14],
+  "h": [16,16,22,25,17,17,17,0],
+  "i": [4,0,12,4,4,4,14,0],
+  "j": [2,0,6,2,2,2,18,12],
+  "k": [16,16,18,20,24,20,18,0],
+  "l": [12,4,4,4,4,4,14,0],
+  "m": [0,0,26,21,21,21,21,0],
+  "n": [0,0,22,25,17,17,17,0],
+  "o": [0,0,14,17,17,17,14,0],
+  "p": [0,0,30,17,17,30,16,16],
+  "q": [0,0,15,17,17,15,1,1],
+  "r": [0,0,22,25,16,16,16,0],
+  "s": [0,0,15,16,14,1,30,0],
+  "t": [8,8,28,8,8,9,6,0],
+  "u": [0,0,17,17,17,19,13,0],
+  "v": [0,0,17,17,17,10,4,0],
+  "w": [0,0,17,17,21,21,10,0],
+  "x": [0,0,17,10,4,10,17,0],
+  "y": [0,0,17,17,17,15,1,14],
+  "z": [0,0,31,2,4,8,31,0],
+  "ä": [10,0,14,1,15,17,15,0],
+  "ö": [10,0,14,17,17,17,14,0],
+  "ü": [10,0,17,17,17,19,13,0],
+  "ß": [12,18,18,20,18,17,22,0],
+  ".": [0,0,0,0,0,12,12,0],
+  ",": [0,0,0,0,0,12,4,8],
+  "-": [0,0,0,31,0,0,0,0],
+  "+": [0,4,4,31,4,4,0,0],
+  "*": [0,4,21,14,21,4,0,0],
+  "/": [1,2,2,4,8,8,16,0],
+  ":": [0,12,12,0,12,12,0,0],
+  "(": [2,4,8,8,8,4,2,0],
+  ")": [8,4,2,2,2,4,8,0],
+  "&": [12,18,20,8,21,18,13,0],
+  "'": [4,4,8,0,0,0,0,0],
+  "\"": [10,10,0,0,0,0,0,0],
+  "!": [4,4,4,4,4,0,4,0],
+  "?": [14,17,1,2,4,0,4,0],
+  "|": [4,4,4,4,4,4,4,0],
+  "<": [2,4,8,16,8,4,2,0],
+  ">": [8,4,2,1,2,4,8,0],
+  "=": [0,0,31,0,31,0,0,0],
+  "%": [24,25,2,4,8,19,3,0],
+};
 
 // Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
 const STELE_DEST_SHORT = [
   [/^Fernheizkraftwerk$/i, "Fernheizwerk"],
   [/^Remise Kleinmünchen$/i, "Kleinmünchen"],
   [/^Trauner Kreuzung\s*P\s*(\+|&|und)\s*R$/i, "Trauner Kreuzung"],
+  [/^Stieglbauernstraße$/i, "Stieglbauernstr."],
 ];
 const steleShortDest = (t) => {
   const s = String(t || "").trim();
@@ -1296,8 +1386,8 @@ class LinzMonitorCombined extends HTMLElement {
             box-shadow: inset 0 0 0 0.3cqw #1a1f1c;
             padding: 0.6cqw 1.2%; box-sizing: border-box; line-height: 0;
           }
-          /* 24 Zeichen x (10 x 16 Punkte) -> Seitenverhältnis 240:16 */
-          .st-row canvas { display: block; width: 100%; aspect-ratio: 15 / 1; }
+          /* 24 Zeichen x (12 x 18 Punkte) -> Seitenverhältnis 288 : 18 (bei STELE_DOT_ASPECT 1) */
+          .st-row canvas { display: block; width: 100%; aspect-ratio: ${288 / (18 * STELE_DOT_ASPECT)} / 1; }
 
           /* --- Fußbereich --- */
           .st-foot { position: relative; margin-top: 6cqw; min-height: 10cqw; display: flex; justify-content: flex-end; align-items: flex-end; }
@@ -1463,14 +1553,9 @@ class LinzMonitorCombined extends HTMLElement {
     });
   }
 
-  /* Eine LED-Zeile zeichnen: 24 Zeichenfelder, je 8 x 14 leuchtende Punkte ("doppelte" Auflösung) */
+  /* Eine LED-Zeile zeichnen: 24 Zeichenfelder, 5x7-LED-Schrift, jeder Schrift-Punkt = 2x2 LED-Punkte */
   _drawSteleRow(cv, text, LED) {
-    const PX = STELE_CELL_W, PY = STELE_CELL_H, W = STELE_COLS * PX, H = PY;
-    if (!this._steleRaster) {
-      this._steleRaster = document.createElement("canvas");
-      this._steleRaster.width = W; this._steleRaster.height = H;
-    }
-    const rc = this._steleRaster.getContext("2d", { willReadFrequently: true });
+    const PX = STELE_CELL_W, PY = STELE_CELL_H, W = STELE_COLS * PX, H = PY, D = STELE_DOT;
 
     const m = /^#?([0-9a-f]{6})$/i.exec(String(LED).trim());
     let cellColor = "#132016";
@@ -1481,39 +1566,41 @@ class LinzMonitorCombined extends HTMLElement {
 
     const dpr = window.devicePixelRatio || 1;
     const cssW = cv.clientWidth || 300;
-    const cw = Math.max(W, Math.round(cssW * dpr)), ch = Math.round(cw * H / W);
+    const cw = Math.max(W, Math.round(cssW * dpr)), ch = Math.round(cw * H * STELE_DOT_ASPECT / W);
     if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
     const ctx = cv.getContext("2d");
-    const dot = cw / W;
-
-    // Text klein rastern (1 Pixel = 1 LED-Punkt)
-    rc.clearRect(0, 0, W, H);
-    rc.fillStyle = "#fff";
-    rc.font = `${STELE_FONT_WEIGHT} ${STELE_FONT_PX}px Arial, Helvetica, sans-serif`;
-    rc.textBaseline = "alphabetic";
-    Array.from(text).slice(0, STELE_COLS).forEach((c, i) => {
-      if (c === " ") return;
-      const w = Math.min(rc.measureText(c).width, STELE_GLYPH_W);
-      rc.fillText(c, i * PX + 1 + (STELE_GLYPH_W - w) / 2, STELE_BASELINE, STELE_GLYPH_W);
-    });
-    const px = rc.getImageData(0, 0, W, H).data;
+    const dot = cw / W, dotY = dot * STELE_DOT_ASPECT;
 
     // Hintergrund + dunkle Zeichenfelder (alle gleich groß)
     ctx.fillStyle = "#0b0e0c";
     ctx.fillRect(0, 0, cw, ch);
     ctx.fillStyle = cellColor;
     for (let i = 0; i < STELE_COLS; i++) {
-      ctx.fillRect((i * PX + 0.5) * dot, 0.5 * dot, (PX - 1) * dot, (PY - 1) * dot);
+      ctx.fillRect((i * PX + 0.5) * dot, 0.5 * dotY, (PX - 1) * dot, (PY - 1) * dotY);
     }
 
-    // leuchtende Punkte (quadratisch, schmale Fuge, leichtes Leuchten)
-    const gap = dot * 0.14;
+    // leuchtende Punkte
+    const gap = dot * 0.12;
     ctx.beginPath();
-    for (let y = 0; y < H; y++) {
-      for (let x = 0; x < W; x++) {
-        if (px[(y * W + x) * 4 + 3] > STELE_THRESHOLD) ctx.rect(x * dot + gap, y * dot + gap, dot - 2 * gap, dot - 2 * gap);
+    Array.from(text).slice(0, STELE_COLS).forEach((c, i) => {
+      let g = STELE_FONT[c];
+      if (!g) {
+        const plain = c.normalize("NFD").replace(/[̀-ͯ]/g, "");   // é -> e usw.
+        g = STELE_FONT[plain] || STELE_FONT[plain.toUpperCase()] || null;
       }
-    }
+      if (!g) return;
+      for (let r = 0; r < 8; r++) {
+        const bits = g[r];
+        if (!bits) continue;
+        for (let col = 0; col < 5; col++) {
+          if (!(bits & (16 >> col))) continue;
+          for (let dy = 0; dy < D; dy++) for (let dx = 0; dx < D; dx++) {
+            const x = i * PX + 1 + col * D + dx, y = 1 + r * D + dy;
+            ctx.rect(x * dot + gap, y * dotY + gap, dot - 2 * gap, dotY - 2 * gap);
+          }
+        }
+      }
+    });
     ctx.fillStyle = LED;
     ctx.shadowColor = LED;
     ctx.shadowBlur = dot * 1.2;
