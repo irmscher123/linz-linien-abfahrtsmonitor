@@ -15,10 +15,10 @@ Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche u
 ---
 
 ## 🆕 Neu in v1.8.1
-* **Haltestellen-Säule:** feste 24-Zeichen-Zeilen mit gleich großen Zeichenfeldern und doppelt so feinen LED-Punkten.
+* **Haltestellen-Säule:** feste 24-Felder-Zeilen wie am Original – Linie (Feld 1–3), Zusatz wie `a`, `*`, `s` (Feld 4), Ziel bzw. Sonderinformation (Feld 6–20, läuft bei Überlänge Feld für Feld durch), Abfahrtsminuten (Feld 21–24). Zusatzinfos wie „Verspätung bitte Geduld“ wechseln sich mit dem Ziel ab. Doppelt so feine LED-Punkte.
 
 ## 🆕 Neu in v1.8.0
-* **5. Design „Haltestellen-Säule“:** Originalgetreuer Nachbau der Linz AG Anzeige an der Haltestelle – H-Schild, Haltestellenname, Linien-Zeile und grüne LED-Zeilen mit fester 24-Zeichen-Matrix (feine Punkte, 8 × 14 pro Zeichen) und Linz AG Linien Logo (nur die Tafel, ohne Mast). Das Logo wird lokal aus der Integration geladen.
+* **5. Design „Haltestellen-Säule“:** Originalgetreuer Nachbau der Linz AG Anzeige an der Haltestelle – H-Schild, Haltestellenname, Linien-Zeile und grüne LED-Zeilen mit fester 24-Felder-Matrix (feine Punkte, 8 × 14 pro Zeichen, Laufschrift für lange Ziele und Zusatzinfos) und Linz AG Linien Logo (nur die Tafel, ohne Mast). Das Logo wird lokal aus der Integration geladen.
 * **Brand-Icons in korrekter Größe** (256/512 px) für eine scharfe Anzeige in HACS und Home Assistant.
 
 ## 🆕 Neu in v1.6.1
