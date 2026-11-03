@@ -1494,7 +1494,8 @@ class LinzMonitorCombined extends HTMLElement {
       const segments = [{ text: steleShortDest(d.direction), ticker: false }];
       if (isCancelled) segments.push({ text: "Fällt aus", ticker: true });
       const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
-      if (!isCancelled && info.length > 2) segments.push({ text: info, ticker: true });
+      // Bei Abfahrt "jetzt" (blinkender Block) nur das Ziel – keine Zusatzinfo
+      if (!isCancelled && !isNow && info.length > 2) segments.push({ text: info, ticker: true });
 
       rows.push({
         id: `${name}|${d.direction}|${d.scheduled}`,
