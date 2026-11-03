@@ -163,7 +163,7 @@ const STELE_FONT = {
   ">": [8,4,2,1,2,4,8,0],
   "=": [0,0,31,0,31,0,0,0],
   "%": [24,25,2,4,8,19,3,0],
-  "■": [0,31,31,31,31,31,0,0],   // gefüllter Block (blinkt bei Abfahrt "jetzt")
+  "■": [0,0,14,14,14,0,0,0],     // kleiner gefüllter Block (blinkt bei Abfahrt "jetzt")
 };
 
 // Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
