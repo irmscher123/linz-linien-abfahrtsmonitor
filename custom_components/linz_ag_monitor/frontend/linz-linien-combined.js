@@ -163,6 +163,7 @@ const STELE_FONT = {
   ">": [8,4,2,1,2,4,8,0],
   "=": [0,0,31,0,31,0,0,0],
   "%": [24,25,2,4,8,19,3,0],
+  "■": [0,0,14,14,14,0,0,0],     // kleiner gefüllter Block (blinkt bei Abfahrt "jetzt")
 };
 
 // Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
@@ -1485,7 +1486,7 @@ class LinzMonitorCombined extends HTMLElement {
 
       let minTxt;
       if (isCancelled) minTxt = "--";
-      else if (isNow) minTxt = "0";
+      else if (isNow) minTxt = "";      // Abfahrt jetzt: Minutenfeld leer, dafür blinkt Kästchen 5
       else minTxt = String(d.countdown);
 
       // Ziel + Sonderinformationen wechseln sich im Zielfeld ab.
@@ -1586,8 +1587,9 @@ class LinzMonitorCombined extends HTMLElement {
       if (row.prefix) {
         const minW = STELE_MIN_W;                           // Felder 22-24
         const fieldW = STELE_COLS - 5 - minW;               // 16 Felder (6-21)
-        const min = (row.blink && !blinkOn) ? "" : row.min;
-        text = row.prefix + this._steleField(row, fieldW, now) + min.padStart(minW);
+        // Abfahrt jetzt: in Kästchen 5 (direkt vor dem Ziel) blinkt ein gefüllter Block
+        const prefix = row.blink ? row.prefix.slice(0, 4) + (blinkOn ? "■" : " ") : row.prefix;
+        text = prefix + this._steleField(row, fieldW, now) + row.min.padStart(minW);
       }
       const key = text + "|" + LED;
       if (this._steleDrawn[r] !== key && canvases[r]) {
