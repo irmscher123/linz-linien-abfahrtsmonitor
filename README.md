@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.8.6-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-1.8.7-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -13,6 +13,9 @@
 Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche und hochgradig anpassbare Dashboard‑Karten.
 
 ---
+
+## 🆕 Neu in v1.8.7
+* **Haltestellen-Säule:** Bei Abfahrt „jetzt“ bleibt das Minutenfeld leer, stattdessen blinkt direkt vor dem Ziel (Feld 5) ein gefüllter Block – wie an der echten Anzeige.
 
 ## 🆕 Neu in v1.8.6
 * **Haltestellen-Säule:** Sonderinformationen wie „Verspätung bitte Geduld“ oder „Fällt aus“ laufen als Laufschrift von rechts nach links durch. Fernheizkraftwerk wird als *Fernheizkraftw.* angezeigt.
@@ -99,9 +102,9 @@ Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz A
 | :---: | --- | --- |
 | 1–3 | Liniennummer (rechtsbündig) | `11`, `3`, `N82` |
 | 4 | Zusatzbezeichnung | `s`, `a`, `b`, `*` |
-| 5 | leer | |
+| 5 | leer – bei Abfahrt „jetzt“ blinkt hier ein Block ■ | |
 | 6–21 | Ziel bzw. Sonderinformation (16 Felder) | `Trauner Kreuzung` |
-| 22–24 | Abfahrt in Minuten (rechtsbündig, max. 99) | `0` (blinkt), `5`, `12` |
+| 22–24 | Abfahrt in Minuten (rechtsbündig, max. 99, bei „jetzt“ leer) | `5`, `12` |
 
 * **Laufschrift:** Ist ein Ziel oder eine Information länger als 16 Felder, läuft der Text Feld für Feld nach links – mit kurzer Pause am Anfang und am Ende, damit jedes Wort lesbar ist.
 * **Sonderinformationen** wie „Verspätung bitte Geduld“ oder „Fällt aus“ wechseln sich im Zielfeld mit dem Ziel ab und laufen dabei als Laufschrift von rechts nach links durch.
