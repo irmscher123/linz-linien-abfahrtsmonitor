@@ -167,7 +167,7 @@ const STELE_FONT = {
 
 // Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
 const STELE_DEST_SHORT = [
-  [/^Fernheizkraftwerk$/i, "Fernheizwerk"],
+  [/^Fernheizkraftwerk$/i, "Fernheizkraftw."],
   [/^Remise Kleinmünchen$/i, "Kleinmünchen"],
   [/^Trauner Kreuzung\s*P\s*(\+|&|und)\s*R$/i, "Trauner Kreuzung"],
   [/^Stieglbauernstraße$/i, "Stieglbauernstr."],
@@ -1471,7 +1471,7 @@ class LinzMonitorCombined extends HTMLElement {
     const rows = [];
     for (let i = 0; i < count; i++) {
       const d = visible[i];
-      if (!d) { rows.push({ id: `leer-${i}`, prefix: "", segments: [""], min: "", blink: false }); continue; }
+      if (!d) { rows.push({ id: `leer-${i}`, prefix: "", segments: [{ text: "", ticker: false }], min: "", blink: false }); continue; }
       const infoLow = (d.infos || "").toLowerCase();
       const isCancelled = d.canceled || d.cancelled || infoLow.includes("fällt aus") || infoLow.includes("entfällt");
       const isNow = d.countdown === 0 && !isCancelled;
@@ -1488,11 +1488,12 @@ class LinzMonitorCombined extends HTMLElement {
       else if (isNow) minTxt = "0";
       else minTxt = String(d.countdown);
 
-      // Ziel + Sonderinformationen wechseln sich im Zielfeld ab
-      const segments = [steleShortDest(d.direction)];
-      if (isCancelled) segments.push("Fällt aus");
+      // Ziel + Sonderinformationen wechseln sich im Zielfeld ab.
+      // Sonderinformationen (Verspätung, Fällt aus …) laufen als Laufschrift von rechts nach links durch.
+      const segments = [{ text: steleShortDest(d.direction), ticker: false }];
+      if (isCancelled) segments.push({ text: "Fällt aus", ticker: true });
       const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
-      if (!isCancelled && info.length > 2) segments.push(info);
+      if (!isCancelled && info.length > 2) segments.push({ text: info, ticker: true });
 
       rows.push({
         id: `${name}|${d.direction}|${d.scheduled}`,
@@ -1519,23 +1520,37 @@ class LinzMonitorCombined extends HTMLElement {
     this._steleTick();
   }
 
-  /* Zielfeld-Text zum Zeitpunkt "now": kurze Texte stehen, lange laufen Feld für Feld nach links */
+  /* Zielfeld-Text zum Zeitpunkt "now":
+     - Ziel: steht; ist es zu lang, läuft es Feld für Feld nach links (Pause am Anfang und Ende)
+     - Sonderinformation: läuft immer als Laufschrift von rechts herein und links hinaus */
   _steleField(row, width, now) {
-    const HOLD_START = 2000, HOLD_END = 1500, STEP = 330, SHOW_SHORT = 6000;
+    const HOLD_START = 2000, HOLD_END = 1500, STEP = 330, SHOW_DEST = 6000, TICKER_STEP = 250;
+    const segs = row.segments;
+    const holdFor = (seg) => seg.ticker ? TICKER_STEP : (seg.text.length > width ? HOLD_START : SHOW_DEST);
     let st = this._steleAnim.get(row.id);
-    if (!st || st.segCount !== row.segments.length) {
-      st = { seg: 0, off: 0, phase: "start", until: now + HOLD_START, segCount: row.segments.length };
+    const sig = segs.map(x => x.text).join("|");
+    if (!st || st.sig !== sig) {
+      st = { seg: 0, off: 0, phase: "start", until: now + holdFor(segs[0]), sig };
       this._steleAnim.set(row.id, st);
     }
+    const next = () => {
+      st.seg = (st.seg + 1) % segs.length; st.off = 0; st.phase = "start";
+      st.until += holdFor(segs[st.seg]);
+    };
     let guard = 0;
-    while (now >= st.until && guard++ < 200) {
-      const text = row.segments[st.seg] || "";
-      const overflow = text.length - width;
+    while (now >= st.until && guard++ < 400) {
+      const seg = segs[st.seg];
+      if (seg.ticker) {
+        // Laufschrift: Text kommt von rechts, läuft durch und verschwindet links
+        st.off++;
+        if (st.off > seg.text.length + width) next();
+        else st.until += TICKER_STEP;
+        continue;
+      }
+      const overflow = seg.text.length - width;
       if (overflow <= 0) {
-        // passt: eine Weile stehen lassen, dann ggf. zur nächsten Information
-        if (row.segments.length === 1) { st.until = now + 1e9; break; }
-        st.seg = (st.seg + 1) % row.segments.length; st.off = 0; st.phase = "start";
-        st.until += (row.segments[st.seg].length > width) ? HOLD_START : SHOW_SHORT;
+        if (segs.length === 1) { st.until = now + 1e9; break; }
+        next();
       } else if (st.phase === "start") {
         st.phase = "scroll"; st.until += STEP;
       } else if (st.phase === "scroll") {
@@ -1543,12 +1558,15 @@ class LinzMonitorCombined extends HTMLElement {
         if (st.off >= overflow) { st.phase = "end"; st.until += HOLD_END; }
         else st.until += STEP;
       } else {
-        st.seg = (st.seg + 1) % row.segments.length; st.off = 0; st.phase = "start";
-        st.until += (row.segments[st.seg].length > width) ? HOLD_START : SHOW_SHORT;
+        next();
       }
     }
-    const text = row.segments[st.seg] || "";
-    return text.slice(st.off, st.off + width).padEnd(width);
+    const seg = segs[st.seg] || { text: "", ticker: false };
+    if (seg.ticker) {
+      const band = " ".repeat(width) + seg.text + " ".repeat(width);
+      return band.slice(st.off, st.off + width);
+    }
+    return seg.text.slice(st.off, st.off + width).padEnd(width);
   }
 
   /* Takt für Laufschrift und Blinken – zeichnet nur Zeilen neu, die sich geändert haben */
