@@ -1485,14 +1485,14 @@ class LinzMonitorCombined extends HTMLElement {
       const prefix = base.padStart(3) + (suffix || " ") + " ";
 
       let minTxt;
-      if (isCancelled) minTxt = "--";
+      if (isCancelled) minTxt = String(Math.max(0, d.countdown ?? 0));   // Ausfall: Minuten bis zur geplanten Abfahrt (durchgestrichen)
       else if (isNow) minTxt = "";      // Abfahrt jetzt: Minutenfeld leer, dafür blinkt Kästchen 5
       else minTxt = String(d.countdown);
 
       // Ziel + Sonderinformationen wechseln sich im Zielfeld ab.
       // Sonderinformationen (Verspätung, Fällt aus …) laufen als Laufschrift von rechts nach links durch.
       const segments = [{ text: steleShortDest(d.direction), ticker: false }];
-      if (isCancelled) segments.push({ text: "Fällt aus", ticker: true });
+      if (isCancelled) segments.push({ text: "Fahrt fällt aus", ticker: true });
       const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
       // Bei Abfahrt "jetzt" (blinkender Block) nur das Ziel – keine Zusatzinfo
       if (!isCancelled && !isNow && info.length > 2) segments.push({ text: info, ticker: true });
@@ -1500,6 +1500,7 @@ class LinzMonitorCombined extends HTMLElement {
       rows.push({
         id: `${name}|${d.direction}|${d.scheduled}`,
         prefix, segments, min: minTxt, blink: isNow,
+        strike: !!isCancelled,                 // Ausfall: Ziel und Minuten durchgestrichen
       });
     }
 
@@ -1566,9 +1567,9 @@ class LinzMonitorCombined extends HTMLElement {
     const seg = segs[st.seg] || { text: "", ticker: false };
     if (seg.ticker) {
       const band = " ".repeat(width) + seg.text + " ".repeat(width);
-      return band.slice(st.off, st.off + width);
+      return { text: band.slice(st.off, st.off + width), ticker: true };
     }
-    return seg.text.slice(st.off, st.off + width).padEnd(width);
+    return { text: seg.text.slice(st.off, st.off + width).padEnd(width), ticker: false };
   }
 
   /* Takt für Laufschrift und Blinken – zeichnet nur Zeilen neu, die sich geändert haben */
@@ -1585,23 +1586,31 @@ class LinzMonitorCombined extends HTMLElement {
     const canvases = rowsEl.querySelectorAll("canvas");
     this._steleRows.forEach((row, r) => {
       let text = "";
+      const strike = [];
       if (row.prefix) {
         const minW = STELE_MIN_W;                           // Felder 22-24
         const fieldW = STELE_COLS - 5 - minW;               // 16 Felder (6-21)
         // Abfahrt jetzt: in Kästchen 5 (direkt vor dem Ziel) blinkt ein gefüllter Block
         const prefix = row.blink ? row.prefix.slice(0, 4) + (blinkOn ? "■" : " ") : row.prefix;
-        text = prefix + this._steleField(row, fieldW, now) + row.min.padStart(minW);
+        const field = this._steleField(row, fieldW, now);
+        text = prefix + field.text + row.min.padStart(minW);
+        if (row.strike) {
+          // Ausfall: Ziel (nicht die Laufschrift "Fahrt fällt aus") und Minuten durchstreichen
+          const destLen = field.text.replace(/\s+$/, "").length;
+          if (!field.ticker && destLen) strike.push([5, 5 + destLen]);
+          if (row.min) strike.push([STELE_COLS - row.min.length, STELE_COLS]);
+        }
       }
-      const key = text + "|" + LED;
+      const key = text + "|" + LED + "|" + JSON.stringify(strike);
       if (this._steleDrawn[r] !== key && canvases[r]) {
         this._steleDrawn[r] = key;
-        this._drawSteleRow(canvases[r], text, LED);
+        this._drawSteleRow(canvases[r], text, LED, strike);
       }
     });
   }
 
   /* Eine LED-Zeile zeichnen: 24 Zeichenfelder, 5x7-LED-Schrift, jeder Schrift-Punkt = 2x2 LED-Punkte */
-  _drawSteleRow(cv, text, LED) {
+  _drawSteleRow(cv, text, LED, strike = []) {
     const PX = STELE_CELL_W, PY = STELE_CELL_H, W = STELE_COLS * PX, H = PY, D = STELE_DOT;
 
     const m = /^#?([0-9a-f]{6})$/i.exec(String(LED).trim());
@@ -1675,6 +1684,15 @@ class LinzMonitorCombined extends HTMLElement {
         }
       }
     });
+    // Durchstreichen (Ausfall): waagrechte Linie in Höhe der Zeichenmitte, über das ganze Kästchen
+    for (const [from, to] of strike) {
+      for (let i = from; i < to; i++) {
+        for (let dy = 0; dy < D; dy++) for (let c = 0; c < STELE_PIX_W; c++) {
+          const x = i * PX + STELE_CELL_GAP / 2 + c, y = STELE_CELL_GAP / 2 + STELE_GLYPH_Y + 3 * D + dy;
+          ctx.rect(x * dot + gapX, y * dotY + gapY, dot - 2 * gapX, dotY - 2 * gapY);
+        }
+      }
+    }
     ctx.fillStyle = LED;
     ctx.shadowColor = LED;
     ctx.shadowBlur = dot * (look.glow ?? 1.2);
