@@ -172,6 +172,8 @@ const STELE_DEST_SHORT = [
   [/^Remise Kleinmünchen$/i, "Kleinmünchen"],
   [/^Trauner Kreuzung\s*P\s*(\+|&|und)\s*R$/i, "Trauner Kreuzung"],
   [/^Stieglbauernstraße$/i, "Stieglbauernstr."],
+  [/^Wege?scheider\s*Stra(ß|ss)e$/i, "Wegscheider Str."],
+  [/^Volksgarten\s*stra(ß|ss)e$/i, "Volksgartenstr."],
 ];
 const steleShortDest = (t) => {
   const s = String(t || "").trim();
