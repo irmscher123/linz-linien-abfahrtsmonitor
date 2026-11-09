@@ -1388,7 +1388,8 @@ class LinzMonitorCombined extends HTMLElement {
             display: flex; align-items: center; justify-content: center;
             color: #1b6b43; font-weight: 700; font-size: 13cqw; line-height: 1; font-family: Arial, sans-serif;
           }
-          .st-name { font-weight: 700; font-size: 6.6cqw; line-height: 1.15; letter-spacing: -0.01em; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .st-name { font-weight: 800; font-size: calc(7cqw * var(--st-name-fit, 1)); line-height: 1.15; letter-spacing: -0.005em; white-space: nowrap; overflow: hidden;
+            -webkit-text-stroke: 0.025em currentColor; paint-order: stroke fill; }
           .st-lines { text-align: left; font-size: 4.6cqw; margin-top: 1.6cqw; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 
           /* --- Fuge zwischen Kopf und Anzeige --- */
@@ -1451,7 +1452,7 @@ class LinzMonitorCombined extends HTMLElement {
     const defaultName = (state.attributes.stop_name || "").replace(filterRegex, "").trim();
     const title = this._config.stop_name_override || defaultName;
     const titleEl = this.querySelector("#st-title");
-    if (titleEl && titleEl.textContent !== title) titleEl.textContent = title;
+    if (titleEl && titleEl.textContent !== title) { titleEl.textContent = title; this._fitSteleTitle(); }
 
     // Linien-Zeile: manuell oder automatisch aus allen Abfahrten der Haltestelle
     let lines = (this._config.stele_lines || "").split(",").map(s => s.trim()).filter(Boolean);
@@ -1510,7 +1511,7 @@ class LinzMonitorCombined extends HTMLElement {
     if (rowsEl.children.length !== count) {
       rowsEl.innerHTML = Array.from({ length: count }, () => `<div class="st-row"><canvas></canvas></div>`).join("");
       if (!this._steleRO && window.ResizeObserver) {
-        this._steleRO = new ResizeObserver(() => { this._steleDrawn = []; this._steleTick(); });
+        this._steleRO = new ResizeObserver(() => { this._steleDrawn = []; this._steleTick(); this._fitSteleTitle(); });
       }
       if (this._steleRO) { this._steleRO.disconnect(); this._steleRO.observe(rowsEl); }
     }
@@ -1523,6 +1524,17 @@ class LinzMonitorCombined extends HTMLElement {
 
     if (!this._steleTimer) this._steleTimer = setInterval(() => this._steleTick(), 100);
     this._steleTick();
+  }
+
+  /* Haltestellenname im Kopf: so groß wie möglich, aber immer ganz sichtbar (bei langen Namen kleiner) */
+  _fitSteleTitle() {
+    const el = this.querySelector("#st-title");
+    if (!el) return;
+    requestAnimationFrame(() => {
+      el.style.setProperty("--st-name-fit", "1");
+      const avail = el.clientWidth, need = el.scrollWidth;
+      if (avail > 0 && need > avail) el.style.setProperty("--st-name-fit", String(Math.max(0.45, (avail / need) * 0.98)));
+    });
   }
 
   /* Zielfeld-Text zum Zeitpunkt "now":
