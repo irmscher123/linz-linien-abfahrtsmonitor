@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.8.11-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-1.8.12-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -13,6 +13,9 @@
 Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche und hochgradig anpassbare Dashboard‑Karten.
 
 ---
+
+## 🆕 Neu in v1.8.12
+* **Haltestellen-Säule:** Spaltenköpfe „Linie / Ziel / Abfahrt in Min.“ größer, „Linie“ endet bündig mit der Liniennummer.
 
 ## 🆕 Neu in v1.8.11
 * **Haltestellen-Säule:** Kurzname Sporthalle Leonding → *Sporth. Leonding*
