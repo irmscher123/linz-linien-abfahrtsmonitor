@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.8.10-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-1.8.11-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -13,6 +13,9 @@
 Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche und hochgradig anpassbare Dashboard‑Karten.
 
 ---
+
+## 🆕 Neu in v1.8.11
+* **Haltestellen-Säule:** Kurzname Sporthalle Leonding → *Sporth. Leonding*
 
 ## 🆕 Neu in v1.8.10
 * **Haltestellen-Säule:** weitere Kurznamen wie an der echten Anzeige – Wegscheider Straße → *Wegscheider Str.*, Volksgartenstraße → *Volksgartenstr.*
@@ -118,7 +121,7 @@ Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz A
 * **Laufschrift:** Ist ein Ziel oder eine Information länger als 16 Felder, läuft der Text Feld für Feld nach links – mit kurzer Pause am Anfang und am Ende, damit jedes Wort lesbar ist.
 * **Ausfälle:** Die Fahrt bleibt bis zur geplanten Abfahrtszeit stehen – Ziel und Minuten durchgestrichen, dazwischen läuft „Fahrt fällt aus“ durch.
 * **Sonderinformationen** wie „Verspätung bitte Geduld“ wechseln sich im Zielfeld mit dem Ziel ab und laufen dabei als Laufschrift von rechts nach links durch.
-* **Kurznamen wie an der echten Anzeige** (nur in diesem Design): Fernheizkraftwerk → *Fernheizkraftw.*, Remise Kleinmünchen → *Kleinmünchen*, Trauner Kreuzung P+R → *Trauner Kreuzung*, Stieglbauernstraße → *Stieglbauernstr.*, Wegscheider Straße → *Wegscheider Str.*, Volksgartenstraße → *Volksgartenstr.*
+* **Kurznamen wie an der echten Anzeige** (nur in diesem Design): Fernheizkraftwerk → *Fernheizkraftw.*, Remise Kleinmünchen → *Kleinmünchen*, Trauner Kreuzung P+R → *Trauner Kreuzung*, Stieglbauernstraße → *Stieglbauernstr.*, Wegscheider Straße → *Wegscheider Str.*, Volksgartenstraße → *Volksgartenstr.*, Sporthalle Leonding → *Sporth. Leonding*
 * **LED-Board wie am Original:** jedes Kästchen hat 12 × 20 Pixel; die unbeleuchteten Pixel schimmern ganz leicht durch. Die Schrift ist eine klassische 5 × 7-Punkt-Schrift, jeder Schrift-Punkt als 2 × 2 Pixel – Striche 2 Pixel dick, inkl. Ä, Ö, Ü, ß.
 * **Kopf:** H-Schild, Haltestellenname und Linien-Zeile (automatisch aus den Abfahrten oder selbst eingetragen).
 * **Unten rechts** das Linz AG Linien Logo (wird lokal aus der Integration geladen), optional eine kleine Uhrzeit links.
