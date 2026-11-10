@@ -1,95 +1,46 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-1.8.12-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-2.0-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/logo2026.png" width="200" alt="Linz Linien Logo">
 
-<img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/dashboards.png" width="800" alt="Linz Linien Dashboards">
+<img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/dashboards.png" width="900" alt="Linz Linien Dashboards – Maxi, Midi, Mini, LED-Wall und Haltestellen-Säule">
 
 **Der moderne Abfahrtsmonitor für Home Assistant.**  
-Live‑Daten der Linz AG Linien, smarte Einrichtung per Text- oder Kartensuche und hochgradig anpassbare Dashboard‑Karten.
+Live‑Daten der Linz AG Linien, Einrichtung per Text- oder Kartensuche und eine Dashboard‑Karte mit fünf Designs – vom kompakten Listen-Layout bis zum originalgetreuen Nachbau der Anzeige an der Haltestelle.
 
 ---
 
-## 🆕 Neu in v1.8.12
-* **Haltestellen-Säule:** Spaltenköpfe „Linie / Ziel / Abfahrt in Min.“ größer, „Linie“ endet bündig mit der Liniennummer.
+## ✨ Was die Integration kann
 
-## 🆕 Neu in v1.8.11
-* **Haltestellen-Säule:** Kurzname Sporthalle Leonding → *Sporth. Leonding*
+### 🔌 Integration
+* **100 % Live-Daten direkt von der Linz AG** – Echtzeit-Abfahrten inkl. Verspätungen, Ausfällen und Sonderinformationen (z. B. „Verspätung wegen Verkehrsüberlastung“). Keine lokale Fahrplan-Datenbank nötig, schnell und ressourcenschonend.
+* **Haltestellensuche per Text oder Karte** – klassisch nach Namen suchen oder auf einer interaktiven Karte im Umkreis eines Punktes. Jede Haltestelle erscheint nur einmal in der Trefferliste, und dieselbe Haltestelle kann nicht doppelt angelegt werden.
+* **Ein Gerät pro Haltestelle mit 5 Sensoren** für die nächsten 5 Abfahrten – in lesbarem Klartext, z. B. `1 Universität 14:30 (5 Min)` oder `3 Traun (Jetzt)`. Ideal auch für Smartwatch, Sprachausgabe oder Automationen.
+* **Saubere Ziel- und Haltestellennamen** – Zusätze wie „Linz/Donau“, „Leonding“ oder „Traun OÖ“ werden automatisch entfernt.
+* **Linie 11s** – Fahrten der Linie 11 zum Stadtfriedhof werden als `11s` angezeigt (statt `11*`).
+* **Schonende Aktualisierung** – ein zentraler Abruf alle 60 Sekunden für alle Sensoren einer Haltestelle, ohne das API-Limit der Linz AG zu belasten.
+* **Sicher & sauber** – SSL-Zertifikatsprüfung aktiv; die lange Abfahrtsliste wird nicht in die Verlaufsdatenbank geschrieben.
+* **Dashboard-Karte inklusive** – die Karte wird mit der Integration installiert und **automatisch geladen**. Kein manueller Ressourcen-Eintrag, kein zusätzliches Repository.
 
-## 🆕 Neu in v1.8.10
-* **Haltestellen-Säule:** weitere Kurznamen wie an der echten Anzeige – Wegscheider Straße → *Wegscheider Str.*, Volksgartenstraße → *Volksgartenstr.*
+### 🎨 Dashboard-Karte – fünf Designs in einer Karte
+| Design | Beschreibung |
+| --- | --- |
+| **Maxi** (V1) | Große Zeilen mit Linien-Badge, Ziel, Minuten, geplanter Abfahrtszeit, Verspätung und Info-Zeile – ideal für Wandtablets. |
+| **Midi** (V2) | Kompakte Liste mit Verspätung und Hinweisen in einer Zeile – Zeilenhöhe und Schriftgrößen frei einstellbar. |
+| **Mini** (V3) | Sehr platzsparend, perfekt für Smartphones oder als Seitenleiste. |
+| **LED-Wall** | Klassische Anzeigetafel mit leuchtender LED-Schrift (Farbe frei wählbar), Uhrzeit und durchgestrichenen Ausfällen. |
+| **Haltestellen-Säule** | Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz AG Haltestellen – Details unten. |
 
-## 🆕 Neu in v1.8.9
-* **Haltestellen-Säule:** Ausgefallene Fahrten bleiben bis zur geplanten Abfahrtszeit sichtbar – Ziel und Minuten durchgestrichen, abwechselnd mit der Laufschrift „Fahrt fällt aus“.
-
-## 🆕 Neu in v1.8.8
-* **Haltestellen-Säule:** Blinkt der Block (Abfahrt „jetzt“), steht nur das Ziel – keine Zusatzinfo. Der Block ist kleiner.
-
-## 🆕 Neu in v1.8.7
-* **Haltestellen-Säule:** Bei Abfahrt „jetzt“ bleibt das Minutenfeld leer, stattdessen blinkt direkt vor dem Ziel (Feld 5) ein gefüllter Block – wie an der echten Anzeige.
-
-## 🆕 Neu in v1.8.6
-* **Haltestellen-Säule:** Sonderinformationen wie „Verspätung bitte Geduld“ oder „Fällt aus“ laufen als Laufschrift von rechts nach links durch. Fernheizkraftwerk wird als *Fernheizkraftw.* angezeigt.
-
-## 🆕 Neu in v1.8.5
-* **Haltestellen-Säule – Kompakt-Modus (Badge):** nur die LED-Zeile(n), ohne Kopf und Logo – z. B. als einzeilige Anzeige im Dashboard. Spaltenköpfe ein-/ausblendbar.
-* **LED-Board wie am Original:** jedes Kästchen hat 12 × 20 Pixel, die unbeleuchteten Pixel sind ganz leicht sichtbar.
-
-## 🆕 Neu in v1.8.4
-* **Haltestellen-Säule:** neue 5 × 7-LED-Schrift wie am Original (jeder Punkt doppelt), Kurznamen wie an der echten Anzeige (Fernheizkraftw., Kleinmünchen, Trauner Kreuzung, Stieglbauernstr.) und feste 24-Felder-Zeilen wie am Original – Linie (Feld 1–3), Zusatz wie `a`, `*`, `s` (Feld 4), Ziel bzw. Sonderinformation (Feld 6–21, läuft bei Überlänge Feld für Feld durch), Abfahrtsminuten (Feld 22–24, max. 99 Minuten). Zusatzinfos wie „Verspätung bitte Geduld“ wechseln sich mit dem Ziel ab. 
-
-## 🆕 Neu in v1.8.0
-* **5. Design „Haltestellen-Säule“:** Originalgetreuer Nachbau der Linz AG Anzeige an der Haltestelle – H-Schild, Haltestellenname, Linien-Zeile und grüne LED-Zeilen mit fester 24-Felder-Matrix (feine Punkte, 8 × 14 pro Zeichen, Laufschrift für lange Ziele und Zusatzinfos) und Linz AG Linien Logo (nur die Tafel, ohne Mast). Das Logo wird lokal aus der Integration geladen.
-* **Brand-Icons in korrekter Größe** (256/512 px) für eine scharfe Anzeige in HACS und Home Assistant.
-
-## 🆕 Neu in v1.6.1
-* **Linie 11s:** Fahrten der Linie 11 zum Stadtfriedhof werden als `11s` statt `11*` angezeigt.
-* **Karte wird automatisch geladen** – kein manueller Ressourcen-Eintrag mehr nötig.
-* **Stabiler & sicherer:** SSL-Zertifikatsprüfung aktiv, saubere Verbindungsfreigabe, kein doppeltes Anlegen derselben Haltestelle, Abfahrtsliste wird nicht mehr in die Verlaufsdatenbank geschrieben.
-* **Bugfixes:** Haltestellennamen wie „Linzer Straße" werden nicht mehr verstümmelt; Änderungen im Karten-Editor (Zeilenhöhe, Schrift, LED-Farbe) wirken sofort; `hacs.json` repariert.
-
-## 🚀 NEU in dieser Version
-* **100% Live-API & Kartensuche:** Kein lokaler GTFS-Datenbank-Ballast mehr! Die Integration läuft nun komplett über die direkte Linz AG API, was sie extrem schnell und ressourcenschonend macht. Haltestellen können jetzt auch bequem über eine interaktive Umkreissuche (Karte) gefunden werden.
-* **Vom Sensor zum "Gerät":** Pro Haltestelle wird nun ein echtes Home Assistant *Gerät (Device)* angelegt, das automatisch **5 übersichtliche Sensoren** für die nächsten 5 Abfahrten enthält.
-* **Klartext-Anzeige:** Keine nackten Zahlen mehr! Sensoren zeigen direkt lesbaren Text (z.B. `1 Universität 14:30 (5 Min)` oder `3 Traun (Jetzt)`) – perfekt für Apple Watch oder kompakte Dashboards.
-* **Saubere Namen & Duplikat-Filter:** Unerwünschte Zusätze wie *"Linz/Donau"* oder *"Leonding"* werden aus Zielen herausgefiltert. Die clevere Suche zeigt jede Haltestelle nur noch exakt einmal an.
-* **Smartes Live-Sync:** Ein zentraler DataCoordinator aktualisiert die Echtzeitdaten exakt alle 60 Sekunden schonend für alle Sensoren gleichzeitig, ohne das API-Limit zu sprengen.
-
----
-
-## ✨ Features
-
-- ⚡ 100% Echtzeit‑Daten inkl. Verspätungen und Baustellen-Infos  
-- 🔍 Smart Search für Haltestellen (Textsuche oder interaktive GPS-Umkreissuche)
-- 🎨 Fünf Design‑Varianten (Maxi, Midi, Mini, LED Wall, Haltestellen-Säule) in einer einzigen flexiblen Karte zusammengeführt  
-- 📱 Responsive: Perfekt für Tablets, Wallpanels & Smartphones  
-- ⚙️ Komplette UI‑Konfiguration via Lovelace Editor
-
----
-
-## ⚙️ Einrichtung — 1) Integration hinzufügen (wichtig: zuerst) 🚦
-
-Bevor Sie Dashboard‑Karten nutzen, fügen Sie bitte zunächst die Integration hinzu.
-
-1. Gehen Sie zu **Einstellungen** > **Geräte & Dienste** > **Integration hinzufügen**.  
-2. Suchen Sie nach **Linz AG Monitor**.  
-3. Wählen Sie zwischen der **klassischen Textsuche** oder der **interaktiven Kartensuche**.
-4. Wählen Sie den korrekten Treffer aus dem Dropdown-Menü aus.  
-5. **Fertig:** Sie haben nun ein neues *Gerät*, das 5 Sensoren enthält (z.B. `sensor.haltestelle_hauptbahnhof_nachste_abfahrt`, `sensor.haltestelle_hauptbahnhof_abfahrt_2`, etc.).
-
-> **WICHTIG für das Dashboard:** Der Sensor **"Nächste Abfahrt"** (`sensor.haltestelle_ihre_station_nachste_abfahrt`) enthält im Hintergrund die unsichtbaren `departureList`-Attribute für die Custom Cards. Wählen Sie in den Lovelace-Karten immer diesen ersten Sensor aus!
-
----
-
-## 📥 Dashboard‑Karten (Integriert) 🗂️
-
-Die Custom Lovelace Card (`linz-linien-combined.js`) ist jetzt direkt in dieser Integration enthalten und wird **automatisch** geladen. Eine manuelle Installation der Karte oder ein separates Repository ist nicht mehr erforderlich!
-
-*Hinweis zur Migration:* Falls Sie noch die alten separaten v1/v2/v3 JS-Dateien nutzen, entfernen Sie diese bitte aus Ihren Ressourcen und nutzen Sie ab sofort nur noch die neue kombinierte Karte.
+Für alle Designs:
+* **Komplett im UI-Editor einstellbar** – Layout, Anzahl der Zeilen, Schrift, Farben und mehr, ohne YAML.
+* **Filter nach Linien und Richtungen per Klick** – der Editor zeigt die Linien und Ziele der Haltestelle zum Anhaken an.
+* **Sortierung** nach Echtzeit (tatsächliche Abfahrt) oder nach Fahrplan.
+* **Eigener Anzeigename** für die Haltestelle, Zeitanzeige in Minuten oder als Uhrzeit.
+* **Responsive** – passt sich vom Smartphone bis zum Wandpanel an die Kartenbreite an.
 
 ---
 
@@ -101,9 +52,9 @@ Die Custom Lovelace Card (`linz-linien-combined.js`) ist jetzt direkt in dieser 
 
 ---
 
-## 🚏 Design 5: Haltestellen-Säule (DFI)
+## 🚏 Haltestellen-Säule (DFI)
 
-Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz AG Haltestellen – nur die Tafel selbst, ohne Mast.
+Originalgetreuer Nachbau der Anzeige an den Linz AG Haltestellen – nur die Tafel selbst, ohne Mast.
 
 <p>
   <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/haltestelle.png" width="340" alt="Haltestellen-Säule">
@@ -111,7 +62,7 @@ Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz A
   <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/haltestelle-animation.gif" width="340" alt="Haltestellen-Säule mit Laufschrift">
 </p>
 
-**So ist jede LED-Zeile aufgebaut – immer 24 gleich große Felder:**
+**So ist jede LED-Zeile aufgebaut – immer 24 gleich große Felder wie am Original:**
 
 | Feld | Inhalt | Beispiel |
 | :---: | --- | --- |
@@ -121,38 +72,70 @@ Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz A
 | 6–21 | Ziel bzw. Sonderinformation (16 Felder) | `Trauner Kreuzung` |
 | 22–24 | Abfahrt in Minuten (rechtsbündig, max. 99, bei „jetzt“ leer) | `5`, `12` |
 
-* **Laufschrift:** Ist ein Ziel oder eine Information länger als 16 Felder, läuft der Text Feld für Feld nach links – mit kurzer Pause am Anfang und am Ende, damit jedes Wort lesbar ist.
-* **Ausfälle:** Die Fahrt bleibt bis zur geplanten Abfahrtszeit stehen – Ziel und Minuten durchgestrichen, dazwischen läuft „Fahrt fällt aus“ durch.
-* **Sonderinformationen** wie „Verspätung bitte Geduld“ wechseln sich im Zielfeld mit dem Ziel ab und laufen dabei als Laufschrift von rechts nach links durch.
-* **Kurznamen wie an der echten Anzeige** (nur in diesem Design): Fernheizkraftwerk → *Fernheizkraftw.*, Remise Kleinmünchen → *Kleinmünchen*, Trauner Kreuzung P+R → *Trauner Kreuzung*, Stieglbauernstraße → *Stieglbauernstr.*, Wegscheider Straße → *Wegscheider Str.*, Volksgartenstraße → *Volksgartenstr.*, Sporthalle Leonding → *Sporth. Leonding*
-* **LED-Board wie am Original:** jedes Kästchen hat 12 × 20 Pixel; die unbeleuchteten Pixel schimmern ganz leicht durch. Die Schrift ist eine klassische 5 × 7-Punkt-Schrift, jeder Schrift-Punkt als 2 × 2 Pixel – Striche 2 Pixel dick, inkl. Ä, Ö, Ü, ß.
-* **Kopf:** H-Schild, Haltestellenname und Linien-Zeile (automatisch aus den Abfahrten oder selbst eingetragen).
-* **Unten rechts** das Linz AG Linien Logo (wird lokal aus der Integration geladen), optional eine kleine Uhrzeit links.
-* Wie an der echten Anzeige erscheinen nur Abfahrten bis 99 Minuten; die Anzeige ist immer in Minuten.
-* **Kompakt-Modus (Badge):** nur die LED-Zeile(n) ohne Kopf und Logo – mit `anzahl: 1` eine einzeilige Anzeige:
+* **LED-Board wie am Original:** jedes Feld hat 12 × 20 Pixel, die unbeleuchteten Pixel schimmern leicht durch. Klassische 5 × 7-Punkt-Schrift, jeder Schrift-Punkt als 2 × 2 Pixel – inkl. Ä, Ö, Ü und ß. LED-Farbe frei wählbar.
+* **Abfahrt „jetzt“:** Das Minutenfeld bleibt leer, stattdessen blinkt vor dem Ziel ein kleiner Block – ohne Zusatztext.
+* **Laufschrift:** Ist ein Ziel länger als 16 Felder, läuft es Feld für Feld durch – mit kurzer Pause am Anfang und Ende, damit jedes Wort lesbar bleibt.
+* **Sonderinformationen** wie „Verspätung bitte Geduld“ wechseln sich mit dem Ziel ab und laufen als Laufschrift von rechts nach links durch.
+* **Ausfälle:** Die Fahrt bleibt bis zur geplanten Abfahrtszeit stehen – Ziel und Minuten durchgestrichen, dazwischen läuft „Fahrt fällt aus“.
+* **Kurznamen wie an der echten Anzeige** (nur in diesem Design):
+
+  | Ziel | Anzeige |
+  | --- | --- |
+  | Fernheizkraftwerk | Fernheizkraftw. |
+  | Remise Kleinmünchen | Kleinmünchen |
+  | Trauner Kreuzung P+R | Trauner Kreuzung |
+  | Stieglbauernstraße | Stieglbauernstr. |
+  | Wegscheider Straße | Wegscheider Str. |
+  | Volksgartenstraße | Volksgartenstr. |
+  | Sporthalle Leonding | Sporth. Leonding |
+
+* Wie am Original nur Abfahrten bis 99 Minuten, immer in Minuten.
+* **Kopf:** H-Schild, Haltestellenname und Linien-Zeile (automatisch aus den Abfahrten oder selbst eingetragen), darunter die Spaltenköpfe „Linie / Ziel / Abfahrt in Min.“ (ausblendbar).
+* **Unten rechts** das Linz AG Linien Logo (lokal aus der Integration geladen, durch ein eigenes Bild ersetzbar), optional eine kleine Uhrzeit links.
+* **Kompakt-Modus (Badge):** nur die LED-Zeile(n), ohne Kopf und Logo – mit `anzahl: 1` eine einzeilige Anzeige:
 
   <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/haltestelle-kompakt.png" width="420" alt="Haltestellen-Säule Kompakt">
 
-* Die Tafel passt sich der Kartenbreite an – vom Smartphone bis zum Wandtablet.
+---
+
+## ⚙️ Einrichtung
+
+### 1) Installation über HACS
+1. HACS öffnen → **Benutzerdefinierte Repositories** → `https://github.com/irmscher123/linz-linien-abfahrtsmonitor` als **Integration** hinzufügen.
+2. **Linz Linien Abfahrtsmonitor** installieren und Home Assistant neu starten.
+
+### 2) Haltestelle hinzufügen (zuerst!)
+1. **Einstellungen** → **Geräte & Dienste** → **Integration hinzufügen**.
+2. Nach **Linz AG Monitor** suchen.
+3. **Textsuche** oder **Kartensuche** wählen.
+4. Den passenden Treffer aus der Liste auswählen.
+5. **Fertig:** Es gibt nun ein neues *Gerät* mit 5 Sensoren (z. B. `sensor.haltestelle_hauptbahnhof_nachste_abfahrt`, `sensor.haltestelle_hauptbahnhof_abfahrt_2` …).
+
+> **Wichtig für das Dashboard:** Der Sensor **„Nächste Abfahrt“** (`sensor.haltestelle_<name>_nachste_abfahrt`) enthält die komplette Abfahrtsliste (`departureList`) für die Karte. Wählen Sie in der Karte immer diesen Sensor aus.
+
+### 3) Karte ins Dashboard
+Dashboard bearbeiten → **Karte hinzufügen** → **LinzAG Linien Monitor** auswählen und im Editor einstellen. Die Karte wird automatisch geladen.
+
+*Umstieg von alten Versionen:* Falls noch die alten separaten Karten-Dateien (v1/v2/v3) als Ressource eingetragen sind, diese bitte entfernen – es wird nur noch die kombinierte Karte benötigt.
 
 ---
 
-## ⚙️ Verwendung & Konfiguration im Dashboard
+## 🧩 Konfiguration per YAML
 
-Eine Karte, fünf Varianten! Sie können die Karte komplett grafisch im Home Assistant UI-Editor anpassen (inklusive dynamischer Linien- und Richtungs-Filter per Klick!). 
+Alles lässt sich im UI-Editor einstellen. Wer YAML bevorzugt:
 
-Falls Sie den YAML-Modus bevorzugen, hier ein Beispiel für das kompakte **Midi-Layout**:
+### Beispiel: Midi-Layout
 
 ```yaml
 type: custom:linz-monitor-combined
 entity: sensor.haltestelle_hauptbahnhof_nachste_abfahrt
-layout: midi
+layout: midi            # maxi | midi | mini | led | stele
 anzahl: 8
 row_height: 38
 font_size: 20
 dest_size: 18
-filter: "1,2"
-sortierung: "echtzeit"
+filter: "1,2"           # nur diese Linien
+sortierung: "echtzeit"  # echtzeit | plan
 ```
 
 ### Beispiel: Haltestellen-Säule
@@ -169,3 +152,18 @@ stele_footer_image: ""       # optional eigenes Bild statt Linz AG Logo unten re
 stele_compact: false         # true = nur LED-Zeilen (Badge), ohne Kopf und Logo
 stele_labels: true           # Spaltenköpfe "Linie / Ziel / Abfahrt in Min." anzeigen
 ```
+
+### Wichtige Optionen
+
+| Option | Bedeutung |
+| --- | --- |
+| `entity` | Sensor „Nächste Abfahrt“ der Haltestelle |
+| `layout` | `maxi`, `midi`, `mini`, `led` oder `stele` |
+| `anzahl` | Anzahl der angezeigten Abfahrten |
+| `filter` | nur bestimmte Linien, z. B. `"1,2,3"` |
+| `filter_direction` | nur bestimmte Ziele/Richtungen |
+| `sortierung` | `echtzeit` (tatsächliche Abfahrt) oder `plan` (Fahrplan) |
+| `stop_name_override` | eigener Anzeigename der Haltestelle |
+| `time_format` | `countdown` (Minuten) oder `absolute` (Uhrzeit) |
+| `led_color` | LED-Farbe der LED-Wall |
+| `stele_*` | Optionen der Haltestellen-Säule (siehe Beispiel oben) |
