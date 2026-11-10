@@ -174,6 +174,7 @@ const STELE_DEST_SHORT = [
   [/^Stieglbauernstraße$/i, "Stieglbauernstr."],
   [/^Wege?scheider\s*Stra(ß|ss)e$/i, "Wegscheider Str."],
   [/^Volksgarten\s*stra(ß|ss)e$/i, "Volksgartenstr."],
+  [/^Sporthalle\s*Leonding$/i, "Sporth. Leonding"],
 ];
 const steleShortDest = (t) => {
   const s = String(t || "").trim();
