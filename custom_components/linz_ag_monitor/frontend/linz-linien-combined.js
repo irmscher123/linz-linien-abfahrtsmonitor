@@ -1405,7 +1405,10 @@ class LinzMonitorCombined extends HTMLElement {
           .st-compact .st-body { border-top: 1px solid #c7cacc; border-radius: 2cqw; padding: 2cqw 2.6cqw 2.6cqw; }
           .st-compact .st-body.no-labels { padding-top: 2.6cqw; }
           /* Spaltenköpfe exakt über dem 24-Zeichen-Raster: "Ziel" beginnt bei Zeichen 5 */
-          .st-labels { display: grid; grid-template-columns: calc(1.2% + 97.6% * 5 / 24) 1fr auto; align-items: end; font-size: 3.9cqw; line-height: 1.15; margin-bottom: 1.8cqw; color: #2a2a28; }
+          /* "Linie" endet genau am Ende der Liniennummer (Kästchen 3), "Ziel" beginnt am Zieltext (Kästchen 6) */
+          .st-labels { display: grid; grid-template-columns: calc(1.2% + 97.6% * 37.5 / 312) calc(97.6% * 29 / 312) 1fr auto;
+                       align-items: end; font-size: 4.6cqw; line-height: 1.12; margin-bottom: 1.8cqw; color: #2a2a28; }
+          .st-labels .lab-line { text-align: right; }
           .st-labels .lab-time { text-align: right; }
 
           .st-rows { display: flex; flex-direction: column; gap: 2.8cqw; }
@@ -1432,7 +1435,7 @@ class LinzMonitorCombined extends HTMLElement {
             </div>
             <div class="st-joint"></div>`}
             <div class="st-body${showLabels ? "" : " no-labels"}">
-              ${showLabels ? `<div class="st-labels"><span>Linie</span><span>Ziel</span><span class="lab-time">Abfahrt<br>in Min.</span></div>` : ``}
+              ${showLabels ? `<div class="st-labels"><span class="lab-line">Linie</span><span></span><span>Ziel</span><span class="lab-time">Abfahrt<br>in Min.</span></div>` : ``}
               <div class="st-rows" id="st-rows"></div>
               ${compact ? `` : `
               <div class="st-foot">
