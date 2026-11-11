@@ -53,117 +53,118 @@ const LINZ_ASSET_BASE = (() => {
 
 // LED-Raster der Haltestellen-Säule: 24 Zeichen, Zeichenfeld 10 x 16 Punkte, Glyphe 8 x 14 Punkte
 const STELE_COLS = 24;
-const STELE_DOT = 2;                  // 1 Schrift-Punkt = 2 x 2 LED-Punkte ("doppelte Punkte")
-const STELE_PIX_W = 12;               // ein Kästchen hat 12 x 20 Pixel (wie an der echten Anzeige)
-const STELE_PIX_H = 20;
-const STELE_CELL_GAP = 1;             // dunkle Fuge zwischen den Kästchen (in Pixeln)
+const STELE_PIX_W = 8;                // ein Feld hat 8 x 16 LED-Plättchen (wie an der echten Anzeige)
+const STELE_PIX_H = 16;
+const STELE_CELL_GAP = 3;             // dunkle Fuge zwischen den Feldern (in Plättchen)
 const STELE_CELL_W = STELE_PIX_W + STELE_CELL_GAP;
 const STELE_CELL_H = STELE_PIX_H + STELE_CELL_GAP;
-const STELE_GLYPH_X = 1;              // Schrift (5x8 x 2 = 10 x 16 Pixel) im Kästchen: 1 Pixel Rand links
-const STELE_GLYPH_Y = 2;              // 2 Pixel Rand oben
+const STELE_PANEL = 0.6;              // das Feld ist etwas größer als die Plättchen-Matrix
+const STELE_STRIKE_ROW = 7;           // Durchstreichen: Zeile 7-8 (Höhe der Zeichenmitte)
 const STELE_MIN_W = 3;                // Abfahrtsminuten: Feld 22-24
-const STELE_DOT_ASPECT = 1;           // 1 = quadratische LED-Punkte (größer = höhere, schlankere Zeichen)
+const STELE_DOT_ASPECT = 1;           // 1 = quadratische LED-Plättchen
 // Aussehen der LED-Anzeige:
-//   mode     "full" = jeder Schrift-Punkt als 2x2 feine Punkte, "thinH" = waagrechte Striche 1 Punkt,
-//            "led" = ein großes LED pro Schrift-Punkt
-//   fill     Größe der leuchtenden Punkte (0-1, kleiner = mehr Abstand)
-//   grid     Helligkeit der unbeleuchteten Pixel im Hintergrund (0 = aus)
-//   gridMode Raster im Hintergrund ("led" = ein großes Feld pro Schrift-Punkt, sonst wie mode)
-//   gridFill Größe der Hintergrund-Pixel
+//   fill     Größe der leuchtenden Plättchen (0-1, kleiner = mehr Abstand)
+//   grid     Helligkeit der unbeleuchteten Plättchen (0 = aus)
+//   gridFill Größe der unbeleuchteten Plättchen
 //   glow     Stärke des Leuchtens um die Schrift
-const STELE_LOOK = { mode: "full", fill: 0.76, grid: 0.11, gridMode: "full", gridFill: 0.60, glow: 1.2 };
-// 5x8-LED-Schrift wie an der echten Anzeige (Zeile 0-6 Zeichen, Zeile 7 Unterlänge).
-// Jede Zeile = 5 Bits (links = höchstes Bit). Jeder Schrift-Punkt wird als 2x2 feine LED-Punkte gezeichnet.
+const STELE_LOOK = { fill: 0.80, grid: 0.11, gridFill: 0.80, glow: 1.2 };
+// 8x16-LED-Schrift wie an der echten Anzeige: 16 Zeilen je Zeichen, jede Zeile = 8 Bits (links = höchstes Bit).
+// Striche 2 Pixel dick, Schrägen in Einzelschritten; Großbuchstaben/Ziffern 14 Zeilen hoch, Zeile 14-15 Unterlänge.
 const STELE_FONT = {
-  "0": [14,17,19,21,25,17,14,0],
-  "1": [4,12,4,4,4,4,14,0],
-  "2": [14,17,1,2,4,8,31,0],
-  "3": [31,2,4,2,1,17,14,0],
-  "4": [2,6,10,18,31,2,2,0],
-  "5": [31,16,30,1,1,17,14,0],
-  "6": [6,8,16,30,17,17,14,0],
-  "7": [31,1,2,4,8,8,8,0],
-  "8": [14,17,17,14,17,17,14,0],
-  "9": [14,17,17,15,1,2,12,0],
-  "A": [14,17,17,17,31,17,17,0],
-  "B": [30,17,17,30,17,17,30,0],
-  "C": [14,17,16,16,16,17,14,0],
-  "D": [28,18,17,17,17,18,28,0],
-  "E": [31,16,16,30,16,16,31,0],
-  "F": [31,16,16,30,16,16,16,0],
-  "G": [14,17,16,23,17,17,15,0],
-  "H": [17,17,17,31,17,17,17,0],
-  "I": [14,4,4,4,4,4,14,0],
-  "J": [7,2,2,2,2,18,12,0],
-  "K": [17,18,20,24,20,18,17,0],
-  "L": [16,16,16,16,16,16,31,0],
-  "M": [17,27,21,21,17,17,17,0],
-  "N": [17,17,25,21,19,17,17,0],
-  "O": [14,17,17,17,17,17,14,0],
-  "P": [30,17,17,30,16,16,16,0],
-  "Q": [14,17,17,17,21,18,13,0],
-  "R": [30,17,17,30,20,18,17,0],
-  "S": [15,16,16,14,1,1,30,0],
-  "T": [31,4,4,4,4,4,4,0],
-  "U": [17,17,17,17,17,17,14,0],
-  "V": [17,17,17,17,17,10,4,0],
-  "W": [17,17,17,21,21,21,10,0],
-  "X": [17,17,10,4,10,17,17,0],
-  "Y": [17,17,10,4,4,4,4,0],
-  "Z": [31,1,2,4,8,16,31,0],
-  "Ä": [10,0,14,17,31,17,17,0],
-  "Ö": [10,0,14,17,17,17,14,0],
-  "Ü": [10,0,17,17,17,17,14,0],
-  "a": [0,0,14,1,15,17,15,0],
-  "b": [16,16,22,25,17,17,30,0],
-  "c": [0,0,14,16,16,17,14,0],
-  "d": [1,1,13,19,17,17,15,0],
-  "e": [0,0,14,17,31,16,14,0],
-  "f": [6,9,8,28,8,8,8,0],
-  "g": [0,0,15,17,17,15,1,14],
-  "h": [16,16,22,25,17,17,17,0],
-  "i": [4,0,12,4,4,4,14,0],
-  "j": [2,0,6,2,2,2,18,12],
-  "k": [16,16,18,20,24,20,18,0],
-  "l": [12,4,4,4,4,4,14,0],
-  "m": [0,0,26,21,21,21,21,0],
-  "n": [0,0,22,25,17,17,17,0],
-  "o": [0,0,14,17,17,17,14,0],
-  "p": [0,0,30,17,17,30,16,16],
-  "q": [0,0,15,17,17,15,1,1],
-  "r": [0,0,22,25,16,16,16,0],
-  "s": [0,0,15,16,14,1,30,0],
-  "t": [8,8,28,8,8,9,6,0],
-  "u": [0,0,17,17,17,19,13,0],
-  "v": [0,0,17,17,17,10,4,0],
-  "w": [0,0,17,17,21,21,10,0],
-  "x": [0,0,17,10,4,10,17,0],
-  "y": [0,0,17,17,17,15,1,14],
-  "z": [0,0,31,2,4,8,31,0],
-  "ä": [10,0,14,1,15,17,15,0],
-  "ö": [10,0,14,17,17,17,14,0],
-  "ü": [10,0,17,17,17,19,13,0],
-  "ß": [12,18,18,20,18,17,22,0],
-  ".": [0,0,0,0,0,12,12,0],
-  ",": [0,0,0,0,0,12,4,8],
-  "-": [0,0,0,31,0,0,0,0],
-  "+": [0,4,4,31,4,4,0,0],
-  "*": [0,4,21,14,21,4,0,0],
-  "/": [1,2,2,4,8,8,16,0],
-  ":": [0,12,12,0,12,12,0,0],
-  "(": [2,4,8,8,8,4,2,0],
-  ")": [8,4,2,2,2,4,8,0],
-  "&": [12,18,20,8,21,18,13,0],
-  "'": [4,4,8,0,0,0,0,0],
-  "\"": [10,10,0,0,0,0,0,0],
-  "!": [4,4,4,4,4,0,4,0],
-  "?": [14,17,1,2,4,0,4,0],
-  "|": [4,4,4,4,4,4,4,0],
-  "<": [2,4,8,16,8,4,2,0],
-  ">": [8,4,2,1,2,4,8,0],
-  "=": [0,0,31,0,31,0,0,0],
-  "%": [24,25,2,4,8,19,3,0],
-  "■": [0,0,14,14,14,0,0,0],     // kleiner gefüllter Block (blinkt bei Abfahrt "jetzt")
+  "0": [60,126,231,195,195,195,195,195,195,195,195,231,126,60,0,0],
+  "1": [6,14,30,126,118,6,6,6,6,6,6,6,6,6,0,0],
+  "2": [60,126,231,195,3,7,14,28,120,240,192,192,255,255,0,0],
+  "3": [60,126,231,195,3,7,62,62,7,3,195,231,126,60,0,0],
+  "4": [6,14,14,30,62,54,118,102,255,255,6,6,6,6,0,0],
+  "5": [255,255,192,192,192,252,254,7,3,3,195,231,126,60,0,0],
+  "6": [30,62,112,224,192,192,252,254,199,195,195,231,126,60,0,0],
+  "7": [255,255,3,7,6,14,28,24,56,48,48,48,48,48,0,0],
+  "8": [60,126,231,195,195,231,126,126,231,195,195,231,126,60,0,0],
+  "9": [60,126,231,195,195,227,127,63,3,3,7,14,124,120,0,0],
+  "A": [24,60,126,231,195,195,195,255,255,195,195,195,195,195,0,0],
+  "B": [252,254,199,195,195,199,254,254,199,195,195,199,254,252,0,0],
+  "C": [62,127,227,192,192,192,192,192,192,192,192,227,127,62,0,0],
+  "D": [248,252,206,199,195,195,195,195,195,195,199,206,252,248,0,0],
+  "E": [255,255,192,192,192,192,254,254,192,192,192,192,255,255,0,0],
+  "F": [255,255,192,192,192,192,254,254,192,192,192,192,192,192,0,0],
+  "G": [62,127,227,192,192,192,192,223,223,195,195,227,127,63,0,0],
+  "H": [195,195,195,195,195,195,255,255,195,195,195,195,195,195,0,0],
+  "I": [126,126,24,24,24,24,24,24,24,24,24,24,126,126,0,0],
+  "J": [63,63,3,3,3,3,3,3,3,3,195,231,126,60,0,0],
+  "K": [195,199,206,220,216,248,240,240,248,220,204,206,199,195,0,0],
+  "L": [192,192,192,192,192,192,192,192,192,192,192,192,255,255,0,0],
+  "M": [231,255,255,255,219,219,219,219,219,195,195,195,195,195,0,0],
+  "N": [195,227,227,243,243,251,219,223,207,207,199,199,195,195,0,0],
+  "O": [60,126,231,195,195,195,195,195,195,195,195,231,126,60,0,0],
+  "P": [252,254,199,195,195,199,254,252,192,192,192,192,192,192,0,0],
+  "Q": [60,126,231,195,195,195,195,195,195,219,223,239,127,63,0,0],
+  "R": [252,254,199,195,195,199,254,252,206,199,195,195,195,195,0,0],
+  "S": [62,127,227,192,192,224,124,62,7,3,3,199,254,124,0,0],
+  "T": [255,255,24,24,24,24,24,24,24,24,24,24,24,24,0,0],
+  "U": [195,195,195,195,195,195,195,195,195,195,195,231,126,60,0,0],
+  "V": [195,195,195,195,195,195,195,227,103,118,62,60,28,24,0,0],
+  "W": [195,195,195,195,195,219,219,219,219,219,255,255,255,231,0,0],
+  "X": [195,195,195,231,126,60,60,60,126,102,231,195,195,195,0,0],
+  "Y": [195,195,195,195,231,126,60,24,24,24,24,24,24,24,0,0],
+  "Z": [255,255,3,7,14,12,28,56,112,96,224,192,255,255,0,0],
+  "Ä": [102,102,0,60,126,231,195,195,255,255,195,195,195,195,0,0],
+  "Ö": [102,102,0,60,126,231,195,195,195,195,195,231,126,60,0,0],
+  "Ü": [102,102,0,195,195,195,195,195,195,195,195,231,126,60,0,0],
+  "a": [0,0,0,0,124,126,7,63,127,227,195,231,127,63,0,0],
+  "b": [192,192,192,192,252,254,199,195,195,195,195,199,254,252,0,0],
+  "c": [0,0,0,0,63,127,224,192,192,192,192,224,127,63,0,0],
+  "d": [3,3,3,3,63,127,227,195,195,195,195,227,127,63,0,0],
+  "e": [0,0,0,0,60,126,231,195,255,255,192,224,126,62,0,0],
+  "f": [14,31,59,48,254,254,48,48,48,48,48,48,48,48,0,0],
+  "g": [0,0,0,0,63,127,227,195,195,195,227,127,63,3,255,254],
+  "h": [192,192,192,192,252,254,231,195,195,195,195,195,195,195,0,0],
+  "i": [0,24,24,0,56,56,24,24,24,24,24,24,24,24,0,0],
+  "j": [0,12,12,0,28,28,12,12,12,12,12,12,12,12,252,248],
+  "k": [192,192,192,192,199,207,220,248,240,248,220,206,199,195,0,0],
+  "l": [56,56,24,24,24,24,24,24,24,24,24,24,24,24,0,0],
+  "m": [0,0,0,0,254,255,219,219,219,219,219,219,219,219,0,0],
+  "n": [0,0,0,0,252,254,231,195,195,195,195,195,195,195,0,0],
+  "o": [0,0,0,0,60,126,231,195,195,195,195,231,126,60,0,0],
+  "p": [0,0,0,0,252,254,199,195,195,195,199,254,252,192,192,192],
+  "q": [0,0,0,0,63,127,227,195,195,195,227,127,63,3,3,3],
+  "r": [0,0,0,0,223,255,240,224,192,192,192,192,192,192,0,0],
+  "s": [0,0,0,0,63,127,224,224,124,62,7,7,254,252,0,0],
+  "t": [0,48,48,48,254,254,48,48,48,48,48,56,31,15,0,0],
+  "u": [0,0,0,0,195,195,195,195,195,195,195,231,127,63,0,0],
+  "v": [0,0,0,0,195,195,195,195,231,102,126,60,60,24,0,0],
+  "w": [0,0,0,0,195,195,195,219,219,219,219,255,127,126,0,0],
+  "x": [0,0,0,0,195,231,126,60,60,60,126,102,231,195,0,0],
+  "y": [0,0,0,0,195,195,195,195,195,195,227,127,63,3,255,254],
+  "z": [0,0,0,0,255,255,7,14,28,56,112,224,255,255,0,0],
+  "ä": [0,102,102,0,124,126,7,63,127,227,195,231,127,63,0,0],
+  "ö": [0,102,102,0,60,126,231,195,195,195,195,231,126,60,0,0],
+  "ü": [0,102,102,0,195,195,195,195,195,195,195,231,127,63,0,0],
+  "ß": [60,126,231,195,199,222,222,199,195,195,195,199,254,252,0,0],
+  ".": [0,0,0,0,0,0,0,0,0,0,0,0,24,24,0,0],
+  ",": [0,0,0,0,0,0,0,0,0,0,0,0,24,56,48,48],
+  "-": [0,0,0,0,0,0,126,126,0,0,0,0,0,0,0,0],
+  "+": [0,0,0,24,24,24,255,255,24,24,24,0,0,0,0,0],
+  "*": [0,0,24,219,255,126,60,126,255,219,24,0,0,0,0,0],
+  "/": [3,7,6,14,12,28,24,56,48,112,96,224,192,192,0,0],
+  ":": [0,0,0,24,24,0,0,0,0,0,24,24,0,0,0,0],
+  "(": [14,30,56,48,48,48,48,48,48,48,48,56,30,14,0,0],
+  ")": [112,120,28,12,12,12,12,12,12,12,12,28,120,112,0,0],
+  "&": [56,60,124,108,124,120,112,112,251,223,206,238,127,59,0,0],
+  "'": [24,24,24,24,24,0,0,0,0,0,0,0,0,0,0,0],
+  "!": [24,24,24,24,24,24,24,24,24,24,0,0,24,24,0,0],
+  "?": [60,126,231,195,3,7,14,28,24,24,0,0,24,24,0,0],
+  "|": [24,24,24,24,24,24,24,24,24,24,24,24,24,24,24,24],
+  "<": [0,0,6,14,28,56,112,112,56,28,14,6,0,0,0,0],
+  ">": [0,0,96,112,56,28,14,14,28,56,112,96,0,0,0,0],
+  "=": [0,0,0,0,255,255,0,0,255,255,0,0,0,0,0,0],
+  "%": [227,231,230,238,12,28,24,56,48,112,103,231,199,199,0,0],
+  "_": [0,0,0,0,0,0,0,0,0,0,0,0,0,0,255,255],
+  ";": [0,0,0,24,24,0,0,0,0,0,24,24,56,48,48,48],
+  "#": [0,60,60,60,255,255,60,60,255,255,60,60,60,0,0,0],
+  "@": [60,126,231,195,195,255,255,255,255,222,192,224,126,62,0,0],
+  "°": [60,60,60,60,0,0,0,0,0,0,0,0,0,0,0,0],
+  "\"": [102,102,102,102,102,0,0,0,0,0,0,0,0,0,0,0],
+  "■": [0,0,0,0,0,126,126,126,126,126,126,0,0,0,0,0],
 };
 
 // Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
@@ -1417,7 +1418,7 @@ class LinzMonitorCombined extends HTMLElement {
             box-shadow: inset 0 0 0 0.3cqw #1a1f1c;
             padding: 0.6cqw 1.2%; box-sizing: border-box; line-height: 0;
           }
-          /* 24 Kästchen à 12 x 20 Pixel (+ Fuge) */
+          /* 24 Felder à 8 x 16 LED-Plättchen (+ Fuge) */
           .st-row canvas { display: block; width: 100%; aspect-ratio: ${(STELE_COLS * STELE_CELL_W) / (STELE_CELL_H * STELE_DOT_ASPECT)} / 1; }
 
           /* --- Fußbereich --- */
@@ -1615,9 +1616,10 @@ class LinzMonitorCombined extends HTMLElement {
     });
   }
 
-  /* Eine LED-Zeile zeichnen: 24 Zeichenfelder, 5x7-LED-Schrift, jeder Schrift-Punkt = 2x2 LED-Punkte */
+  /* Eine LED-Zeile zeichnen: 24 Felder mit je 8 x 16 LED-Plättchen, 8x16-LED-Schrift */
   _drawSteleRow(cv, text, LED, strike = []) {
-    const PX = STELE_CELL_W, PY = STELE_CELL_H, W = STELE_COLS * PX, H = PY, D = STELE_DOT;
+    const PX = STELE_CELL_W, PY = STELE_CELL_H, W = STELE_COLS * PX, H = PY;
+    const OX = STELE_CELL_GAP / 2, OY = STELE_CELL_GAP / 2;   // Plättchen-Matrix im Feld
 
     const m = /^#?([0-9a-f]{6})$/i.exec(String(LED).trim());
     let cellColor = "#132016";
@@ -1632,38 +1634,34 @@ class LinzMonitorCombined extends HTMLElement {
     if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
     const ctx = cv.getContext("2d");
     const dot = cw / W, dotY = dot * STELE_DOT_ASPECT;
-
-    // Hintergrund + dunkle Zeichenfelder (alle gleich groß)
     const look = STELE_LOOK;
+
+    // Hintergrund + dunkle Felder (alle gleich groß)
     ctx.fillStyle = "#0b0e0c";
     ctx.fillRect(0, 0, cw, ch);
     ctx.fillStyle = cellColor;
+    const pm = STELE_PANEL;
     for (let i = 0; i < STELE_COLS; i++) {
-      ctx.fillRect((i * PX + STELE_CELL_GAP / 2) * dot, (STELE_CELL_GAP / 2) * dotY, STELE_PIX_W * dot, STELE_PIX_H * dotY);
+      ctx.fillRect((i * PX + OX - pm) * dot, (OY - pm) * dotY, (STELE_PIX_W + 2 * pm) * dot, (STELE_PIX_H + 2 * pm) * dotY);
     }
-    const gapX = dot * (1 - look.fill) / 2, gapY = dotY * (1 - look.fill) / 2;
 
-    // unbeleuchtete Pixel des LED-Boards ganz leicht sichtbar
+    const plate = (x, y, f) => {
+      const gx = dot * (1 - f) / 2, gy = dotY * (1 - f) / 2;
+      ctx.rect(x * dot + gx, y * dotY + gy, dot - 2 * gx, dotY - 2 * gy);
+    };
+
+    // unbeleuchtete Plättchen ganz leicht sichtbar
     if (look.grid > 0) {
-      const gm = look.gridMode || look.mode, gf = look.gridFill ?? look.fill;
-      const ggX = dot * (1 - gf) / 2, ggY = dotY * (1 - gf) / 2;
       ctx.beginPath();
-      for (let i = 0; i < STELE_COLS; i++) {
-        // ganzes Kästchen: 12 x 20 Pixel
-        for (let r = 0; r < STELE_PIX_H; r++) for (let c = 0; c < STELE_PIX_W; c++) {
-          if (gm === "led" && (r % D || c % D)) continue;
-          const x = i * PX + STELE_CELL_GAP / 2 + c, y = STELE_CELL_GAP / 2 + r;
-          if (gm === "led") ctx.rect(x * dot + ggX * D, y * dotY + ggY * D, D * dot - 2 * ggX * D, D * dotY - 2 * ggY * D);
-          else ctx.rect(x * dot + ggX, y * dotY + ggY, dot - 2 * ggX, dotY - 2 * ggY);
-        }
-      }
+      for (let i = 0; i < STELE_COLS; i++)
+        for (let r = 0; r < STELE_PIX_H; r++) for (let c = 0; c < STELE_PIX_W; c++) plate(i * PX + OX + c, OY + r, look.gridFill);
       ctx.fillStyle = LED;
       ctx.globalAlpha = look.grid;
       ctx.fill();
       ctx.globalAlpha = 1;
     }
 
-    // leuchtende Punkte
+    // leuchtende Plättchen
     ctx.beginPath();
     Array.from(text).slice(0, STELE_COLS).forEach((c, i) => {
       let g = STELE_FONT[c];
@@ -1672,32 +1670,16 @@ class LinzMonitorCombined extends HTMLElement {
         g = STELE_FONT[plain] || STELE_FONT[plain.toUpperCase()] || null;
       }
       if (!g) return;
-      const on = (r, col) => r >= 0 && r < 8 && col >= 0 && col < 5 && !!(g[r] & (16 >> col));
-      for (let r = 0; r < 8; r++) {
-        for (let col = 0; col < 5; col++) {
-          if (!on(r, col)) continue;
-          const x0 = i * PX + STELE_CELL_GAP / 2 + STELE_GLYPH_X + col * D, y0 = STELE_CELL_GAP / 2 + STELE_GLYPH_Y + r * D;
-          if (look.mode === "led") {            // ein großes LED pro Schrift-Punkt
-            ctx.rect(x0 * dot + gapX * D, y0 * dotY + gapY * D, D * dot - 2 * gapX * D, D * dotY - 2 * gapY * D);
-            continue;
-          }
-          for (let dy = 0; dy < D; dy++) for (let dx = 0; dx < D; dx++) {
-            // "thinH": waagrechte Striche nur 1 Punkt hoch, senkrechte bleiben durchgehend
-            if (look.mode === "thinH" && dy > 0 && !on(r + 1, col)) continue;
-            const x = x0 + dx, y = y0 + dy;
-            ctx.rect(x * dot + gapX, y * dotY + gapY, dot - 2 * gapX, dotY - 2 * gapY);
-          }
-        }
+      for (let r = 0; r < STELE_PIX_H; r++) {
+        const bits = g[r];
+        if (!bits) continue;
+        for (let col = 0; col < STELE_PIX_W; col++) if (bits & (128 >> col)) plate(i * PX + OX + col, OY + r, look.fill);
       }
     });
-    // Durchstreichen (Ausfall): waagrechte Linie in Höhe der Zeichenmitte, über das ganze Kästchen
+    // Durchstreichen (Ausfall): waagrechte Linie (2 Plättchen) in Höhe der Zeichenmitte, über das ganze Feld
     for (const [from, to] of strike) {
-      for (let i = from; i < to; i++) {
-        for (let dy = 0; dy < D; dy++) for (let c = 0; c < STELE_PIX_W; c++) {
-          const x = i * PX + STELE_CELL_GAP / 2 + c, y = STELE_CELL_GAP / 2 + STELE_GLYPH_Y + 3 * D + dy;
-          ctx.rect(x * dot + gapX, y * dotY + gapY, dot - 2 * gapX, dotY - 2 * gapY);
-        }
-      }
+      for (let i = from; i < to; i++)
+        for (let dy = 0; dy < 2; dy++) for (let c = 0; c < STELE_PIX_W; c++) plate(i * PX + OX + c, OY + STELE_STRIKE_ROW + dy, look.fill);
     }
     ctx.fillStyle = LED;
     ctx.shadowColor = LED;
