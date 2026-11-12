@@ -1,7 +1,7 @@
 {
   "domain": "linz_ag_monitor",
   "name": "Linz AG Monitor",
-  "version": "2.1.0",
+  "version": "2.1.1",
   "documentation": "https://github.com/irmscher123/linz-linien-abfahrtsmonitor",
   "dependencies": [
     "frontend",
