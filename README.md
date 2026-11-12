@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.1-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-2.1.1-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -72,7 +72,7 @@ Originalgetreuer Nachbau der Anzeige an den Linz AG Haltestellen – nur die Taf
 | 6–21 | Ziel bzw. Sonderinformation (16 Felder) | `Trauner Kreuzung` |
 | 22–24 | Abfahrt in Minuten (rechtsbündig, max. 99, bei „jetzt“ leer) | `5`, `12` |
 
-* **LED-Board wie am Original:** jedes Feld hat 8 × 16 LED-Plättchen, die unbeleuchteten Plättchen schimmern leicht durch. Eigene LED-Schrift nach dem Original: Striche 2 Plättchen dick, weiche Schrägen, Großbuchstaben und Ziffern 14 Plättchen hoch – inkl. Ä, Ö, Ü, ß und Sonderzeichen wie `/ * ( ) & ? %`. LED-Farbe frei wählbar.
+* **LED-Board wie am Original:** jedes Feld hat 8 × 16 LED-Plättchen, die unbeleuchteten Plättchen schimmern leicht durch. LED-Schrift nach Fotos der echten Anzeige abgezählt: Striche 2 Plättchen dick, weiche Schrägen, Großbuchstaben und Ziffern 14 Plättchen hoch – inkl. Ä, Ö, Ü, ß und Sonderzeichen wie `/ * ( ) & ? %`. LED-Farbe frei wählbar.
 * **Abfahrt „jetzt“:** Das Minutenfeld bleibt leer, stattdessen blinkt vor dem Ziel ein kleiner Block – ohne Zusatztext.
 * **Laufschrift:** Ist ein Ziel länger als 16 Felder, läuft es Feld für Feld durch – mit kurzer Pause am Anfang und Ende, damit jedes Wort lesbar bleibt.
 * **Sonderinformationen** wie „Verspätung bitte Geduld“ wechseln sich mit dem Ziel ab und laufen als Laufschrift von rechts nach links durch.
