@@ -316,7 +316,8 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
           <div>
             <label>🌡️ Temperatur aus</label>
             <select id="stele_temp_entity" class="std-input">
-              <option value="">– keine Temperatur –</option>
+              <option value="" ${!this._config.stele_temp_entity ? 'selected' : ''}>Haltestelle – Wetter am Ort (automatisch)</option>
+              <option value="none" ${this._config.stele_temp_entity === 'none' ? 'selected' : ''}>– keine Temperatur –</option>
               ${tempEntities.map(e => `<option value="${e.id}" ${this._config.stele_temp_entity === e.id ? 'selected' : ''}>${e.name}</option>`).join('')}
             </select>
           </div>
@@ -1669,13 +1670,18 @@ class LinzMonitorCombined extends HTMLElement {
     return list.filter((d, i) => pick.has(i));
   }
 
-  /* Temperatur aus der gewählten Entität: weather.* (Attribut temperature) oder Temperatursensor */
+  /* Temperatur für die Info-Zeile:
+       leer   = am Ort der Haltestelle (Attribut "temperature" des Sensors "Nächste Abfahrt", Open-Meteo)
+       "none" = keine Temperatur
+       sonst  = gewählte Entität: weather.* (Attribut temperature) oder Temperatursensor */
   _steleTemperature() {
-    const id = this._config.stele_temp_entity;
-    const st = id && this._hass && this._hass.states[id];
+    const sel = this._config.stele_temp_entity || "";
+    if (sel === "none" || !this._hass) return "";
+    const id = sel || this._config.entity;
+    const st = id && this._hass.states[id];
     if (!st) return "";
     const a = st.attributes || {};
-    const val = id.startsWith("weather.") ? a.temperature : parseFloat(st.state);
+    const val = !sel ? a.temperature : (id.startsWith("weather.") ? a.temperature : parseFloat(st.state));
     if (typeof val !== "number" || !isFinite(val)) return "";
     const unit = /F/i.test(a.temperature_unit || a.unit_of_measurement || "") ? "°F" : "°C";
     return val.toFixed(1).replace(".", ",").replace(/^-0,0$/, "0,0") + unit;

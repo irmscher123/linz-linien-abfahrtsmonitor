@@ -10,6 +10,11 @@ from homeassistant.helpers.update_coordinator import DataUpdateCoordinator, Coor
 
 _LOGGER = logging.getLogger(__name__)
 
+# Temperatur am Ort der Haltestelle (Open-Meteo, frei ohne Schlüssel)
+WEATHER_URL = "https://api.open-meteo.com/v1/forecast"
+WEATHER_INTERVAL = timedelta(minutes=10)
+FALLBACK_COORD = (48.3059, 14.2862)   # Linz Zentrum, falls die Haltestelle keine Koordinaten liefert
+
 HEADERS = {
     "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
                   "(KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36",
@@ -73,8 +78,12 @@ class LinzAGCoordinator(DataUpdateCoordinator):
             "name_dm": api_stop_id,
             "mode": "direct",
             "useRealtime": "1",
+            "coordOutputFormat": "EPSG:4326",
             "limit": "40"
         }
+        self.temperature = None
+        self._coord = None
+        self._weather_next = None
 
     async def _fetch(self):
         """Ein Abruf der Abfahrten, Antwort wird sauber freigegeben."""
@@ -88,6 +97,51 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                     return await response.json(content_type=None)
                 except Exception:
                     raise UpdateFailed("API blockiert / liefert kein gültiges JSON (Spamschutz aktiv)")
+
+    @staticmethod
+    def _stop_coord(data):
+        """Koordinaten (lat, lon) der Haltestelle aus der Antwort – nur plausible Werte in Österreich."""
+        cands = []
+        locs = data.get("locations") or []
+        if locs and isinstance(locs[0], dict):
+            cands.append(locs[0].get("coord"))
+        events = data.get("stopEvents") or []
+        if events and isinstance(events[0], dict):
+            loc = events[0].get("location") or {}
+            cands += [loc.get("coord"), (loc.get("parent") or {}).get("coord")]
+        for c in cands:
+            if not isinstance(c, (list, tuple)) or len(c) < 2:
+                continue
+            try:
+                a, b = float(c[0]), float(c[1])
+            except (TypeError, ValueError):
+                continue
+            if 46 < a < 49.5 and 9 < b < 17.5:
+                return (a, b)
+            if 46 < b < 49.5 and 9 < a < 17.5:
+                return (b, a)
+        return None
+
+    async def _update_temperature(self):
+        """Temperatur am Ort der Haltestelle, alle 10 Minuten. Fehler ändern nichts an den Abfahrten."""
+        now = dt_util.utcnow()
+        if self._weather_next and now < self._weather_next:
+            return
+        self._weather_next = now + WEATHER_INTERVAL
+        lat, lon = self._coord or FALLBACK_COORD
+        params = {"latitude": f"{lat:.2f}", "longitude": f"{lon:.2f}",
+                  "current": "temperature_2m", "timezone": "Europe/Vienna"}
+        try:
+            async with asyncio.timeout(10):
+                async with self._session.get(WEATHER_URL, params=params) as response:
+                    if response.status != 200:
+                        return
+                    data = await response.json(content_type=None)
+            value = (data.get("current") or {}).get("temperature_2m")
+            if isinstance(value, (int, float)):
+                self.temperature = round(float(value), 1)
+        except Exception as err:   # Wetter ist nur Zusatz – letzter Wert bleibt stehen
+            _LOGGER.debug("Linz AG: Temperatur nicht abrufbar: %s", err)
 
     def _clean_name(self, text):
         """Entfernt Orts-Präfixe nur am Anfang, lässt sie am Ende stehen."""
@@ -140,6 +194,9 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                 data = await self._fetch()
 
             events = data.get("stopEvents", [])
+            if self._coord is None:
+                self._coord = self._stop_coord(data)
+            await self._update_temperature()
             now = dt_util.now()
             departures = []
             my_station_clean = self._clean_name(self.stop_name).lower()
@@ -213,7 +270,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
 class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
     # Die große Abfahrtsliste nicht in die Recorder-Datenbank schreiben
     # (bis zu 100 Einträge, ändert sich jede Minute -> bläht die DB auf).
-    _unrecorded_attributes = frozenset({"departureList", "last_update"})
+    _unrecorded_attributes = frozenset({"departureList", "last_update", "temperature"})
     def __init__(self, coordinator, stop_id, name, entry_id, index):
         super().__init__(coordinator)
         self._index = index
@@ -265,6 +322,7 @@ class LinzAGDepartureSensor(CoordinatorEntity, SensorEntity):
                 "stop_name": self._name,
                 "station": self._name,
                 "station_name": self._name,
-                "last_update": dt_util.now().strftime("%H:%M:%S")
+                "last_update": dt_util.now().strftime("%H:%M:%S"),
+                "temperature": self.coordinator.temperature,
             }
         return {}
