@@ -163,7 +163,7 @@ const STELE_FONT = {
   ";": [0,0,0,24,24,0,0,0,0,0,24,24,56,48,48,48],
   "#": [0,60,60,60,255,255,60,60,255,255,60,60,60,0,0,0],
   "@": [60,126,231,195,195,255,255,255,255,222,192,224,126,62,0,0],
-  "°": [60,60,60,60,0,0,0,0,0,0,0,0,0,0,0,0],
+  "°": [56,108,108,56,0,0,0,0,0,0,0,0,0,0,0,0],
   "\"": [102,102,102,102,102,0,0,0,0,0,0,0,0,0,0,0],
   "■": [0,0,0,0,0,126,126,126,126,126,126,0,0,0,0,0],
 };
@@ -291,17 +291,44 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
         </div>
        `;
     } else if (mode === "stele") {
+       // Temperatur-Quellen: Wetter-Entitäten und Temperatursensoren
+       const tempEntities = Object.keys((this._hass && this._hass.states) || {})
+         .filter(id => {
+           const st = this._hass.states[id], a = (st && st.attributes) || {};
+           return id.startsWith("weather.") || (id.startsWith("sensor.") && (a.device_class === "temperature" || /°[CF]/.test(a.unit_of_measurement || "")));
+         })
+         .map(id => ({ id, name: (this._hass.states[id].attributes.friendly_name || id) + " (" + id + ")" }))
+         .sort((a, b) => a.name.localeCompare(b.name, "de"));
        specificHtml = `
         <div class="grid-2">
           <div>
             <label>💡 LED Farbe</label>
             <input id="stele_led_color" class="std-input" type="text" value="${this._config.stele_led_color || '#4dff5e'}" placeholder="Standard: #4dff5e (Grün)">
           </div>
-          <label class="toggle-box"><input id="stele_clock" class="std-input" type="checkbox" ${this._config.stele_clock !== false ? 'checked' : ''}><span>Uhrzeit unten anzeigen</span></label>
+          <label class="toggle-box"><input id="stele_clock" class="std-input" type="checkbox" ${this._config.stele_clock !== false && this._config.stele_info_row !== true ? 'checked' : ''}><span>Uhrzeit unten anzeigen</span></label>
         </div>
         <div class="grid-2">
           <label class="toggle-box"><input id="stele_compact" class="std-input" type="checkbox" ${this._config.stele_compact === true ? 'checked' : ''}><span>Kompakt (Badge): nur LED-Zeilen</span></label>
           <label class="toggle-box"><input id="stele_labels" class="std-input" type="checkbox" ${this._config.stele_labels !== false ? 'checked' : ''}><span>Spaltenköpfe (Linie / Ziel / Abfahrt)</span></label>
+        </div>
+        <div class="grid-2">
+          <label class="toggle-box"><input id="stele_info_row" class="std-input" type="checkbox" ${this._config.stele_info_row === true ? 'checked' : ''}><span>Letzte Zeile: Datum, Uhrzeit &amp; Temperatur</span></label>
+          <div>
+            <label>🌡️ Temperatur aus</label>
+            <select id="stele_temp_entity" class="std-input">
+              <option value="">– keine Temperatur –</option>
+              ${tempEntities.map(e => `<option value="${e.id}" ${this._config.stele_temp_entity === e.id ? 'selected' : ''}>${e.name}</option>`).join('')}
+            </select>
+          </div>
+        </div>
+        <div class="form-row">
+          <label>🔁 Linien mehrfach anzeigen?</label>
+          <select id="stele_once" class="std-input">
+            <option value="" ${!this._config.stele_once ? 'selected' : ''}>Alle Abfahrten der Reihe nach</option>
+            <option value="fill" ${this._config.stele_once === 'fill' ? 'selected' : ''}>Jede Linie zuerst einmal (freie Zeilen auffüllen)</option>
+            <option value="only" ${this._config.stele_once === 'only' ? 'selected' : ''}>Jede Linie nur einmal</option>
+          </select>
+          <div class="hint-text">Damit Linien mit dichtem Takt (z.B. Bim alle 3 Min.) seltene Linien nicht verdrängen. Fährt eine Linie hier in beide Richtungen ab, zählt jede Richtung extra.</div>
         </div>
         <div class="form-row">
           <label>🔤 Linien-Zeile (leer = automatisch aus den Abfahrten)</label>
@@ -434,6 +461,9 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
     const t = ev.target;
     let value = (t.type === "checkbox") ? t.checked : (t.type === "number" ? Number(t.value) : t.value);
     const config = { ...this._config, [t.id]: value };
+    // Säule: kleine Uhrzeit unten und Info-Zeile (Datum, Uhrzeit, Temperatur) schließen sich aus
+    if (t.id === "stele_info_row" && value) config.stele_clock = false;
+    if (t.id === "stele_clock" && value) config.stele_info_row = false;
     this.dispatchEvent(new CustomEvent("config-changed", { detail: { config }, bubbles: true, composed: true }));
   }
 
@@ -1442,7 +1472,7 @@ class LinzMonitorCombined extends HTMLElement {
               ${compact ? `` : `
               <div class="st-foot">
                 <img src="${esc(this._config.stele_footer_image || (LINZ_ASSET_BASE + "linzag-linien.png"))}" alt="Linz AG Linien">
-                ${this._config.stele_clock !== false ? `<div class="st-clock" id="clock"></div>` : ``}
+                ${this._config.stele_clock !== false && this._config.stele_info_row !== true ? `<div class="st-clock" id="clock"></div>` : ``}
               </div>`}
             </div>
           </div>
@@ -1476,9 +1506,13 @@ class LinzMonitorCombined extends HTMLElement {
     // Bereits abgefahrene Fahrten zeigt die echte Anzeige nicht.
     const count = Math.max(1, Number(this._config.anzahl) || 4);
     // Die echte Anzeige zeigt nur Abfahrten bis 99 Minuten
-    const visible = departures.filter(d => !d.isGone && !(typeof d.countdown === "number" && d.countdown > 99)).slice(0, count);
+    // Letzte Zeile optional mit Datum, Uhrzeit und Temperatur
+    const infoRow = this._config.stele_info_row === true;
+    const depRows = infoRow ? count - 1 : count;
+    const upcoming = departures.filter(d => !d.isGone && !(typeof d.countdown === "number" && d.countdown > 99));
+    const visible = this._steleOnce(upcoming, depRows);
     const rows = [];
-    for (let i = 0; i < count; i++) {
+    for (let i = 0; i < depRows; i++) {
       const d = visible[i];
       if (!d) { rows.push({ id: `leer-${i}`, prefix: "", segments: [{ text: "", ticker: false }], min: "", blink: false }); continue; }
       const infoLow = (d.infos || "").toLowerCase();
@@ -1511,6 +1545,8 @@ class LinzMonitorCombined extends HTMLElement {
         strike: !!isCancelled,                 // Ausfall: Ziel und Minuten durchgestrichen
       });
     }
+
+    if (infoRow) rows.push({ id: "info", info: true, prefix: "", segments: [{ text: "", ticker: false }], min: "", blink: false });
 
     const rowsEl = this.querySelector("#st-rows");
     if (rowsEl.children.length !== count) {
@@ -1595,7 +1631,8 @@ class LinzMonitorCombined extends HTMLElement {
     this._steleRows.forEach((row, r) => {
       let text = "";
       const strike = [];
-      if (row.prefix) {
+      if (row.info) text = this._steleInfoText(now);
+      else if (row.prefix) {
         const minW = STELE_MIN_W;                           // Felder 22-24
         const fieldW = STELE_COLS - 5 - minW;               // 16 Felder (6-21)
         // Abfahrt jetzt: in Kästchen 5 (direkt vor dem Ziel) blinkt ein gefüllter Block
@@ -1615,6 +1652,47 @@ class LinzMonitorCombined extends HTMLElement {
         this._drawSteleRow(canvases[r], text, LED, strike);
       }
     });
+  }
+
+  /* Jede Linie (je Richtung) zuerst einmal zeigen, damit dichte Takte (Bim alle 3 Min.)
+     seltene Linien (Bus alle 30 Min.) nicht verdrängen.
+       stele_once "fill": zuerst jede Linie einmal, freie Zeilen mit weiteren Abfahrten auffüllen
+       stele_once "only": jede Linie nur einmal (die nächste Abfahrt), restliche Zeilen bleiben leer
+     Die Reihenfolge auf der Tafel bleibt nach Abfahrtszeit sortiert. */
+  _steleOnce(list, n) {
+    const mode = this._config.stele_once;
+    if (mode !== "fill" && mode !== "only") return list.slice(0, n);
+    const key = (d) => String(this._getRouteName(d) || d.line) + "|" + d.direction;
+    const seen = new Set(), pick = new Set();
+    list.forEach((d, i) => { if (pick.size < n && !seen.has(key(d))) { seen.add(key(d)); pick.add(i); } });
+    if (mode === "fill") list.forEach((d, i) => { if (pick.size < n) pick.add(i); });
+    return list.filter((d, i) => pick.has(i));
+  }
+
+  /* Temperatur aus der gewählten Entität: weather.* (Attribut temperature) oder Temperatursensor */
+  _steleTemperature() {
+    const id = this._config.stele_temp_entity;
+    const st = id && this._hass && this._hass.states[id];
+    if (!st) return "";
+    const a = st.attributes || {};
+    const val = id.startsWith("weather.") ? a.temperature : parseFloat(st.state);
+    if (typeof val !== "number" || !isFinite(val)) return "";
+    const unit = /F/i.test(a.temperature_unit || a.unit_of_measurement || "") ? "°F" : "°C";
+    return val.toFixed(1).replace(".", ",").replace(/^-0,0$/, "0,0") + unit;
+  }
+
+  /* Info-Zeile (24 Felder): "Sa 14.11.  08:57  12,4°C" – Datum links, Uhrzeit Mitte, Temperatur rechts */
+  _steleInfoText(now) {
+    const d = new Date(now), p2 = (n) => String(n).padStart(2, "0");
+    const date = ["So", "Mo", "Di", "Mi", "Do", "Fr", "Sa"][d.getDay()] + " " + p2(d.getDate()) + "." + p2(d.getMonth() + 1) + ".";
+    const time = p2(d.getHours()) + ":" + p2(d.getMinutes());
+    const temp = this._steleTemperature();
+    const cells = Array(STELE_COLS).fill(" ");
+    const put = (str, at) => Array.from(str).forEach((c, i) => { if (at + i >= 0 && at + i < STELE_COLS) cells[at + i] = c; });
+    put(date, 0);
+    put(time, 11);
+    put(temp, STELE_COLS - temp.length);
+    return cells.join("");
   }
 
   /* Eine LED-Zeile zeichnen: 24 Felder mit je 8 x 16 LED-Plättchen, 8x16-LED-Schrift */

@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.1.1-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-2.2-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -90,6 +90,8 @@ Originalgetreuer Nachbau der Anzeige an den Linz AG Haltestellen – nur die Taf
   | Sporthalle Leonding | Sporth. Leonding |
 
 * Wie am Original nur Abfahrten bis 99 Minuten, immer in Minuten.
+* **Info-Zeile (optional):** die letzte LED-Zeile zeigt Datum, Uhrzeit und Temperatur, z. B. `Sa 14.11.  14:05  -2,3°C`. Die Temperatur kommt aus einer Entität nach Wahl – Wetter-Entität (`weather.*`) oder Temperatursensor. Statt der kleinen Uhrzeit unten links (beides zusammen geht nicht).
+* **Jede Linie zuerst einmal (optional):** Damit Linien mit dichtem Takt (z. B. Bim alle 3 Minuten) seltene Linien (Bus alle 30 Minuten) nicht von der Tafel verdrängen, zeigt die Säule zuerst die nächste Abfahrt jeder Linie und füllt freie Zeilen mit weiteren Abfahrten auf – oder zeigt jede Linie nur einmal. Fährt eine Linie in beide Richtungen ab, zählt jede Richtung extra.
 * **Kopf:** H-Schild, Haltestellenname und Linien-Zeile (automatisch aus den Abfahrten oder selbst eingetragen), darunter die Spaltenköpfe „Linie / Ziel / Abfahrt in Min.“ (ausblendbar).
 * **Unten rechts** das Linz AG Linien Logo (lokal aus der Integration geladen, durch ein eigenes Bild ersetzbar), optional eine kleine Uhrzeit links.
 * **Kompakt-Modus (Badge):** nur die LED-Zeile(n), ohne Kopf und Logo – mit `anzahl: 1` eine einzeilige Anzeige:
@@ -151,6 +153,9 @@ stele_lines: ""              # Linien-Zeile, leer = automatisch (z.B. "27,41,43"
 stele_footer_image: ""       # optional eigenes Bild statt Linz AG Logo unten rechts
 stele_compact: false         # true = nur LED-Zeilen (Badge), ohne Kopf und Logo
 stele_labels: true           # Spaltenköpfe "Linie / Ziel / Abfahrt in Min." anzeigen
+stele_info_row: false        # true = letzte Zeile mit Datum, Uhrzeit und Temperatur (statt stele_clock)
+stele_temp_entity: weather.forecast_home   # Temperatur: Wetter-Entität oder Temperatursensor
+stele_once: ""               # "fill" = jede Linie zuerst einmal, "only" = jede Linie nur einmal
 ```
 
 ### Wichtige Optionen
