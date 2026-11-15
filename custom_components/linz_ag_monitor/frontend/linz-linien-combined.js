@@ -1543,7 +1543,7 @@ class LinzMonitorCombined extends HTMLElement {
       rows.push({
         id: `${name}|${d.direction}|${d.scheduled}`,
         prefix, segments, min: minTxt, blink: isNow,
-        strike: !!isCancelled,                 // Ausfall: Ziel und Minuten durchgestrichen
+        strike: false,                         // Ausfall: nicht durchstreichen – Ziel wechselt mit „Fahrt fällt aus“
       });
     }
 
