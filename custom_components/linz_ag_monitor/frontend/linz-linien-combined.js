@@ -1535,7 +1535,7 @@ class LinzMonitorCombined extends HTMLElement {
       // Ziel + Sonderinformationen wechseln sich im Zielfeld ab.
       // Sonderinformationen (Verspätung, Fällt aus …) laufen als Laufschrift von rechts nach links durch.
       const segments = [{ text: steleShortDest(d.direction), ticker: false }];
-      if (isCancelled) segments.push({ text: "Fahrt fällt aus", ticker: true });
+      if (isCancelled) segments.push({ text: "Fahrt fällt aus!", ticker: false });   // genau 16 Felder: fest eingeblendet, im Wechsel mit dem Ziel
       const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
       // Bei Abfahrt "jetzt" (blinkender Block) nur das Ziel – keine Zusatzinfo
       if (!isCancelled && !isNow && info.length > 2) segments.push({ text: info, ticker: true });

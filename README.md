@@ -76,7 +76,7 @@ Originalgetreuer Nachbau der Anzeige an den Linz AG Haltestellen – nur die Taf
 * **Abfahrt „jetzt“:** Das Minutenfeld bleibt leer, stattdessen blinkt vor dem Ziel ein kleiner Block – ohne Zusatztext.
 * **Laufschrift:** Ist ein Ziel länger als 16 Felder, läuft es Feld für Feld durch – mit kurzer Pause am Anfang und Ende, damit jedes Wort lesbar bleibt.
 * **Sonderinformationen** wie „Verspätung bitte Geduld“ wechseln sich mit dem Ziel ab und laufen als Laufschrift von rechts nach links durch.
-* **Ausfälle:** Die Fahrt bleibt bis zur geplanten Abfahrtszeit stehen – im Zielfeld wechseln sich Ziel und die Laufschrift „Fahrt fällt aus“ ab (nicht durchgestrichen).
+* **Ausfälle:** Die Fahrt bleibt bis zur geplanten Abfahrtszeit stehen – im Zielfeld wechseln sich Ziel und „Fahrt fällt aus!“ ab (fest eingeblendet, passt genau in die 16 Felder; nicht durchgestrichen).
 * **Kurznamen wie an der echten Anzeige** (nur in diesem Design):
 
   | Ziel | Anzeige |
