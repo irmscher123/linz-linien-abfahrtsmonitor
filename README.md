@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.2-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-2.2.1-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -68,7 +68,7 @@ Originalgetreuer Nachbau der Anzeige an den Linz AG Haltestellen – nur die Taf
 | :---: | --- | --- |
 | 1–3 | Liniennummer (rechtsbündig) | `11`, `3`, `N82` |
 | 4 | Zusatzbezeichnung | `s`, `a`, `b`, `*` |
-| 5 | leer – bei Abfahrt „jetzt“ blinkt hier ein Block ■ | |
+| 5 | leer – bei Abfahrt „jetzt“ blinkt hier ein Block ■, bei Ausfall steht ein Warndreieck mit Rufzeichen | |
 | 6–21 | Ziel bzw. Sonderinformation (16 Felder) | `Trauner Kreuzung` |
 | 22–24 | Abfahrt in Minuten (rechtsbündig, max. 99, bei „jetzt“ leer) | `5`, `12` |
 
@@ -76,7 +76,7 @@ Originalgetreuer Nachbau der Anzeige an den Linz AG Haltestellen – nur die Taf
 * **Abfahrt „jetzt“:** Das Minutenfeld bleibt leer, stattdessen blinkt vor dem Ziel ein kleiner Block – ohne Zusatztext.
 * **Laufschrift:** Ist ein Ziel länger als 16 Felder, läuft es Feld für Feld durch – mit kurzer Pause am Anfang und Ende, damit jedes Wort lesbar bleibt.
 * **Sonderinformationen** wie „Verspätung bitte Geduld“ wechseln sich mit dem Ziel ab und laufen als Laufschrift von rechts nach links durch.
-* **Ausfälle:** Die Fahrt bleibt bis zur geplanten Abfahrtszeit stehen – Ziel und Minuten durchgestrichen, dazwischen läuft „Fahrt fällt aus“.
+* **Ausfälle:** Die Fahrt bleibt bis zur geplanten Abfahrtszeit stehen – in Feld 5 ein Warndreieck mit Rufzeichen, im Zielfeld wechseln sich Ziel und „Fahrt fällt aus!“ ab (fest eingeblendet, passt genau in die 16 Felder; nicht durchgestrichen). Das Minutenfeld zeigt die Minuten bis zur geplanten Abfahrt, nie „0“.
 * **Kurznamen wie an der echten Anzeige** (nur in diesem Design):
 
   | Ziel | Anzeige |

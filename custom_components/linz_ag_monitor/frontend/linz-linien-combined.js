@@ -165,6 +165,7 @@ const STELE_FONT = {
   "@": [60,126,231,195,195,255,255,255,255,222,192,224,126,62,0,0],
   "°": [56,108,108,56,0,0,0,0,0,0,0,0,0,0,0,0],
   "\"": [102,102,102,102,102,0,0,0,0,0,0,0,0,0,0,0],
+  "⚠": [0,24,24,36,36,36,90,90,90,153,129,153,129,255,0,0],   // Warndreieck mit Rufzeichen (Feld 5 bei Ausfall)
   "■": [0,0,0,0,0,126,126,126,126,126,126,0,0,0,0,0],
 };
 
@@ -1528,14 +1529,14 @@ class LinzMonitorCombined extends HTMLElement {
       const prefix = base.padStart(3) + (suffix || " ") + " ";
 
       let minTxt;
-      if (isCancelled) minTxt = String(Math.max(0, d.countdown ?? 0));   // Ausfall: Minuten bis zur geplanten Abfahrt (durchgestrichen)
+      if (isCancelled) minTxt = (d.countdown ?? 0) > 0 ? String(d.countdown) : "";   // Ausfall: Minuten bis zur geplanten Abfahrt, nie "0"
       else if (isNow) minTxt = "";      // Abfahrt jetzt: Minutenfeld leer, dafür blinkt Kästchen 5
       else minTxt = String(d.countdown);
 
       // Ziel + Sonderinformationen wechseln sich im Zielfeld ab.
       // Sonderinformationen (Verspätung, Fällt aus …) laufen als Laufschrift von rechts nach links durch.
       const segments = [{ text: steleShortDest(d.direction), ticker: false }];
-      if (isCancelled) segments.push({ text: "Fahrt fällt aus", ticker: true });
+      if (isCancelled) segments.push({ text: "Fahrt fällt aus!", ticker: false });   // genau 16 Felder: fest eingeblendet, im Wechsel mit dem Ziel
       const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
       // Bei Abfahrt "jetzt" (blinkender Block) nur das Ziel – keine Zusatzinfo
       if (!isCancelled && !isNow && info.length > 2) segments.push({ text: info, ticker: true });
@@ -1543,7 +1544,8 @@ class LinzMonitorCombined extends HTMLElement {
       rows.push({
         id: `${name}|${d.direction}|${d.scheduled}`,
         prefix, segments, min: minTxt, blink: isNow,
-        strike: !!isCancelled,                 // Ausfall: Ziel und Minuten durchgestrichen
+        strike: false,                         // Ausfall: nicht durchstreichen – Ziel wechselt mit „Fahrt fällt aus!“
+        warn: !!isCancelled,                   // Ausfall: Warndreieck in Feld 5
       });
     }
 
@@ -1637,7 +1639,8 @@ class LinzMonitorCombined extends HTMLElement {
         const minW = STELE_MIN_W;                           // Felder 22-24
         const fieldW = STELE_COLS - 5 - minW;               // 16 Felder (6-21)
         // Abfahrt jetzt: in Kästchen 5 (direkt vor dem Ziel) blinkt ein gefüllter Block
-        const prefix = row.blink ? row.prefix.slice(0, 4) + (blinkOn ? "■" : " ") : row.prefix;
+        // Ausfall: in Kästchen 5 steht ein Warndreieck mit Rufzeichen
+        const prefix = row.warn ? row.prefix.slice(0, 4) + "⚠" : row.blink ? row.prefix.slice(0, 4) + (blinkOn ? "■" : " ") : row.prefix;
         const field = this._steleField(row, fieldW, now);
         text = prefix + field.text + row.min.padStart(minW);
         if (row.strike) {
