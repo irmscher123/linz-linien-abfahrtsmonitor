@@ -657,6 +657,7 @@ class LinzMonitorCombined extends HTMLElement {
     if (this._steleRO) { this._steleRO.disconnect(); this._steleRO = null; }
     if (this._steleTimer) { clearInterval(this._steleTimer); this._steleTimer = null; }
     if (this._lwTimer) { clearInterval(this._lwTimer); this._lwTimer = null; }
+    if (this._lwClockTimer) { clearInterval(this._lwClockTimer); this._lwClockTimer = null; }
     if (this._lwRO) { this._lwRO.disconnect(); this._lwRO = null; }
     this._animTimers.forEach(t => clearTimeout(t));
     this._animTimers.clear();
@@ -1937,27 +1938,20 @@ class LinzMonitorCombined extends HTMLElement {
     this._lwRows = rows; this._lwCount = count;
     this._steleAnim = this._steleAnim || new Map();
     if (!this._lwTimer) this._lwTimer = setInterval(() => this._lwTick(), 120);
+    if (!this._lwClockTimer) this._lwClockTimer = setInterval(() => {
+      if (this._currentLayout !== "ledm") { clearInterval(this._lwClockTimer); this._lwClockTimer = null; return; }
+      this._lwDrawClock(Date.now());
+    }, 30);
     this._lwDrawn = null;
     this._lwTick();
   }
 
   /* LED-Fenster oben rechts, rechtsbündig. Wechselt (led_clock_mode "cycle", Standard):
-       Uhrzeit 6 s (Doppelpunkt blinkt) -> Datum 3 s -> Temperatur am Ort der Haltestelle 3 s.
+       Uhrzeit 8 s (Doppelpunkt blinkt) -> Datum 3 s -> Temperatur am Ort der Haltestelle 3 s.
+     Jede neue Anzeige scrollt von rechts herein und schiebt die alte links hinaus.
      led_clock_mode "time": nur die Uhrzeit. Temperatur = Attribut "temperature" des Haltestellen-Sensors. */
-  _lwDrawClock(now) {
-    const cv = this.querySelector("#lw-clock");
-    if (!cv) return;
-    const c = this._config;
-    const d = new Date(now), p2 = (n) => String(n).padStart(2, "0");
-    const st = this._hass && this._hass.states[c.entity];
-    const t = st && st.attributes ? st.attributes.temperature : null;
-    const hasTemp = typeof t === "number" && isFinite(t);
-    let mode = "time";
-    if (c.led_clock_mode !== "time") {
-      const cycle = hasTemp ? 12000 : 9000, ph = now % cycle;
-      mode = ph < 6000 ? "time" : ph < 9000 ? "date" : "temp";
-    }
-    // Teile: [Text, Art] – Art: "d" fette Ziffer, "colon", "dot", "comma", "minus", "deg", "C"
+  _lwClockCells(mode, d, t, CW, PAD) {
+    const p2 = (n) => String(n).padStart(2, "0");
     const parts = [];
     const digits = (str) => Array.from(str).forEach(ch => parts.push([ch, "d"]));
     if (mode === "time") { digits(p2(d.getHours())); parts.push([":", "colon"]); digits(p2(d.getMinutes())); }
@@ -1969,7 +1963,6 @@ class LinzMonitorCombined extends HTMLElement {
       digits(ip); parts.push([",", "comma"]); digits(fp); parts.push(["°", "deg"]); parts.push(["C", "C"]);
     }
     const W = { d: 7, colon: 4, dot: 3, comma: 3, minus: 5, deg: 5, C: 6 };
-    const PAD = 2, CW = 44, CH = 7 + 2 * PAD;            // Platz für "-12,3°C"
     const total = parts.reduce((sum, [, k]) => sum + W[k], 0) - 1;
     let x = CW - PAD - total;                           // rechtsbündig
     const cells = [], put = (xx, yy) => cells.push([xx, PAD + yy]);
@@ -1983,6 +1976,35 @@ class LinzMonitorCombined extends HTMLElement {
       else if (k === "deg") [[1,0],[2,0],[0,1],[3,1],[0,2],[3,2],[1,3],[2,3]].forEach(([rx, ry]) => put(x + rx, ry));
       else if (k === "C") this._lwText(cells, x, PAD, "C", false);
       x += W[k];
+    }
+    return cells;
+  }
+
+  _lwDrawClock(now) {
+    const cv = this.querySelector("#lw-clock");
+    if (!cv) return;
+    const c = this._config;
+    const st = this._hass && this._hass.states[c.entity];
+    const t = st && st.attributes ? st.attributes.temperature : null;
+    const hasTemp = typeof t === "number" && isFinite(t);
+    const PAD = 2, CW = 44, CH = 7 + 2 * PAD, SCROLL = 700;   // Platz für "-12,3°C", Scroll-Dauer in ms
+    let cells;
+    if (c.led_clock_mode === "time") {
+      cells = this._lwClockCells("time", new Date(now), t, CW, PAD);
+    } else {
+      // Ablauf: [Anzeige, Dauer in ms] – die Uhrzeit steht am längsten
+      const seq = hasTemp ? [["time", 8000], ["date", 3000], ["temp", 3000]] : [["time", 8000], ["date", 3000]];
+      const cycle = seq.reduce((sum, [, ms]) => sum + ms, 0);
+      let ph = now % cycle, i = 0;
+      while (ph >= seq[i][1]) { ph -= seq[i][1]; i++; }
+      const cur = this._lwClockCells(seq[i][0], new Date(now), t, CW, PAD);
+      if (ph < SCROLL) {
+        // Scrollen: alte Anzeige nach links hinaus, neue von rechts herein (Punkt für Punkt)
+        const prev = this._lwClockCells(seq[(i - 1 + seq.length) % seq.length][0], new Date(now - ph - 1), t, CW, PAD);
+        const shift = Math.round(ph / SCROLL * CW);
+        cells = prev.map(([x, y]) => [x - shift, y]).concat(cur.map(([x, y]) => [x + CW - shift, y]))
+                    .filter(([x]) => x >= 0 && x < CW);
+      } else cells = cur;
     }
     const COLOR = c.led_num_color || "#ffffff";
     const dpr = window.devicePixelRatio || 1, cssW = cv.clientWidth || 80;
@@ -2030,7 +2052,7 @@ class LinzMonitorCombined extends HTMLElement {
     const LED = this._config.led_color || "#FF9900";
     const NUM = this._config.led_num_color || "#ffffff";
     const now = Date.now();
-    const starLeft = Math.floor(now / 500) % 2 === 0;
+    const starLeft = Math.floor(now / 1000) % 2 === 0;   // Sterne wechseln jede Sekunde
     const W = LW_COLS + 2 * LW_PAD, H = this._lwCount * (LW_ROW_H + LW_GAP) - LW_GAP + 2 * LW_PAD;
     const RED = this._config.led_cancel_color || "#ff3b30";
     const cells = [], nums = [], reds = [];              // Ziel (LED-Farbe) / Linie + Abfahrt (eigene Farbe) / Ausfall (rot)
@@ -2046,8 +2068,8 @@ class LinzMonitorCombined extends HTMLElement {
       // Abfahrt rechts: "sofort" / zwei abwechselnd blinkende Sterne / fette Minuten + "min" / Uhrzeit
       let right = 0;
       if (r.time.stars) {
-        right = 20;
-        this._lwText(nums, ox + LW_COLS - (starLeft ? 19 : 5), oy, "*", false);
+        right = 14;
+        this._lwText(nums, ox + LW_COLS - (starLeft ? 13 : 5), oy, "*", false);   // eng nebeneinander
       } else if (r.time.text !== undefined) {
         right = measure(r.time.text, false);
         this._lwText(numL, ox + LW_COLS - right, oy, r.time.text, false);
@@ -2071,7 +2093,6 @@ class LinzMonitorCombined extends HTMLElement {
     });
     const dpr = window.devicePixelRatio || 1, cssW = cv.clientWidth || 300;
     const cw = Math.max(W, Math.round(cssW * dpr)), ch = Math.round(cw * H * LW_ASPECT / W);
-    this._lwDrawClock(now);
     const key = LED + NUM + RED + "|" + cw + "|" + [cells, nums, reds].map(l => l.map(p => p[0] * 1000 + p[1]).join(",")).join("|");
     if (this._lwDrawn === key) return;
     this._lwDrawn = key;
