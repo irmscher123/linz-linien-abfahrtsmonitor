@@ -169,6 +169,122 @@ const STELE_FONT = {
   "■": [0,0,0,0,0,126,126,126,126,126,126,0,0,0,0,0],
 };
 
+
+// ===== LED-Wall (Punktmatrix) =====
+// Dünne 5x7-Punkt-Schrift (Zeile 0-6, Zeile 7 Unterlänge) für Ziele und Text
+const LW_THIN = {
+  "0": [14,17,19,21,25,17,14,0],
+  "1": [4,12,4,4,4,4,14,0],
+  "2": [14,17,1,2,4,8,31,0],
+  "3": [31,2,4,2,1,17,14,0],
+  "4": [2,6,10,18,31,2,2,0],
+  "5": [31,16,30,1,1,17,14,0],
+  "6": [6,8,16,30,17,17,14,0],
+  "7": [31,1,2,4,8,8,8,0],
+  "8": [14,17,17,14,17,17,14,0],
+  "9": [14,17,17,15,1,2,12,0],
+  "A": [14,17,17,17,31,17,17,0],
+  "B": [30,17,17,30,17,17,30,0],
+  "C": [14,17,16,16,16,17,14,0],
+  "D": [28,18,17,17,17,18,28,0],
+  "E": [31,16,16,30,16,16,31,0],
+  "F": [31,16,16,30,16,16,16,0],
+  "G": [14,17,16,23,17,17,15,0],
+  "H": [17,17,17,31,17,17,17,0],
+  "I": [14,4,4,4,4,4,14,0],
+  "J": [7,2,2,2,2,18,12,0],
+  "K": [17,18,20,24,20,18,17,0],
+  "L": [16,16,16,16,16,16,31,0],
+  "M": [17,27,21,21,17,17,17,0],
+  "N": [17,17,25,21,19,17,17,0],
+  "O": [14,17,17,17,17,17,14,0],
+  "P": [30,17,17,30,16,16,16,0],
+  "Q": [14,17,17,17,21,18,13,0],
+  "R": [30,17,17,30,20,18,17,0],
+  "S": [15,16,16,14,1,1,30,0],
+  "T": [31,4,4,4,4,4,4,0],
+  "U": [17,17,17,17,17,17,14,0],
+  "V": [17,17,17,17,17,10,4,0],
+  "W": [17,17,17,21,21,21,10,0],
+  "X": [17,17,10,4,10,17,17,0],
+  "Y": [17,17,10,4,4,4,4,0],
+  "Z": [31,1,2,4,8,16,31,0],
+  "Ä": [10,0,14,17,31,17,17,0],
+  "Ö": [10,0,14,17,17,17,14,0],
+  "Ü": [10,0,17,17,17,17,14,0],
+  "a": [0,0,14,1,15,17,15,0],
+  "b": [16,16,22,25,17,17,30,0],
+  "c": [0,0,14,16,16,17,14,0],
+  "d": [1,1,13,19,17,17,15,0],
+  "e": [0,0,14,17,31,16,14,0],
+  "f": [6,9,8,28,8,8,8,0],
+  "g": [0,0,15,17,17,15,1,14],
+  "h": [16,16,22,25,17,17,17,0],
+  "i": [4,0,12,4,4,4,14,0],
+  "j": [2,0,6,2,2,2,18,12],
+  "k": [16,16,18,20,24,20,18,0],
+  "l": [12,4,4,4,4,4,14,0],
+  "m": [0,0,26,21,21,21,21,0],
+  "n": [0,0,22,25,17,17,17,0],
+  "o": [0,0,14,17,17,17,14,0],
+  "p": [0,0,30,17,17,30,16,16],
+  "q": [0,0,15,17,17,15,1,1],
+  "r": [0,0,22,25,16,16,16,0],
+  "s": [0,0,15,16,14,1,30,0],
+  "t": [8,8,28,8,8,9,6,0],
+  "u": [0,0,17,17,17,19,13,0],
+  "v": [0,0,17,17,17,10,4,0],
+  "w": [0,0,17,17,21,21,10,0],
+  "x": [0,0,17,10,4,10,17,0],
+  "y": [0,0,17,17,17,15,1,14],
+  "z": [0,0,31,2,4,8,31,0],
+  "ä": [10,0,14,1,15,17,15,0],
+  "ö": [10,0,14,17,17,17,14,0],
+  "ü": [10,0,17,17,17,19,13,0],
+  "ß": [12,18,18,20,18,17,22,0],
+  ".": [0,0,0,0,0,12,12,0],
+  ",": [0,0,0,0,0,12,4,8],
+  "-": [0,0,0,31,0,0,0,0],
+  "+": [0,4,4,31,4,4,0,0],
+  "*": [0,4,21,14,21,4,0,0],
+  "/": [1,2,2,4,8,8,16,0],
+  ":": [0,12,12,0,12,12,0,0],
+  "(": [2,4,8,8,8,4,2,0],
+  ")": [8,4,2,2,2,4,8,0],
+  "&": [12,18,20,8,21,18,13,0],
+  "'": [4,4,8,0,0,0,0,0],
+  "\"": [10,10,0,0,0,0,0,0],
+  "!": [4,4,4,4,4,0,4,0],
+  "?": [14,17,1,2,4,0,4,0],
+  "|": [4,4,4,4,4,4,4,0],
+  "<": [2,4,8,16,8,4,2,0],
+  ">": [8,4,2,1,2,4,8,0],
+  "=": [0,0,31,0,31,0,0,0],
+  "%": [24,25,2,4,8,19,3,0],
+  "■": [0,0,14,14,14,0,0,0],     // kleiner gefüllter Block (blinkt bei Abfahrt "jetzt")
+};
+// Fette Ziffern 6 x 7 Punkte (gleiche Höhe wie die dünne Schrift) für Liniennummer und Minuten
+const LW_BOLD = {
+  "0":[" #### ","##  ##","##  ##","##  ##","##  ##","##  ##"," #### "],
+  "1":["  ##  "," ###  ","####  ","  ##  ","  ##  ","  ##  ","  ##  "],
+  "2":[" #### ","##  ##","    ##","   ## ","  ##  "," ##   ","######"],
+  "3":[" #### ","##  ##","    ##","  ### ","    ##","##  ##"," #### "],
+  "4":["   ## ","  ### "," #### ","## ## ","######","   ## ","   ## "],
+  "5":["######","##    ","##### ","    ##","    ##","##  ##"," #### "],
+  "6":["  ### "," ##   ","##    ","##### ","##  ##","##  ##"," #### "],
+  "7":["######","    ##","   ## ","  ##  ","  ##  ","  ##  ","  ##  "],
+  "8":[" #### ","##  ##","##  ##"," #### ","##  ##","##  ##"," #### "],
+  "9":[" #### ","##  ##","##  ##"," #####","    ##","   ## "," ###  "],
+  "N":["##  ##","### ##","######","## ###","##  ##","##  ##","##  ##"],
+};
+const LW_ROW_H = 8;          // Punkte je Zeile (7 + Unterlänge)
+const LW_GAP = 4;            // Punkte zwischen den Zeilen
+const LW_COLS = 186;         // Punkte in der Breite
+const LW_PAD = 2;            // Rand um die Zeilen (Punkte)
+const LW_ASPECT = 1.25;      // Punkte etwas höher als breit -> höhere Schrift
+const LW_LINE_R = 20;        // Liniennummer rechtsbündig bis Punkt 20
+const LW_DEST_X = 30;        // Ziel ab Punkt 30
+
 // Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
 const STELE_DEST_SHORT = [
   [/^Fernheizkraftwerk$/i, "Fernheizkraftw."],
@@ -285,11 +401,31 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
         <div class="form-row"><label>Schriftart</label><input id="font_family" class="std-input" type="text" value="${this._config.font_family || ''}" placeholder="Standard: Exo 2"></div>
        `;
     } else if (mode === "led") {
+       const classic = this._config.led_style === "classic";
+       const col = (id, label, def) => `<div><label>${label}</label><input id="${id}" class="std-input" type="color" value="${this._config[id] || def}" style="width:100%;height:36px;padding:2px;"></div>`;
        specificHtml = `
+        <div class="form-row">
+          <label>🖥️ Darstellung</label>
+          <select id="led_style" class="std-input">
+            <option value="" ${!classic ? 'selected' : ''}>Punktmatrix (Anzeigetafel)</option>
+            <option value="classic" ${classic ? 'selected' : ''}>Klassisch (bisherige LED-Wall)</option>
+          </select>
+        </div>
+        ${classic ? `
         <div class="form-row">
            <label>💡 LED Farbe (Hexadezimal)</label>
            <input id="led_color" class="std-input" type="text" value="${this._config.led_color || '#FF9900'}" placeholder="Standard: #FF9900 (Orange)">
+        </div>` : `
+        <div class="grid-2">
+          ${col("led_color", "💡 LED-Schrift", "#ff9900")}
+          ${col("led_bar_color", "▬ Leisten oben/unten", "#3a3a3a")}
         </div>
+        <div class="grid-2">
+          ${col("led_bg_color", "⬛ Hintergrund", "#000000")}
+          ${col("led_text_color", "🔤 Name &amp; Spaltenköpfe", "#e8e8e8")}
+        </div>
+        <label class="toggle-box"><input id="led_clock" class="std-input" type="checkbox" ${this._config.led_clock !== false ? 'checked' : ''}><span>Uhrzeit oben rechts</span></label>
+        <div class="hint-text">„Anzahl der Zeilen“ oben bestimmt, wie viele Abfahrten die Tafel zeigt.</div>`}
        `;
     } else if (mode === "stele") {
        // Temperatur-Quellen: Wetter-Entitäten und Temperatursensoren
@@ -501,6 +637,8 @@ class LinzMonitorCombined extends HTMLElement {
     if (this._clockTimer) clearInterval(this._clockTimer);
     if (this._steleRO) { this._steleRO.disconnect(); this._steleRO = null; }
     if (this._steleTimer) { clearInterval(this._steleTimer); this._steleTimer = null; }
+    if (this._lwTimer) { clearInterval(this._lwTimer); this._lwTimer = null; }
+    if (this._lwRO) { this._lwRO.disconnect(); this._lwRO = null; }
     this._animTimers.forEach(t => clearTimeout(t));
     this._animTimers.clear();
   }
@@ -530,7 +668,7 @@ class LinzMonitorCombined extends HTMLElement {
     
     // FONT FIX: Lädt Exo 2 als Standard, wenn das Feld leer gelassen wurde!
     if (this._config.layout === 'led') {
-       loadGoogleFont("DotGothic16");
+       if (this._config.led_style === "classic") loadGoogleFont("DotGothic16");
     } else if (this._config.layout === 'stele') {
        // LED-Zeilen werden selbst gezeichnet – keine zusätzliche Schrift nötig
     } else {
@@ -606,7 +744,8 @@ class LinzMonitorCombined extends HTMLElement {
     } else if (layout === "midi") {
         this._renderMidi(state, combined);
     } else if (layout === "led") {
-        this._renderLed(state, combined);
+        if (this._config.led_style === "classic") this._renderLed(state, combined);
+        else this._renderLedMatrix(state, combined);
     } else if (layout === "stele") {
         this._renderStele(state, combined);
     } else {
@@ -1702,6 +1841,142 @@ class LinzMonitorCombined extends HTMLElement {
     put(time, 11);
     put(temp, STELE_COLS - temp.length);
     return cells.join("");
+  }
+
+  /* ===== LED-Wall als Punktmatrix: Haltestellenname, Spaltenköpfe, LED-Feld =====
+     Liniennummer und Minuten fett, Ziel in dünner 5x7-Schrift – alles gleich hoch. */
+  _renderLedMatrix(state, departures) {
+    const c = this._config;
+    const BAR = c.led_bar_color || "#3a3a3a";
+    const BG = c.led_bg_color || "#000000";
+    const TXT = c.led_text_color || "#e8e8e8";
+    const pct = (dots) => (dots / (LW_COLS + 2 * LW_PAD) * 100).toFixed(3) + "%";
+
+    if (!this.querySelector("ha-card") || this._currentLayout !== "ledm") {
+      this._currentLayout = "ledm";
+      this._lwDrawn = null;
+      this.innerHTML = `
+        <style>
+          ha-card.lw-card { display: block; container-type: inline-size; background: var(--lw-bg); overflow: hidden;
+                    border-top: 2.2cqw solid var(--lw-bar); border-bottom: 2.2cqw solid var(--lw-bar); border-radius: 4px;
+                    padding: 2.2cqw 3.4cqw 3.4cqw; box-sizing: border-box; color: var(--lw-txt); font-family: Arial, Helvetica, sans-serif; }
+          .lw-head { display: flex; align-items: baseline; justify-content: space-between; gap: 2cqw; margin-bottom: 2.2cqw; }
+          .lw-title { font-size: 6.2cqw; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+          .lw-clock { font-size: 4.2cqw; font-weight: 700; opacity: .9; }
+          .lw-labels { position: relative; height: 4.4cqw; font-size: 2.7cqw; margin-bottom: 1.3cqw; }
+          .lw-labels span { position: absolute; top: 0; border-left: 2px solid var(--lw-txt); padding-left: .6cqw; line-height: 4.4cqw; }
+          .lw-panel { background: #161616; border: 0.8cqw solid #2a2a2a; }
+          .lw-panel canvas { display: block; width: 100%; }
+        </style>
+        <ha-card class="lw-card" style="--lw-bg:${BG};--lw-bar:${BAR};--lw-txt:${TXT}">
+          <div class="lw-head"><div class="lw-title" id="lw-title"></div>${c.led_clock !== false ? `<div class="lw-clock" id="clock"></div>` : ``}</div>
+          <div class="lw-labels">
+            <span style="left:0">Linie</span>
+            <span style="left:calc(0.8cqw + ${pct(LW_PAD + LW_DEST_X - 1.5)})">Ziel</span>
+            <span style="left:calc(0.8cqw + ${pct(LW_PAD + LW_COLS - 40)})">Abfahrt</span>
+          </div>
+          <div class="lw-panel"><canvas id="lw-board"></canvas></div>
+        </ha-card>`;
+      if (!this._lwRO && window.ResizeObserver) this._lwRO = new ResizeObserver(() => { this._lwDrawn = null; this._lwTick(); });
+      if (this._lwRO) { this._lwRO.disconnect(); this._lwRO.observe(this.querySelector("#lw-board")); }
+    }
+    this._updateClockDisplay();
+
+    const filterRegex = /^(Linz\/Donau|Leonding|Linz)[,\s]+/i;
+    const name = c.stop_name_override || (state.attributes.stop_name || "").replace(filterRegex, "").trim();
+    const titleEl = this.querySelector("#lw-title");
+    if (titleEl.textContent !== name) titleEl.textContent = name;
+
+    const count = Math.max(1, Number(c.anzahl) || 6);
+    const rows = departures.filter(d => !d.isGone).slice(0, count).map(d => {
+      const infoLow = (d.infos || "").toLowerCase();
+      const cancelled = !!(d.canceled || d.cancelled || infoLow.includes("fällt aus") || infoLow.includes("entfällt"));
+      const segments = [{ text: d.direction, ticker: false }];
+      if (cancelled) segments.push({ text: "Fahrt fällt aus!", ticker: false });
+      const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
+      const isNow = d.countdown === 0 && !cancelled;
+      if (!cancelled && !isNow && info.length > 2) segments.push({ text: info, ticker: true });
+      let time;
+      if (cancelled) time = (d.countdown ?? 0) > 0 ? { n: String(d.countdown), unit: "min" } : { text: "" };
+      else if (isNow) time = { text: "sofort" };
+      else if (c.time_format === "absolute" || d.countdown >= 60) time = { n: d.scheduled || "", unit: "" };
+      else time = { n: String(d.countdown), unit: "min" };
+      const line = String(this._getRouteName(d) || d.line || "");
+      return { id: `lw|${line}|${d.direction}|${d.scheduled}`, line, segments, time };
+    });
+    this._lwRows = rows; this._lwCount = count;
+    this._steleAnim = this._steleAnim || new Map();
+    if (!this._lwTimer) this._lwTimer = setInterval(() => this._lwTick(), 120);
+    this._lwDrawn = null;
+    this._lwTick();
+  }
+
+  /* Text als Punkte eintragen (fett = Ziffern 6x7, sonst dünne 5x7-Schrift); liefert die Breite */
+  _lwText(cells, x, y, str, bold) {
+    let cx = x;
+    for (const ch of Array.from(str)) {
+      if (bold && LW_BOLD[ch]) {
+        LW_BOLD[ch].forEach((r, ry) => { for (let rx = 0; rx < r.length; rx++) if (r[rx] === "#") cells.push([cx + rx, y + ry]); });
+        cx += 7; continue;
+      }
+      if (ch === " ") { cx += 4; continue; }
+      const g = LW_THIN[ch] || LW_THIN[ch.normalize("NFD").replace(/[̀-ͯ]/g, "")] || LW_THIN[ch.toUpperCase()];
+      if (!g) { cx += 6; continue; }
+      g.forEach((bits, ry) => { for (let rx = 0; rx < 5; rx++) if (bits & (16 >> rx)) cells.push([cx + rx, y + ry]); });
+      cx += 6;
+    }
+    return cx - x;
+  }
+
+  /* Takt für Laufschrift – zeichnet die Tafel nur neu, wenn sich etwas geändert hat */
+  _lwTick() {
+    if (this._currentLayout !== "ledm" || !this._lwRows) {
+      if (this._lwTimer) { clearInterval(this._lwTimer); this._lwTimer = null; }
+      return;
+    }
+    const cv = this.querySelector("#lw-board");
+    if (!cv) return;
+    const LED = this._config.led_color || "#FF9900";
+    const now = Date.now();
+    const W = LW_COLS + 2 * LW_PAD, H = this._lwCount * (LW_ROW_H + LW_GAP) - LW_GAP + 2 * LW_PAD;
+    const cells = [];
+    const measure = (str, bold) => this._lwText([], 0, 0, str, bold);
+    this._lwRows.forEach((r, i) => {
+      const oy = LW_PAD + i * (LW_ROW_H + LW_GAP), ox = LW_PAD;
+      // Linie: Ziffern fett rechtsbündig, Zusatz (a, s, *) dünn dahinter
+      const m = /^(\d+|N\d+)(.*)$/.exec(r.line) || [null, r.line, ""];
+      this._lwText(cells, ox + LW_LINE_R - measure(m[1], true), oy, m[1], true);
+      if (m[2]) this._lwText(cells, ox + LW_LINE_R + 1, oy, m[2], false);
+      // Abfahrt rechts: "sofort", fette Minuten + "min" oder Uhrzeit
+      let right = 0;
+      if (r.time.text !== undefined) {
+        right = measure(r.time.text, false);
+        this._lwText(cells, ox + LW_COLS - right, oy, r.time.text, false);
+      } else {
+        const wn = measure(r.time.n, true), wu = r.time.unit ? measure(r.time.unit, false) + 2 : 0;
+        right = wn + wu;
+        this._lwText(cells, ox + LW_COLS - right, oy, r.time.n, true);
+        if (r.time.unit) this._lwText(cells, ox + LW_COLS - wu + 2, oy, r.time.unit, false);
+      }
+      // Ziel bis kurz vor die Abfahrt; zu lange Texte und Hinweise laufen durch
+      const width = Math.max(4, Math.floor((LW_COLS - LW_DEST_X - right - 2) / 6));
+      const field = this._steleField(r, width, now);
+      this._lwText(cells, ox + LW_DEST_X, oy, field.text.replace(/\s+$/, ""), false);
+    });
+    const dpr = window.devicePixelRatio || 1, cssW = cv.clientWidth || 300;
+    const cw = Math.max(W, Math.round(cssW * dpr)), ch = Math.round(cw * H * LW_ASPECT / W);
+    const key = LED + "|" + cw + "|" + cells.map(p => p[0] * 1000 + p[1]).join(",");
+    if (this._lwDrawn === key) return;
+    this._lwDrawn = key;
+    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+    const ctx = cv.getContext("2d"), dx = cw / W, dy = dx * LW_ASPECT;
+    ctx.fillStyle = "#161616"; ctx.fillRect(0, 0, cw, ch);
+    ctx.beginPath();                                    // unbeleuchtete Punkte – durchgehendes Raster
+    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) ctx.rect(x * dx + dx * 0.15, y * dy + dy * 0.15, dx * 0.7, dy * 0.7);
+    ctx.fillStyle = "#2a2a2a"; ctx.fill();
+    ctx.beginPath();
+    for (const [x, y] of cells) ctx.rect(x * dx + dx * 0.1, y * dy + dy * 0.1, dx * 0.8, dy * 0.8);
+    ctx.fillStyle = LED; ctx.shadowColor = LED; ctx.shadowBlur = dx * 1.2; ctx.fill(); ctx.shadowBlur = 0;
   }
 
   /* Eine LED-Zeile zeichnen: 24 Felder mit je 8 x 16 LED-Plättchen, 8x16-LED-Schrift */
