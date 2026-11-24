@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.2.1-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-2.3-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -32,7 +32,7 @@ Live‑Daten der Linz AG Linien, Einrichtung per Text- oder Kartensuche und eine
 | **Maxi** (V1) | Große Zeilen mit Linien-Badge, Ziel, Minuten, geplanter Abfahrtszeit, Verspätung und Info-Zeile – ideal für Wandtablets. |
 | **Midi** (V2) | Kompakte Liste mit Verspätung und Hinweisen in einer Zeile – Zeilenhöhe und Schriftgrößen frei einstellbar. |
 | **Mini** (V3) | Sehr platzsparend, perfekt für Smartphones oder als Seitenleiste. |
-| **LED-Wall** | Klassische Anzeigetafel mit leuchtender LED-Schrift (Farbe frei wählbar), Uhrzeit und durchgestrichenen Ausfällen. |
+| **LED-Wall** | Anzeigetafel als echte Punktmatrix: Haltestellenname und Spaltenköpfe, Liniennummer und Minuten fett, Ziele ausgeschrieben in 5×7-Punktschrift, „sofort“ bei Abfahrt jetzt, Laufschrift für Hinweise. Farben von Schrift, Leisten, Hintergrund und Titel frei wählbar; die bisherige Darstellung ist als „klassisch“ weiter wählbar. |
 | **Haltestellen-Säule** | Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz AG Haltestellen – Details unten. |
 
 Für alle Designs:
@@ -140,6 +140,21 @@ filter: "1,2"           # nur diese Linien
 sortierung: "echtzeit"  # echtzeit | plan
 ```
 
+### Beispiel: LED-Wall (Punktmatrix)
+
+```yaml
+type: custom:linz-monitor-combined
+entity: sensor.haltestelle_hauptbahnhof_nachste_abfahrt
+layout: led
+anzahl: 6                    # Anzahl der Zeilen
+led_color: "#ff9900"         # LED-Schrift
+led_bar_color: "#3a3a3a"     # Leisten oben und unten
+led_bg_color: "#000000"      # Hintergrund
+led_text_color: "#e8e8e8"    # Haltestellenname und Spaltenköpfe
+led_clock: true              # Uhrzeit oben rechts
+# led_style: classic         # bisherige LED-Wall
+```
+
 ### Beispiel: Haltestellen-Säule
 
 ```yaml
@@ -171,4 +186,7 @@ stele_once: ""               # "fill" = jede Linie zuerst einmal, "only" = jede 
 | `stop_name_override` | eigener Anzeigename der Haltestelle |
 | `time_format` | `countdown` (Minuten) oder `absolute` (Uhrzeit) |
 | `led_color` | LED-Farbe der LED-Wall |
+| `led_style` | LED-Wall: leer = Punktmatrix, `classic` = bisherige Darstellung |
+| `led_bar_color`, `led_bg_color`, `led_text_color` | LED-Wall (Punktmatrix): Farbe der Leisten oben/unten, des Hintergrunds und von Name/Spaltenköpfen |
+| `led_clock` | LED-Wall (Punktmatrix): `false` = keine Uhrzeit oben rechts |
 | `stele_*` | Optionen der Haltestellen-Säule (siehe Beispiel oben) |
