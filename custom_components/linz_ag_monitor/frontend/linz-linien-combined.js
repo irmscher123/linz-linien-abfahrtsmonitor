@@ -434,7 +434,7 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
             </select>
           </div>
         </div>
-        <label class="toggle-box"><input id="led_clock" class="std-input" type="checkbox" ${this._config.led_clock !== false ? 'checked' : ''}><span>Uhrzeit oben rechts</span></label>
+        <label class="toggle-box"><input id="led_clock" class="std-input" type="checkbox" ${this._config.led_clock !== false ? 'checked' : ''}><span>Uhrzeit oben rechts (LED-Fenster)</span></label>
         <div class="hint-text">„Anzahl der Zeilen“ oben bestimmt, wie viele Abfahrten die Tafel zeigt.</div>`}
        `;
     } else if (mode === "stele") {
@@ -1874,7 +1874,9 @@ class LinzMonitorCombined extends HTMLElement {
           .lw-inner { padding: 2.2cqw 2.4cqw 2.6cqw; color: var(--lw-txt); font-family: Arial, Helvetica, sans-serif; }
           .lw-head { display: flex; align-items: baseline; justify-content: space-between; gap: 2cqw; margin-bottom: 1.6cqw; }
           .lw-title { font-size: 6.4cqw; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-          .lw-clock { font-size: 4.4cqw; font-weight: 700; opacity: .9; }
+          .lw-head { align-items: center; }
+          .lw-clockbox { flex: 0 0 auto; width: 19cqw; background: #161616; border: 0.6cqw solid #2a2a2a; }
+          .lw-clockbox canvas { display: block; width: 100%; }
           .lw-labels { position: relative; height: 4.6cqw; font-size: 3cqw; margin-bottom: 1cqw; }
           .lw-labels span { position: absolute; top: 0; border-left: 2px solid var(--lw-txt); padding-left: .7cqw; line-height: 4.6cqw; }
           .lw-panel { background: #161616; border: 0.7cqw solid #2a2a2a; }
@@ -1884,7 +1886,7 @@ class LinzMonitorCombined extends HTMLElement {
           <div class="lw-wrap">
             <div class="lw-bar"></div>
             <div class="lw-inner">
-              <div class="lw-head"><div class="lw-title" id="lw-title"></div>${c.led_clock !== false ? `<div class="lw-clock" id="clock"></div>` : ``}</div>
+              <div class="lw-head"><div class="lw-title" id="lw-title"></div>${c.led_clock !== false ? `<div class="lw-clockbox"><canvas id="lw-clock"></canvas></div>` : ``}</div>
               <div class="lw-labels">
                 <span style="left:0">Linie</span>
                 <span style="left:calc(0.7cqw + ${pct(LW_PAD + LW_DEST_X - 1.5)})">Ziel</span>
@@ -1895,7 +1897,8 @@ class LinzMonitorCombined extends HTMLElement {
             <div class="lw-bar"></div>
           </div>
         </ha-card>`;
-      if (!this._lwRO && window.ResizeObserver) this._lwRO = new ResizeObserver(() => { this._lwDrawn = null; this._lwTick(); });
+      this._lwClockDrawn = null;
+      if (!this._lwRO && window.ResizeObserver) this._lwRO = new ResizeObserver(() => { this._lwDrawn = null; this._lwClockDrawn = null; this._lwTick(); });
       if (this._lwRO) { this._lwRO.disconnect(); this._lwRO.observe(this.querySelector("#lw-board")); }
     }
     this._updateClockDisplay();
@@ -1920,13 +1923,43 @@ class LinzMonitorCombined extends HTMLElement {
       else if (c.time_format === "absolute" || d.countdown >= 60) time = { n: d.scheduled || "", unit: "" };
       else time = { n: String(d.countdown), unit: "min" };
       const line = String(this._getRouteName(d) || d.line || "");
-      return { id: `lw|${line}|${d.direction}|${d.scheduled}`, line, segments, time };
+      return { id: `lw|${line}|${d.direction}|${d.scheduled}`, line, segments, time, cancelled };
     });
     this._lwRows = rows; this._lwCount = count;
     this._steleAnim = this._steleAnim || new Map();
     if (!this._lwTimer) this._lwTimer = setInterval(() => this._lwTick(), 120);
     this._lwDrawn = null;
     this._lwTick();
+  }
+
+  /* Uhrzeit im kleinen LED-Fenster oben rechts: fette Ziffern, Doppelpunkt blinkt im Sekundentakt */
+  _lwDrawClock(now) {
+    const cv = this.querySelector("#lw-clock");
+    if (!cv) return;
+    const d = new Date(now), p2 = (n) => String(n).padStart(2, "0");
+    const colon = d.getSeconds() % 2 === 0;
+    const COLOR = this._config.led_num_color || "#ffffff";
+    const PAD = 2, CW = 7 * 4 + 5 + 2 * PAD - 1, CH = 7 + 2 * PAD;   // 4 Ziffern + Doppelpunkt
+    const cells = [];
+    let x = PAD;
+    x += this._lwText(cells, x, PAD, p2(d.getHours()), true);
+    if (colon) [1, 2, 4, 5].forEach(ry => [0, 1].forEach(rx => cells.push([x + rx, PAD + ry])));
+    x += 4;
+    this._lwText(cells, x, PAD, p2(d.getMinutes()), true);
+    const dpr = window.devicePixelRatio || 1, cssW = cv.clientWidth || 80;
+    const cw = Math.max(CW, Math.round(cssW * dpr)), ch = Math.round(cw * CH * LW_ASPECT / CW);
+    const key = COLOR + "|" + cw + "|" + cells.map(p => p[0] * 100 + p[1]).join(",");
+    if (this._lwClockDrawn === key) return;
+    this._lwClockDrawn = key;
+    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
+    const ctx = cv.getContext("2d"), dx = cw / CW, dy = dx * LW_ASPECT;
+    ctx.fillStyle = "#161616"; ctx.fillRect(0, 0, cw, ch);
+    ctx.beginPath();
+    for (let yy = 0; yy < CH; yy++) for (let xx = 0; xx < CW; xx++) ctx.rect(xx * dx + dx * 0.15, yy * dy + dy * 0.15, dx * 0.7, dy * 0.7);
+    ctx.fillStyle = "#2a2a2a"; ctx.fill();
+    ctx.beginPath();
+    for (const [xx, yy] of cells) ctx.rect(xx * dx + dx * 0.1, yy * dy + dy * 0.1, dx * 0.8, dy * 0.8);
+    ctx.fillStyle = COLOR; ctx.shadowColor = COLOR; ctx.shadowBlur = dx * 1.2; ctx.fill(); ctx.shadowBlur = 0;
   }
 
   /* Text als Punkte eintragen (fett = Ziffern 6x7, sonst dünne 5x7-Schrift); liefert die Breite.
@@ -1960,14 +1993,17 @@ class LinzMonitorCombined extends HTMLElement {
     const now = Date.now();
     const starLeft = Math.floor(now / 500) % 2 === 0;
     const W = LW_COLS + 2 * LW_PAD, H = this._lwCount * (LW_ROW_H + LW_GAP) - LW_GAP + 2 * LW_PAD;
-    const cells = [], nums = [];                         // Ziel (LED-Farbe) / Linie + Abfahrt (eigene Farbe)
+    const RED = this._config.led_cancel_color || "#ff3b30";
+    const cells = [], nums = [], reds = [];              // Ziel (LED-Farbe) / Linie + Abfahrt (eigene Farbe) / Ausfall (rot)
     const measure = (str, bold) => this._lwText([], 0, 0, str, bold);
     this._lwRows.forEach((r, i) => {
       const oy = LW_PAD + i * (LW_ROW_H + LW_GAP), ox = LW_PAD;
+      // Ausfall: ganze Zeile rot (nicht durchgestrichen)
+      const numL = r.cancelled ? reds : nums, destL = r.cancelled ? reds : cells;
       // Linie: Ziffern fett rechtsbündig, Zusatz (a, s, *) dünn dahinter
       const m = /^(\d+|N\d+)(.*)$/.exec(r.line) || [null, r.line, ""];
-      this._lwText(nums, ox + LW_LINE_R - measure(m[1], true), oy, m[1], true);
-      if (m[2]) this._lwText(nums, ox + LW_LINE_R + 1, oy, m[2], false);
+      this._lwText(numL, ox + LW_LINE_R - measure(m[1], true), oy, m[1], true);
+      if (m[2]) this._lwText(numL, ox + LW_LINE_R + 1, oy, m[2], false);
       // Abfahrt rechts: "sofort" / zwei abwechselnd blinkende Sterne / fette Minuten + "min" / Uhrzeit
       let right = 0;
       if (r.time.stars) {
@@ -1975,12 +2011,12 @@ class LinzMonitorCombined extends HTMLElement {
         this._lwText(nums, ox + LW_COLS - (starLeft ? 19 : 5), oy, "*", false);
       } else if (r.time.text !== undefined) {
         right = measure(r.time.text, false);
-        this._lwText(nums, ox + LW_COLS - right, oy, r.time.text, false);
+        this._lwText(numL, ox + LW_COLS - right, oy, r.time.text, false);
       } else {
         const wn = measure(r.time.n, true), wu = r.time.unit ? measure(r.time.unit, false) + 2 : 0;
         right = wn + wu;
-        this._lwText(nums, ox + LW_COLS - right, oy, r.time.n, true);
-        if (r.time.unit) this._lwText(nums, ox + LW_COLS - wu + 2, oy, r.time.unit, false);
+        this._lwText(numL, ox + LW_COLS - right, oy, r.time.n, true);
+        if (r.time.unit) this._lwText(numL, ox + LW_COLS - wu + 2, oy, r.time.unit, false);
       }
       // Ziel bis kurz vor die Abfahrt; zu lange Texte und Hinweise laufen durch.
       // Laufschrift (Hinweise) kommt ganz rechts herein: führende Leerzeichen volle Zeichenbreite.
@@ -1989,14 +2025,15 @@ class LinzMonitorCombined extends HTMLElement {
       const txt = field.text.replace(/\s+$/, "");
       if (field.ticker) {
         const lead = txt.length - txt.trimStart().length;
-        this._lwText(cells, ox + LW_DEST_X + lead * 6, oy, txt.trimStart(), false, true);
+        this._lwText(destL, ox + LW_DEST_X + lead * 6, oy, txt.trimStart(), false, true);
       } else {
-        this._lwText(cells, ox + LW_DEST_X, oy, txt, false);
+        this._lwText(destL, ox + LW_DEST_X, oy, txt, false);
       }
     });
     const dpr = window.devicePixelRatio || 1, cssW = cv.clientWidth || 300;
     const cw = Math.max(W, Math.round(cssW * dpr)), ch = Math.round(cw * H * LW_ASPECT / W);
-    const key = LED + NUM + "|" + cw + "|" + cells.map(p => p[0] * 1000 + p[1]).join(",") + "|" + nums.map(p => p[0] * 1000 + p[1]).join(",");
+    this._lwDrawClock(now);
+    const key = LED + NUM + RED + "|" + cw + "|" + [cells, nums, reds].map(l => l.map(p => p[0] * 1000 + p[1]).join(",")).join("|");
     if (this._lwDrawn === key) return;
     this._lwDrawn = key;
     if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
@@ -2005,7 +2042,7 @@ class LinzMonitorCombined extends HTMLElement {
     ctx.beginPath();                                    // unbeleuchtete Punkte – durchgehendes Raster
     for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) ctx.rect(x * dx + dx * 0.15, y * dy + dy * 0.15, dx * 0.7, dy * 0.7);
     ctx.fillStyle = "#2a2a2a"; ctx.fill();
-    for (const [list, color] of [[cells, LED], [nums, NUM]]) {
+    for (const [list, color] of [[cells, LED], [nums, NUM], [reds, RED]]) {
       ctx.beginPath();
       for (const [x, y] of list) ctx.rect(x * dx + dx * 0.1, y * dy + dy * 0.1, dx * 0.8, dy * 0.8);
       ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = dx * 1.2; ctx.fill(); ctx.shadowBlur = 0;

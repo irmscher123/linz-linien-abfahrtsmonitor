@@ -1,7 +1,7 @@
 # 🚋 Linz Linien Abfahrtsmonitor
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.3.1-red.svg?style=for-the-badge)]()
+[![version](https://img.shields.io/badge/version-2.3.2-red.svg?style=for-the-badge)]()
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)]()
 [!["Buy Me A Coffee"](https://www.buymeacoffee.com/assets/img/custom_images/orange_img.png)](https://www.buymeacoffee.com/irmscher)
 
@@ -32,7 +32,7 @@ Live‑Daten der Linz AG Linien, Einrichtung per Text- oder Kartensuche und eine
 | **Maxi** (V1) | Große Zeilen mit Linien-Badge, Ziel, Minuten, geplanter Abfahrtszeit, Verspätung und Info-Zeile – ideal für Wandtablets. |
 | **Midi** (V2) | Kompakte Liste mit Verspätung und Hinweisen in einer Zeile – Zeilenhöhe und Schriftgrößen frei einstellbar. |
 | **Mini** (V3) | Sehr platzsparend, perfekt für Smartphones oder als Seitenleiste. |
-| **LED-Wall** | Anzeigetafel als echte Punktmatrix über die volle Kartenbreite: Haltestellenname und Spaltenköpfe, Liniennummer und Abfahrt fett (Standard Weiß), Ziele ausgeschrieben in 5×7-Punktschrift. Bei Abfahrt jetzt wahlweise „sofort“ oder zwei abwechselnd blinkende Sterne. Hinweise laufen als Laufschrift von rechts herein, Ausfälle wechseln mit „Fahrt fällt aus!“. Farben von Ziel, Linie/Abfahrt, Leisten, Hintergrund und Titel frei wählbar; die bisherige Darstellung ist als „klassisch“ weiter wählbar. |
+| **LED-Wall** | Anzeigetafel als echte Punktmatrix über die volle Kartenbreite: Haltestellenname und Spaltenköpfe, Liniennummer und Abfahrt fett (Standard Weiß), Ziele ausgeschrieben in 5×7-Punktschrift. Bei Abfahrt jetzt wahlweise „sofort“ oder zwei abwechselnd blinkende Sterne. Hinweise laufen als Laufschrift von rechts herein; ausgefallene Fahrten leuchten rot und wechseln mit „Fahrt fällt aus!“. Uhrzeit in einem eigenen kleinen LED-Fenster mit blinkendem Doppelpunkt. Farben von Ziel, Linie/Abfahrt, Leisten, Hintergrund und Titel frei wählbar; die bisherige Darstellung ist als „klassisch“ weiter wählbar. |
 | **Haltestellen-Säule** | Originalgetreuer Nachbau der dynamischen Fahrgastinformation (DFI) an den Linz AG Haltestellen – Details unten. |
 
 Für alle Designs:
@@ -152,7 +152,7 @@ led_num_color: "#ffffff"     # Liniennummer und Abfahrt
 led_bar_color: "#3a3a3a"     # Leisten oben und unten
 led_bg_color: "#000000"      # Hintergrund
 led_text_color: "#e8e8e8"    # Haltestellenname und Spaltenköpfe
-led_clock: true              # Uhrzeit oben rechts
+led_clock: true              # Uhrzeit im LED-Fenster oben rechts (Doppelpunkt blinkt)
 led_now: ""                  # Abfahrt jetzt: "" = sofort, "stars" = zwei blinkende Sterne
 # led_style: classic         # bisherige LED-Wall
 ```
@@ -192,5 +192,6 @@ stele_once: ""               # "fill" = jede Linie zuerst einmal, "only" = jede 
 | `led_num_color` | LED-Wall (Punktmatrix): Farbe von Liniennummer und Abfahrt (Standard Weiß) |
 | `led_bar_color`, `led_bg_color`, `led_text_color` | LED-Wall (Punktmatrix): Farbe der Leisten oben/unten, des Hintergrunds und von Name/Spaltenköpfen |
 | `led_now` | LED-Wall (Punktmatrix): bei Abfahrt jetzt leer = „sofort“, `stars` = zwei abwechselnd blinkende Sterne |
-| `led_clock` | LED-Wall (Punktmatrix): `false` = keine Uhrzeit oben rechts |
+| `led_clock` | LED-Wall (Punktmatrix): `false` = kein LED-Uhr-Fenster oben rechts |
+| `led_cancel_color` | LED-Wall (Punktmatrix): Farbe ausgefallener Fahrten (Standard Rot `#ff3b30`) |
 | `stele_*` | Optionen der Haltestellen-Säule (siehe Beispiel oben) |
