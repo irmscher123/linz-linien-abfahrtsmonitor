@@ -7,7 +7,7 @@
 **Live-Abfahrten der Linz AG Linien für Home Assistant – mit fünf Anzeige-Designs,<br>vom kompakten Listen-Layout bis zum originalgetreuen Nachbau der Haltestellen-Anzeige.**
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.3.2-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
+[![version](https://img.shields.io/badge/version-2.3.3-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)](https://github.com/irmscher123)
 
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/dashboards.png" width="900" alt="Die Designs Maxi, Midi, Mini, LED-Wall und Haltestellen-Säule">
@@ -41,7 +41,7 @@
 | 🎨 **Fünf Designs** | Maxi, Midi, Mini, LED-Wall und Haltestellen-Säule – alles in einer Karte |
 | 🖱️ **Ohne YAML** | Alles im Karten-Editor einstellbar, Linien und Richtungen per Klick filtern |
 | 📦 **Alles inklusive** | Die Karte wird mit der Integration installiert und automatisch geladen |
-| 🌡️ **Temperatur am Ort** | Temperatur an der Haltestelle für die Info-Zeile der Säule |
+| 🌡️ **Temperatur am Ort** | Temperatur an der Haltestelle – im LED-Fenster der LED-Wall und in der Info-Zeile der Säule |
 | 🪶 **Schonend** | Ein Abruf pro Minute und Haltestelle, die lange Abfahrtsliste landet nicht im Verlauf |
 
 ---
@@ -95,7 +95,7 @@ Lange Hinweise laufen als Laufschrift durch, ausgefallene Fahrten werden markier
 
 Eine Abfahrtstafel als echte Punktmatrix über die volle Kartenbreite.
 
-- **Kopf:** Haltestellenname groß, Spaltenköpfe „Linie / Ziel / Abfahrt“, Uhrzeit in einem kleinen LED-Fenster – der Doppelpunkt blinkt im Sekundentakt.
+- **Kopf:** Haltestellenname groß, Spaltenköpfe „Linie / Ziel / Abfahrt“ und ein kleines LED-Fenster oben rechts: Uhrzeit (Doppelpunkt blinkt), Datum und Temperatur am Ort der Haltestelle im Wechsel – oder nur die Uhrzeit.
 - **Schrift:** Liniennummer und Abfahrt fett, Ziele ausgeschrieben in 5×7-Punktschrift – alles gleich hoch.
 - **Abfahrt jetzt:** wahlweise „sofort“ oder zwei Sterne, die abwechselnd links und rechts blinken.
 - **Ab 60 Minuten** oder mit Zeitanzeige „Uhrzeit“ steht die Abfahrtszeit statt der Minuten.
@@ -227,7 +227,8 @@ led_num_color: "#ffffff"     # Linie und Abfahrt
 led_bar_color: "#3a3a3a"     # Leisten oben und unten
 led_bg_color: "#000000"      # Hintergrund
 led_text_color: "#e8e8e8"    # Name und Spaltenköpfe
-led_clock: true              # Uhrzeit im LED-Fenster
+led_clock: true              # LED-Fenster oben rechts
+led_clock_mode: ""           # "" = Uhrzeit/Datum/Temperatur im Wechsel, "time" = nur Uhrzeit
 led_now: ""                  # "" = sofort, "stars" = zwei blinkende Sterne
 # led_style: classic         # frühere Darstellung
 ```
@@ -297,7 +298,8 @@ stele_compact: false         # true = nur LED-Zeilen
 | `led_bar_color` | Leisten oben und unten | `#3a3a3a` |
 | `led_bg_color` | Hintergrund | `#000000` |
 | `led_text_color` | Haltestellenname und Spaltenköpfe | `#e8e8e8` |
-| `led_clock` | Uhrzeit im LED-Fenster oben rechts | `true` |
+| `led_clock` | LED-Fenster oben rechts anzeigen | `true` |
+| `led_clock_mode` | leer = Uhrzeit, Datum und Temperatur im Wechsel, `time` = nur Uhrzeit | Wechsel |
 | `led_now` | Abfahrt jetzt: leer = „sofort“, `stars` = zwei blinkende Sterne | „sofort“ |
 </details>
 

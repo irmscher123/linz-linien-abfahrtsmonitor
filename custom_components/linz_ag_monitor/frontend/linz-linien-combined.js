@@ -434,7 +434,16 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
             </select>
           </div>
         </div>
-        <label class="toggle-box"><input id="led_clock" class="std-input" type="checkbox" ${this._config.led_clock !== false ? 'checked' : ''}><span>Uhrzeit oben rechts (LED-Fenster)</span></label>
+        <div class="grid-2">
+          <label class="toggle-box"><input id="led_clock" class="std-input" type="checkbox" ${this._config.led_clock !== false ? 'checked' : ''}><span>LED-Fenster oben rechts</span></label>
+          <div>
+            <label>🕒 Im LED-Fenster</label>
+            <select id="led_clock_mode" class="std-input">
+              <option value="" ${this._config.led_clock_mode !== 'time' ? 'selected' : ''}>Uhrzeit, Datum &amp; Temperatur im Wechsel</option>
+              <option value="time" ${this._config.led_clock_mode === 'time' ? 'selected' : ''}>Nur Uhrzeit</option>
+            </select>
+          </div>
+        </div>
         <div class="hint-text">„Anzahl der Zeilen“ oben bestimmt, wie viele Abfahrten die Tafel zeigt.</div>`}
        `;
     } else if (mode === "stele") {
@@ -1875,7 +1884,7 @@ class LinzMonitorCombined extends HTMLElement {
           .lw-head { display: flex; align-items: baseline; justify-content: space-between; gap: 2cqw; margin-bottom: 1.6cqw; }
           .lw-title { font-size: 6.4cqw; font-weight: 700; line-height: 1.15; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
           .lw-head { align-items: center; }
-          .lw-clockbox { flex: 0 0 auto; width: 19cqw; background: #161616; border: 0.6cqw solid #2a2a2a; }
+          .lw-clockbox { flex: 0 0 auto; width: 22.5cqw; background: #161616; border: 0.6cqw solid #2a2a2a; }
           .lw-clockbox canvas { display: block; width: 100%; }
           .lw-labels { position: relative; height: 4.6cqw; font-size: 3cqw; margin-bottom: 1cqw; }
           .lw-labels span { position: absolute; top: 0; border-left: 2px solid var(--lw-txt); padding-left: .7cqw; line-height: 4.6cqw; }
@@ -1932,20 +1941,50 @@ class LinzMonitorCombined extends HTMLElement {
     this._lwTick();
   }
 
-  /* Uhrzeit im kleinen LED-Fenster oben rechts: fette Ziffern, Doppelpunkt blinkt im Sekundentakt */
+  /* LED-Fenster oben rechts, rechtsbündig. Wechselt (led_clock_mode "cycle", Standard):
+       Uhrzeit 6 s (Doppelpunkt blinkt) -> Datum 3 s -> Temperatur am Ort der Haltestelle 3 s.
+     led_clock_mode "time": nur die Uhrzeit. Temperatur = Attribut "temperature" des Haltestellen-Sensors. */
   _lwDrawClock(now) {
     const cv = this.querySelector("#lw-clock");
     if (!cv) return;
+    const c = this._config;
     const d = new Date(now), p2 = (n) => String(n).padStart(2, "0");
-    const colon = d.getSeconds() % 2 === 0;
-    const COLOR = this._config.led_num_color || "#ffffff";
-    const PAD = 2, CW = 7 * 4 + 5 + 2 * PAD - 1, CH = 7 + 2 * PAD;   // 4 Ziffern + Doppelpunkt
-    const cells = [];
-    let x = PAD;
-    x += this._lwText(cells, x, PAD, p2(d.getHours()), true);
-    if (colon) [1, 2, 4, 5].forEach(ry => [0, 1].forEach(rx => cells.push([x + rx, PAD + ry])));
-    x += 4;
-    this._lwText(cells, x, PAD, p2(d.getMinutes()), true);
+    const st = this._hass && this._hass.states[c.entity];
+    const t = st && st.attributes ? st.attributes.temperature : null;
+    const hasTemp = typeof t === "number" && isFinite(t);
+    let mode = "time";
+    if (c.led_clock_mode !== "time") {
+      const cycle = hasTemp ? 12000 : 9000, ph = now % cycle;
+      mode = ph < 6000 ? "time" : ph < 9000 ? "date" : "temp";
+    }
+    // Teile: [Text, Art] – Art: "d" fette Ziffer, "colon", "dot", "comma", "minus", "deg", "C"
+    const parts = [];
+    const digits = (str) => Array.from(str).forEach(ch => parts.push([ch, "d"]));
+    if (mode === "time") { digits(p2(d.getHours())); parts.push([":", "colon"]); digits(p2(d.getMinutes())); }
+    else if (mode === "date") { digits(p2(d.getDate())); parts.push([".", "dot"]); digits(p2(d.getMonth() + 1)); parts.push([".", "dot"]); }
+    else {
+      const v = Math.round(t * 10) / 10, txt = Math.abs(v).toFixed(1);
+      if (v < 0) parts.push(["-", "minus"]);
+      const [ip, fp] = txt.split(".");
+      digits(ip); parts.push([",", "comma"]); digits(fp); parts.push(["°", "deg"]); parts.push(["C", "C"]);
+    }
+    const W = { d: 7, colon: 4, dot: 3, comma: 3, minus: 5, deg: 5, C: 6 };
+    const PAD = 2, CW = 44, CH = 7 + 2 * PAD;            // Platz für "-12,3°C"
+    const total = parts.reduce((sum, [, k]) => sum + W[k], 0) - 1;
+    let x = CW - PAD - total;                           // rechtsbündig
+    const cells = [], put = (xx, yy) => cells.push([xx, PAD + yy]);
+    const blinkOn = d.getSeconds() % 2 === 0;
+    for (const [ch, k] of parts) {
+      if (k === "d") this._lwText(cells, x, PAD, ch, true);
+      else if (k === "colon") { if (blinkOn) [1, 2, 4, 5].forEach(ry => [0, 1].forEach(rx => put(x + rx, ry))); }
+      else if (k === "dot") [5, 6].forEach(ry => [0, 1].forEach(rx => put(x + rx, ry)));
+      else if (k === "comma") { [5, 6].forEach(ry => [0, 1].forEach(rx => put(x + rx, ry))); put(x, 7); }
+      else if (k === "minus") [0, 1, 2, 3].forEach(rx => put(x + rx, 3));
+      else if (k === "deg") [[1,0],[2,0],[0,1],[3,1],[0,2],[3,2],[1,3],[2,3]].forEach(([rx, ry]) => put(x + rx, ry));
+      else if (k === "C") this._lwText(cells, x, PAD, "C", false);
+      x += W[k];
+    }
+    const COLOR = c.led_num_color || "#ffffff";
     const dpr = window.devicePixelRatio || 1, cssW = cv.clientWidth || 80;
     const cw = Math.max(CW, Math.round(cssW * dpr)), ch = Math.round(cw * CH * LW_ASPECT / CW);
     const key = COLOR + "|" + cw + "|" + cells.map(p => p[0] * 100 + p[1]).join(",");
