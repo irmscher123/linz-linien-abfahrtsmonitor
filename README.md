@@ -7,7 +7,7 @@
 **Live-Abfahrten der Linz AG Linien für Home Assistant – mit fünf Anzeige-Designs,<br>vom kompakten Listen-Layout bis zum originalgetreuen Nachbau der Haltestellen-Anzeige.**
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.3.4-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
+[![version](https://img.shields.io/badge/version-2.3.5-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)](https://github.com/irmscher123)
 
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/dashboards.png" width="900" alt="Die Designs Maxi, Midi, Mini, LED-Wall und Haltestellen-Säule">
