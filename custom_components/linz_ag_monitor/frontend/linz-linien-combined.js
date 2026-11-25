@@ -284,6 +284,9 @@ const LW_PAD = 2;            // Rand um die Zeilen (Punkte)
 const LW_ASPECT = 1.25;      // Punkte etwas höher als breit -> höhere Schrift
 const LW_LINE_R = 20;        // Liniennummer rechtsbündig bis Punkt 20
 const LW_DEST_X = 29;        // Ziel ab Punkt 29
+// Warndreieck mit Rufzeichen (7 x 8 Punkte) – steht vor dem Ziel, solange ein Hinweis läuft oder die Fahrt ausfällt
+const LW_WARN = ["   #   ","  # #  ","  # #  "," # # # "," # # # ","#     #","#  #  #","#######"];
+const LW_WARN_W = 9;         // Breite inkl. Abstand zum Text
 
 // Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
 const STELE_DEST_SHORT = [
@@ -2139,18 +2142,20 @@ class LinzMonitorCombined extends HTMLElement {
       if (r.time.stars) right = 14;
       else if (r.time.text !== undefined) right = width(r.time.text, false);
       else right = width(r.time.n, true) + (r.time.unit ? width(r.time.unit, false) + 2 : 0);
-      const fw = Math.max(4, Math.floor((LW_COLS - LW_DEST_X - right - 2) / 6));
+      // Warndreieck dauerhaft vor dem Ziel, solange ein Hinweis läuft oder die Fahrt ausfällt
+      const warn = r.cancelled || r.segments.some(sg => sg.ticker);
+      const fw = Math.max(4, Math.floor((LW_COLS - LW_DEST_X - (warn ? LW_WARN_W : 0) - right - 2) / 6));
       const field = this._steleField(r, fw, now);
-      return { r, right, field, star: r.time.stars ? starLeft : null };
+      return { r, right, field, warn, star: r.time.stars ? starLeft : null };
     });
     const key = LED + NUM + RED + "|" + (cv.clientWidth || 0) + "|" + this._lwCount + "|" +
-      plan.map(p => [p.r.line, p.r.cancelled ? 1 : 0, JSON.stringify(p.r.time), p.star, p.field.ticker ? 1 : 0, p.field.text].join("¦")).join("\n");
+      plan.map(p => [p.r.line, p.r.cancelled ? 1 : 0, p.warn ? 1 : 0, JSON.stringify(p.r.time), p.star, p.field.ticker ? 1 : 0, p.field.text].join("¦")).join("\n");
     if (this._lwDrawn === key) return;
     this._lwDrawn = key;
     // 2. Punkte berechnen
     const W = LW_COLS + 2 * LW_PAD, H = this._lwCount * (LW_ROW_H + LW_GAP) - LW_GAP + 2 * LW_PAD;
     const cells = [], nums = [], reds = [];              // Ziel (LED-Farbe) / Linie + Abfahrt (eigene Farbe) / Ausfall (rot)
-    plan.forEach(({ r, right, field }, i) => {
+    plan.forEach(({ r, right, field, warn }, i) => {
       const oy = LW_PAD + i * (LW_ROW_H + LW_GAP), ox = LW_PAD;
       // Ausfall: ganze Zeile rot (nicht durchgestrichen)
       const numL = r.cancelled ? reds : nums, destL = r.cancelled ? reds : cells;
@@ -2168,13 +2173,19 @@ class LinzMonitorCombined extends HTMLElement {
         this._lwText(numL, ox + LW_COLS - right, oy, r.time.n, true);
         if (r.time.unit) this._lwText(numL, ox + LW_COLS - wu + 2, oy, r.time.unit, false);
       }
+      // Warndreieck (Ausfall: rot wie die Zeile, Hinweis: Farbe des Ziels)
+      let dx0 = ox + LW_DEST_X;
+      if (warn) {
+        LW_WARN.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) if (row[rx] === "#") destL.push([dx0 + rx, oy + ry]); });
+        dx0 += LW_WARN_W;
+      }
       // Ziel; Laufschrift (Hinweise) kommt ganz rechts herein: führende Leerzeichen volle Zeichenbreite
       const txt = field.text.replace(/\s+$/, "");
       if (field.ticker) {
         const lead = txt.length - txt.trimStart().length;
-        this._lwText(destL, ox + LW_DEST_X + lead * 6, oy, txt.trimStart(), false, true);
+        this._lwText(destL, dx0 + lead * 6, oy, txt.trimStart(), false, true);
       } else {
-        this._lwText(destL, ox + LW_DEST_X, oy, txt, false);
+        this._lwText(destL, dx0, oy, txt, false);
       }
     });
     // 3. Zeichnen
