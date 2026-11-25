@@ -2142,10 +2142,13 @@ class LinzMonitorCombined extends HTMLElement {
       if (r.time.stars) right = 14;
       else if (r.time.text !== undefined) right = width(r.time.text, false);
       else right = width(r.time.n, true) + (r.time.unit ? width(r.time.unit, false) + 2 : 0);
-      // Warndreieck dauerhaft vor dem Ziel, solange ein Hinweis läuft oder die Fahrt ausfällt
-      const warn = r.cancelled || r.segments.some(sg => sg.ticker);
-      const fw = Math.max(4, Math.floor((LW_COLS - LW_DEST_X - (warn ? LW_WARN_W : 0) - right - 2) / 6));
+      // Warndreieck nur, solange der Hinweis bzw. "Fahrt fällt aus!" angezeigt wird – nicht beim Ziel.
+      // Platz dafür wird in solchen Zeilen immer freigehalten, damit das Ziel nicht springt.
+      const canWarn = r.cancelled || r.segments.some(sg => sg.ticker);
+      const fw = Math.max(4, Math.floor((LW_COLS - LW_DEST_X - (canWarn ? LW_WARN_W : 0) - right - 2) / 6));
       const field = this._steleField(r, fw, now);
+      const anim = this._steleAnim && this._steleAnim.get(r.id);
+      const warn = canWarn && !!anim && anim.seg > 0;          // Segment 0 = Ziel
       return { r, right, field, warn, star: r.time.stars ? starLeft : null };
     });
     const key = LED + NUM + RED + "|" + (cv.clientWidth || 0) + "|" + this._lwCount + "|" +
