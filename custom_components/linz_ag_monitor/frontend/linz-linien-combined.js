@@ -2040,11 +2040,24 @@ class LinzMonitorCombined extends HTMLElement {
       while (ph >= seq[i][1]) { ph -= seq[i][1]; i++; }
       const cur = this._lwClockCells(seq[i][0], new Date(now), t, CW, PAD);
       if (ph < SCROLL) {
-        // Scrollen: alte Anzeige nach links hinaus, neue von rechts herein (Punkt für Punkt)
+        // "Kreisel": Datum kommt von rechts, Temperatur von unten (Datum geht nach oben),
+        // die Uhrzeit kommt wieder von links (vorige Anzeige geht nach rechts hinaus) – Punkt für Punkt
         const prev = this._lwClockCells(seq[(i - 1 + seq.length) % seq.length][0], new Date(now - ph - 1), t, CW, PAD);
-        const shift = Math.round(ph / SCROLL * CW);
-        cells = prev.map(([x, y]) => [x - shift, y]).concat(cur.map(([x, y]) => [x + CW - shift, y]))
-                    .filter(([x]) => x >= 0 && x < CW);
+        const f = ph / SCROLL;
+        const kind = seq[i][0];
+        if (kind === "temp") {
+          const sh = Math.round(f * CH);
+          cells = prev.map(([x, y]) => [x, y - sh]).concat(cur.map(([x, y]) => [x, y + CH - sh]))
+                      .filter(([, y]) => y >= 0 && y < CH);
+        } else if (kind === "time") {
+          const sh = Math.round(f * CW);
+          cells = prev.map(([x, y]) => [x + sh, y]).concat(cur.map(([x, y]) => [x - CW + sh, y]))
+                      .filter(([x]) => x >= 0 && x < CW);
+        } else {
+          const sh = Math.round(f * CW);
+          cells = prev.map(([x, y]) => [x - sh, y]).concat(cur.map(([x, y]) => [x + CW - sh, y]))
+                      .filter(([x]) => x >= 0 && x < CW);
+        }
         delay = 33;
       } else {
         cells = cur;
@@ -2158,6 +2171,15 @@ class LinzMonitorCombined extends HTMLElement {
     // 2. Punkte berechnen
     const W = LW_COLS + 2 * LW_PAD, H = this._lwCount * (LW_ROW_H + LW_GAP) - LW_GAP + 2 * LW_PAD;
     const cells = [], nums = [], reds = [];              // Ziel (LED-Farbe) / Linie + Abfahrt (eigene Farbe) / Ausfall (rot)
+    // Keine Abfahrten vom Sensor: Hinweis in den letzten beiden Zeilen (weiß / LED-Farbe), mittig
+    if (!plan.length) {
+      const msgs = [["Keine Echtzeitdaten vorhanden!", nums], ["Betrieb laut Fahrplanaushang!", cells]];
+      const lines = this._lwCount >= 2 ? msgs : msgs.slice(1);
+      lines.forEach(([txt, list], k) => {
+        const row = this._lwCount - lines.length + k;
+        this._lwText(list, LW_PAD + Math.max(0, Math.floor((LW_COLS - width(txt, false)) / 2)), LW_PAD + row * (LW_ROW_H + LW_GAP), txt, false);
+      });
+    }
     plan.forEach(({ r, right, field, warn }, i) => {
       const oy = LW_PAD + i * (LW_ROW_H + LW_GAP), ox = LW_PAD;
       // Ausfall: ganze Zeile rot (nicht durchgestrichen)
