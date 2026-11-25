@@ -657,7 +657,7 @@ class LinzMonitorCombined extends HTMLElement {
     if (this._steleRO) { this._steleRO.disconnect(); this._steleRO = null; }
     if (this._steleTimer) { clearInterval(this._steleTimer); this._steleTimer = null; }
     if (this._lwTimer) { clearInterval(this._lwTimer); this._lwTimer = null; }
-    if (this._lwClockTimer) { clearInterval(this._lwClockTimer); this._lwClockTimer = null; }
+    if (this._lwClockTimer) { clearTimeout(this._lwClockTimer); this._lwClockTimer = null; }
     if (this._lwRO) { this._lwRO.disconnect(); this._lwRO = null; }
     this._animTimers.forEach(t => clearTimeout(t));
     this._animTimers.clear();
@@ -706,6 +706,11 @@ class LinzMonitorCombined extends HTMLElement {
     }
 
     const state = hass.states[this._config.entity];
+    // Home Assistant meldet jede Zustandsänderung im ganzen Haus. Hat sich weder die Haltestelle
+    // noch die gewählte Temperatur-Entität noch die Einstellung geändert, gibt es nichts zu tun.
+    const extra = this._config.stele_temp_entity ? hass.states[this._config.stele_temp_entity] : null;
+    if (this._lastStateObj === state && this._lastExtraObj === extra && this._lastCfgObj === this._config && this.querySelector("ha-card")) return;
+    this._lastStateObj = state; this._lastExtraObj = extra; this._lastCfgObj = this._config;
     const nowTs = Date.now();
     let departures = [...(state.attributes.departureList || [])];
 
@@ -1938,12 +1943,8 @@ class LinzMonitorCombined extends HTMLElement {
     this._lwRows = rows; this._lwCount = count;
     this._steleAnim = this._steleAnim || new Map();
     if (!this._lwTimer) this._lwTimer = setInterval(() => this._lwTick(), 120);
-    if (!this._lwClockTimer) this._lwClockTimer = setInterval(() => {
-      if (this._currentLayout !== "ledm") { clearInterval(this._lwClockTimer); this._lwClockTimer = null; return; }
-      this._lwDrawClock(Date.now());
-    }, 30);
-    this._lwDrawn = null;
-    this._lwTick();
+    if (!this._lwClockTimer) this._lwClockLoop();
+    this._lwTick();                                       // zeichnet nur, wenn sich etwas geändert hat
   }
 
   /* LED-Fenster oben rechts, rechtsbündig. Wechselt (led_clock_mode "cycle", Standard):
@@ -1980,15 +1981,25 @@ class LinzMonitorCombined extends HTMLElement {
     return cells;
   }
 
+  /* Takt des LED-Fensters: schnell nur während des Scrollens, sonst nur beim Umschalten des Doppelpunkts.
+     Im Hintergrund (Tab nicht sichtbar) nur einmal pro Sekunde prüfen, ohne zu zeichnen. */
+  _lwClockLoop() {
+    clearTimeout(this._lwClockTimer);
+    if (this._currentLayout !== "ledm" || !this.isConnected) { this._lwClockTimer = null; return; }
+    const delay = document.hidden ? 1000 : this._lwDrawClock(Date.now());
+    this._lwClockTimer = setTimeout(() => this._lwClockLoop(), delay);
+  }
+
   _lwDrawClock(now) {
+    const toNextSecond = 1000 - (now % 1000) + 5;
     const cv = this.querySelector("#lw-clock");
-    if (!cv) return;
+    if (!cv) return 1000;
     const c = this._config;
     const st = this._hass && this._hass.states[c.entity];
     const t = st && st.attributes ? st.attributes.temperature : null;
     const hasTemp = typeof t === "number" && isFinite(t);
     const PAD = 2, CW = 44, CH = 7 + 2 * PAD, SCROLL = 700;   // Platz für "-12,3°C", Scroll-Dauer in ms
-    let cells;
+    let cells, delay = toNextSecond;
     if (c.led_clock_mode === "time") {
       cells = this._lwClockCells("time", new Date(now), t, CW, PAD);
     } else {
@@ -2004,23 +2015,54 @@ class LinzMonitorCombined extends HTMLElement {
         const shift = Math.round(ph / SCROLL * CW);
         cells = prev.map(([x, y]) => [x - shift, y]).concat(cur.map(([x, y]) => [x + CW - shift, y]))
                     .filter(([x]) => x >= 0 && x < CW);
-      } else cells = cur;
+        delay = 33;
+      } else {
+        cells = cur;
+        delay = Math.max(20, Math.min(toNextSecond, seq[i][1] - ph + 5));
+      }
     }
     const COLOR = c.led_num_color || "#ffffff";
-    const dpr = window.devicePixelRatio || 1, cssW = cv.clientWidth || 80;
-    const cw = Math.max(CW, Math.round(cssW * dpr)), ch = Math.round(cw * CH * LW_ASPECT / CW);
-    const key = COLOR + "|" + cw + "|" + cells.map(p => p[0] * 100 + p[1]).join(",");
-    if (this._lwClockDrawn === key) return;
-    this._lwClockDrawn = key;
+    const key = COLOR + "|" + (cv.clientWidth || 0) + "|" + cells.map(p => p[0] * 100 + p[1]).join(",");
+    if (this._lwClockDrawn !== key) {
+      this._lwClockDrawn = key;
+      this._lwPaint(cv, CW, CH, [[cells, COLOR]]);
+    }
+    return delay;
+  }
+
+  /* Punktmatrix zeichnen. Das Raster der unbeleuchteten Punkte wird einmal vorgezeichnet und nur noch
+     als Bild eingesetzt; das Leuchten entsteht ohne teuren Weichzeichner (halbtransparenter Hof). */
+  _lwPaint(cv, W, H, layers) {
+    const dpr = window.devicePixelRatio || 1, cssW = cv.clientWidth || 300;
+    const cw = Math.max(W, Math.round(cssW * dpr)), ch = Math.round(cw * H * LW_ASPECT / W);
     if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
-    const ctx = cv.getContext("2d"), dx = cw / CW, dy = dx * LW_ASPECT;
-    ctx.fillStyle = "#161616"; ctx.fillRect(0, 0, cw, ch);
-    ctx.beginPath();
-    for (let yy = 0; yy < CH; yy++) for (let xx = 0; xx < CW; xx++) ctx.rect(xx * dx + dx * 0.15, yy * dy + dy * 0.15, dx * 0.7, dy * 0.7);
-    ctx.fillStyle = "#2a2a2a"; ctx.fill();
-    ctx.beginPath();
-    for (const [xx, yy] of cells) ctx.rect(xx * dx + dx * 0.1, yy * dy + dy * 0.1, dx * 0.8, dy * 0.8);
-    ctx.fillStyle = COLOR; ctx.shadowColor = COLOR; ctx.shadowBlur = dx * 1.2; ctx.fill(); ctx.shadowBlur = 0;
+    const ctx = cv.getContext("2d"), dx = cw / W, dy = dx * LW_ASPECT;
+    const gridKey = cw + "x" + ch + "|" + W + "x" + H;
+    if (!cv._lwGrid || cv._lwGridKey !== gridKey) {
+      const g = document.createElement("canvas");
+      g.width = cw; g.height = ch;
+      const gc = g.getContext("2d");
+      gc.fillStyle = "#161616"; gc.fillRect(0, 0, cw, ch);
+      gc.beginPath();
+      for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) gc.rect(x * dx + dx * 0.15, y * dy + dy * 0.15, dx * 0.7, dy * 0.7);
+      gc.fillStyle = "#2a2a2a"; gc.fill();
+      cv._lwGrid = g; cv._lwGridKey = gridKey;
+    }
+    ctx.globalAlpha = 1;
+    ctx.drawImage(cv._lwGrid, 0, 0);
+    for (const [list, color] of layers) {
+      if (!list.length) continue;
+      ctx.fillStyle = color;
+      ctx.globalAlpha = 0.22;                          // Leuchthof
+      ctx.beginPath();
+      for (const [x, y] of list) ctx.rect(x * dx - dx * 0.25, y * dy - dy * 0.25, dx * 1.5, dy * 1.5);
+      ctx.fill();
+      ctx.globalAlpha = 1;                             // leuchtender Punkt
+      ctx.beginPath();
+      for (const [x, y] of list) ctx.rect(x * dx + dx * 0.1, y * dy + dy * 0.1, dx * 0.8, dy * 0.8);
+      ctx.fill();
+    }
+    ctx.globalAlpha = 1;
   }
 
   /* Text als Punkte eintragen (fett = Ziffern 6x7, sonst dünne 5x7-Schrift); liefert die Breite.
@@ -2041,48 +2083,65 @@ class LinzMonitorCombined extends HTMLElement {
     return cx - x;
   }
 
-  /* Takt für Laufschrift und Sterne – zeichnet die Tafel nur neu, wenn sich etwas geändert hat */
+  /* Takt für Laufschrift und Sterne. Zuerst wird nur der Inhalt jeder Zeile als Text verglichen –
+     die Punkte werden erst berechnet und gezeichnet, wenn sich wirklich etwas geändert hat. */
   _lwTick() {
     if (this._currentLayout !== "ledm" || !this._lwRows) {
       if (this._lwTimer) { clearInterval(this._lwTimer); this._lwTimer = null; }
       return;
     }
+    if (document.hidden) return;
     const cv = this.querySelector("#lw-board");
     if (!cv) return;
     const LED = this._config.led_color || "#FF9900";
     const NUM = this._config.led_num_color || "#ffffff";
+    const RED = this._config.led_cancel_color || "#ff3b30";
     const now = Date.now();
     const starLeft = Math.floor(now / 1000) % 2 === 0;   // Sterne wechseln jede Sekunde
-    const W = LW_COLS + 2 * LW_PAD, H = this._lwCount * (LW_ROW_H + LW_GAP) - LW_GAP + 2 * LW_PAD;
-    const RED = this._config.led_cancel_color || "#ff3b30";
-    const cells = [], nums = [], reds = [];              // Ziel (LED-Farbe) / Linie + Abfahrt (eigene Farbe) / Ausfall (rot)
     const measure = (str, bold) => this._lwText([], 0, 0, str, bold);
-    this._lwRows.forEach((r, i) => {
+    if (!this._lwMeasure) this._lwMeasure = new Map();
+    const width = (str, bold) => {                       // Breiten zwischenspeichern
+      const k = (bold ? "b" : "t") + str;
+      let w = this._lwMeasure.get(k);
+      if (w === undefined) { w = measure(str, bold); this._lwMeasure.set(k, w); }
+      return w;
+    };
+    // 1. Inhalt jeder Zeile bestimmen (billig)
+    const plan = this._lwRows.map((r) => {
+      let right;
+      if (r.time.stars) right = 14;
+      else if (r.time.text !== undefined) right = width(r.time.text, false);
+      else right = width(r.time.n, true) + (r.time.unit ? width(r.time.unit, false) + 2 : 0);
+      const fw = Math.max(4, Math.floor((LW_COLS - LW_DEST_X - right - 2) / 6));
+      const field = this._steleField(r, fw, now);
+      return { r, right, field, star: r.time.stars ? starLeft : null };
+    });
+    const key = LED + NUM + RED + "|" + (cv.clientWidth || 0) + "|" + this._lwCount + "|" +
+      plan.map(p => [p.r.line, p.r.cancelled ? 1 : 0, JSON.stringify(p.r.time), p.star, p.field.ticker ? 1 : 0, p.field.text].join("¦")).join("\n");
+    if (this._lwDrawn === key) return;
+    this._lwDrawn = key;
+    // 2. Punkte berechnen
+    const W = LW_COLS + 2 * LW_PAD, H = this._lwCount * (LW_ROW_H + LW_GAP) - LW_GAP + 2 * LW_PAD;
+    const cells = [], nums = [], reds = [];              // Ziel (LED-Farbe) / Linie + Abfahrt (eigene Farbe) / Ausfall (rot)
+    plan.forEach(({ r, right, field }, i) => {
       const oy = LW_PAD + i * (LW_ROW_H + LW_GAP), ox = LW_PAD;
       // Ausfall: ganze Zeile rot (nicht durchgestrichen)
       const numL = r.cancelled ? reds : nums, destL = r.cancelled ? reds : cells;
       // Linie: Ziffern fett rechtsbündig, Zusatz (a, s, *) dünn dahinter
       const m = /^(\d+|N\d+)(.*)$/.exec(r.line) || [null, r.line, ""];
-      this._lwText(numL, ox + LW_LINE_R - measure(m[1], true), oy, m[1], true);
+      this._lwText(numL, ox + LW_LINE_R - width(m[1], true), oy, m[1], true);
       if (m[2]) this._lwText(numL, ox + LW_LINE_R + 1, oy, m[2], false);
       // Abfahrt rechts: "sofort" / zwei abwechselnd blinkende Sterne / fette Minuten + "min" / Uhrzeit
-      let right = 0;
       if (r.time.stars) {
-        right = 14;
         this._lwText(nums, ox + LW_COLS - (starLeft ? 13 : 5), oy, "*", false);   // eng nebeneinander
       } else if (r.time.text !== undefined) {
-        right = measure(r.time.text, false);
         this._lwText(numL, ox + LW_COLS - right, oy, r.time.text, false);
       } else {
-        const wn = measure(r.time.n, true), wu = r.time.unit ? measure(r.time.unit, false) + 2 : 0;
-        right = wn + wu;
+        const wu = r.time.unit ? width(r.time.unit, false) + 2 : 0;
         this._lwText(numL, ox + LW_COLS - right, oy, r.time.n, true);
         if (r.time.unit) this._lwText(numL, ox + LW_COLS - wu + 2, oy, r.time.unit, false);
       }
-      // Ziel bis kurz vor die Abfahrt; zu lange Texte und Hinweise laufen durch.
-      // Laufschrift (Hinweise) kommt ganz rechts herein: führende Leerzeichen volle Zeichenbreite.
-      const width = Math.max(4, Math.floor((LW_COLS - LW_DEST_X - right - 2) / 6));
-      const field = this._steleField(r, width, now);
+      // Ziel; Laufschrift (Hinweise) kommt ganz rechts herein: führende Leerzeichen volle Zeichenbreite
       const txt = field.text.replace(/\s+$/, "");
       if (field.ticker) {
         const lead = txt.length - txt.trimStart().length;
@@ -2091,22 +2150,8 @@ class LinzMonitorCombined extends HTMLElement {
         this._lwText(destL, ox + LW_DEST_X, oy, txt, false);
       }
     });
-    const dpr = window.devicePixelRatio || 1, cssW = cv.clientWidth || 300;
-    const cw = Math.max(W, Math.round(cssW * dpr)), ch = Math.round(cw * H * LW_ASPECT / W);
-    const key = LED + NUM + RED + "|" + cw + "|" + [cells, nums, reds].map(l => l.map(p => p[0] * 1000 + p[1]).join(",")).join("|");
-    if (this._lwDrawn === key) return;
-    this._lwDrawn = key;
-    if (cv.width !== cw || cv.height !== ch) { cv.width = cw; cv.height = ch; }
-    const ctx = cv.getContext("2d"), dx = cw / W, dy = dx * LW_ASPECT;
-    ctx.fillStyle = "#161616"; ctx.fillRect(0, 0, cw, ch);
-    ctx.beginPath();                                    // unbeleuchtete Punkte – durchgehendes Raster
-    for (let y = 0; y < H; y++) for (let x = 0; x < W; x++) ctx.rect(x * dx + dx * 0.15, y * dy + dy * 0.15, dx * 0.7, dy * 0.7);
-    ctx.fillStyle = "#2a2a2a"; ctx.fill();
-    for (const [list, color] of [[cells, LED], [nums, NUM], [reds, RED]]) {
-      ctx.beginPath();
-      for (const [x, y] of list) ctx.rect(x * dx + dx * 0.1, y * dy + dy * 0.1, dx * 0.8, dy * 0.8);
-      ctx.fillStyle = color; ctx.shadowColor = color; ctx.shadowBlur = dx * 1.2; ctx.fill(); ctx.shadowBlur = 0;
-    }
+    // 3. Zeichnen
+    this._lwPaint(cv, W, H, [[cells, LED], [nums, NUM], [reds, RED]]);
   }
 
   /* Eine LED-Zeile zeichnen: 24 Felder mit je 8 x 16 LED-Plättchen, 8x16-LED-Schrift */
