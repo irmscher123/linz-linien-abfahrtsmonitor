@@ -2040,11 +2040,24 @@ class LinzMonitorCombined extends HTMLElement {
       while (ph >= seq[i][1]) { ph -= seq[i][1]; i++; }
       const cur = this._lwClockCells(seq[i][0], new Date(now), t, CW, PAD);
       if (ph < SCROLL) {
-        // Scrollen: alte Anzeige nach links hinaus, neue von rechts herein (Punkt für Punkt)
+        // "Kreisel": Datum kommt von rechts, Temperatur von unten (Datum geht nach oben),
+        // die Uhrzeit kommt wieder von links (vorige Anzeige geht nach rechts hinaus) – Punkt für Punkt
         const prev = this._lwClockCells(seq[(i - 1 + seq.length) % seq.length][0], new Date(now - ph - 1), t, CW, PAD);
-        const shift = Math.round(ph / SCROLL * CW);
-        cells = prev.map(([x, y]) => [x - shift, y]).concat(cur.map(([x, y]) => [x + CW - shift, y]))
-                    .filter(([x]) => x >= 0 && x < CW);
+        const f = ph / SCROLL;
+        const kind = seq[i][0];
+        if (kind === "temp") {
+          const sh = Math.round(f * CH);
+          cells = prev.map(([x, y]) => [x, y - sh]).concat(cur.map(([x, y]) => [x, y + CH - sh]))
+                      .filter(([, y]) => y >= 0 && y < CH);
+        } else if (kind === "time") {
+          const sh = Math.round(f * CW);
+          cells = prev.map(([x, y]) => [x + sh, y]).concat(cur.map(([x, y]) => [x - CW + sh, y]))
+                      .filter(([x]) => x >= 0 && x < CW);
+        } else {
+          const sh = Math.round(f * CW);
+          cells = prev.map(([x, y]) => [x - sh, y]).concat(cur.map(([x, y]) => [x + CW - sh, y]))
+                      .filter(([x]) => x >= 0 && x < CW);
+        }
         delay = 33;
       } else {
         cells = cur;
