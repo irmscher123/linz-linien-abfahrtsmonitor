@@ -100,6 +100,7 @@ Eine Abfahrtstafel als echte Punktmatrix über die volle Kartenbreite.
 - **Abfahrt jetzt:** wahlweise „sofort“ oder zwei eng nebeneinander stehende Sterne, die im Sekundentakt abwechselnd blinken.
 - **Ab 60 Minuten** oder mit Zeitanzeige „Uhrzeit“ steht die Abfahrtszeit statt der Minuten.
 - **Hinweise** wie „Verspätung! Bitte Geduld!“ laufen im Zielfeld von rechts herein, im Wechsel mit dem Ziel. Solange der Hinweis läuft, steht ein Warndreieck mit Rufzeichen davor – beim Ziel selbst nicht.
+- **Keine Daten:** Liefert der Sensor keine Abfahrten, steht in den letzten beiden Zeilen „Keine Echtzeitdaten vorhanden!“ (weiß) und „Betrieb laut Fahrplanaushang!“ (LED-Farbe).
 - **Ausfälle:** Die ganze Zeile leuchtet rot, das Ziel wechselt mit „Warndreieck + Fahrt fällt aus!“.
 - **Farben frei wählbar:** Ziel, Linie & Abfahrt, Leisten oben/unten, Hintergrund sowie Name & Spaltenköpfe.
 - Die frühere Darstellung bleibt unter **Darstellung → Klassisch** wählbar.
