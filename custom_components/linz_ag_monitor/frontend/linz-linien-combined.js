@@ -650,7 +650,7 @@ class LinzMonitorCombined extends HTMLElement {
 
   connectedCallback() {
     if (this._clockTimer) clearInterval(this._clockTimer);
-    this._clockTimer = setInterval(() => this._updateClockDisplay(), 1000);
+    this._clockTimer = setInterval(() => { this._updateClockDisplay(); this._refreshTick(); }, 1000);
     // Nach dem Wechsel der Dashboard-Ansicht wird die Karte wieder eingehängt, ohne dass neue Daten kommen:
     // Takt der LED-Wall und des LED-Fensters hier wieder starten (sonst bleibt das Fenster leer).
     if (this._currentLayout === "ledm" && this._lwRows) {
@@ -786,6 +786,16 @@ class LinzMonitorCombined extends HTMLElement {
     } else {
         this._renderMaxi(state, combined);
     }
+  }
+
+  /* Einmal pro Sekunde neu berechnen, auch ohne neue Daten: Countdown, Wechsel Ziel/Hinweis (Mini, Midi)
+     und erneutes Messen der Ziele (z. B. wenn die Schrift erst nach dem ersten Aufbau geladen wurde).
+     Seit Meldungen ohne Änderung übersprungen werden, kam dieser Takt sonst nicht mehr zustande. */
+  _refreshTick() {
+    if (!this._hass || !this._config || !this._config.entity || document.hidden || !this.isConnected) return;
+    if (!this._currentLayout || this._currentLayout === "ledm") return;   // LED-Wall hat eigene Takte
+    this._lastStateObj = null;
+    this.hass = this._hass;
   }
 
   _updateClockDisplay() {
@@ -1042,7 +1052,8 @@ class LinzMonitorCombined extends HTMLElement {
           setTimeout(() => {
              const parent = row.querySelector(".col-dest");
              // 2 PIXEL TOLERANZ HINZUGEFÜGT
-             if (elDestInner.scrollWidth > parent.offsetWidth - 2) {
+             if (!parent.offsetWidth) { /* noch nicht sichtbar */ }
+             else if (elDestInner.scrollWidth > parent.offsetWidth - 2) {
                 const diff = parent.offsetWidth - elDestInner.scrollWidth;
                 elDestInner.style.setProperty('--scroll-dist', `${diff - 10}px`);
                 elDestInner.classList.add("ping-pong-scroll");
@@ -1250,7 +1261,8 @@ class LinzMonitorCombined extends HTMLElement {
       const destWrap = rowEl.querySelector(".dest-wrap");
       if (destWrap && destEl) {
          // 2 PIXEL TOLERANZ HINZUGEFÜGT
-         if (destEl.scrollWidth > destWrap.offsetWidth - 2) {
+         if (!destWrap.offsetWidth) { /* noch nicht sichtbar – später neu messen */ }
+         else if (destEl.scrollWidth > destWrap.offsetWidth - 2) {
             const diff = destWrap.offsetWidth - destEl.scrollWidth;
             destEl.style.setProperty('--scroll-dist', `${diff - 10}px`);
             destEl.classList.add("ping-pong-scroll");
@@ -1354,12 +1366,13 @@ class LinzMonitorCombined extends HTMLElement {
       b.classList.toggle("blink-badge", isNow);
 
       const timeCol = row.querySelector(".col-time");
+      const setTime = (h) => { if (timeCol._h !== h) { timeCol._h = h; timeCol.innerHTML = h; } };   // nur bei Änderung neu schreiben
       const delayText = (!d.isGone && !isCancelled && d.delay > 0) ? `<span class="delay-red">(+${d.delay})</span>` : "";
 
-      if (isCancelled) timeCol.innerHTML = `<span style="text-decoration: line-through; color: #ff5252; opacity: 0.9;">${d.scheduled}</span>`;
-      else if (isNow) timeCol.innerHTML = `<div style="display:flex;justify-content:flex-end;"><img src="https://www.irmscher.at/linzag/linzlinien-z.png" style="width:22px;height:22px;object-fit:contain;"></div>`;
-      else if (this._config.time_format === "absolute" || d.isGone || d.countdown >= 45) timeCol.innerHTML = `${delayText}${d.scheduled}`;
-      else timeCol.innerHTML = `${delayText}${d.countdown}<span style="font-size:${TIME_S-3}px;opacity:0.6;margin-left:2px">Min</span>`;
+      if (isCancelled) setTime(`<span style="text-decoration: line-through; color: #ff5252; opacity: 0.9;">${d.scheduled}</span>`);
+      else if (isNow) setTime(`<div style="display:flex;justify-content:flex-end;"><img src="https://www.irmscher.at/linzag/linzlinien-z.png" style="width:22px;height:22px;object-fit:contain;"></div>`);
+      else if (this._config.time_format === "absolute" || d.isGone || d.countdown >= 45) setTime(`${delayText}${d.scheduled}`);
+      else setTime(`${delayText}${d.countdown}<span style="font-size:${TIME_S-3}px;opacity:0.6;margin-left:2px">Min</span>`);
 
       const destEl = row.querySelector(".dest-text");
       if(destEl.innerText !== d.direction) destEl.innerText = d.direction;
@@ -1368,7 +1381,8 @@ class LinzMonitorCombined extends HTMLElement {
       const col = row.querySelector(".col-dest");
       if (col && destEl) {
          // 2 PIXEL TOLERANZ HINZUGEFÜGT
-         if (destEl.scrollWidth > col.offsetWidth - 2) {
+         if (!col.offsetWidth) { /* noch nicht sichtbar – später neu messen */ }
+         else if (destEl.scrollWidth > col.offsetWidth - 2) {
             const diff = col.offsetWidth - destEl.scrollWidth;
             destEl.style.setProperty('--scroll-dist', `${diff - 10}px`);
             destEl.classList.add("ping-pong-scroll");
@@ -1504,12 +1518,13 @@ class LinzMonitorCombined extends HTMLElement {
       b.style.borderRadius = B_RADIUS; 
 
       const timeCol = row.querySelector(".col-time");
+      const setTime = (h) => { if (timeCol._h !== h) { timeCol._h = h; timeCol.innerHTML = h; } };   // nur bei Änderung neu schreiben
       const delayText = (!d.isGone && !isCancelled && d.delay > 0) ? `<span class="delay-red">(+${d.delay})</span>` : "";
 
-      if (isCancelled) timeCol.innerHTML = `<span style="text-decoration: line-through; color: #ff5252; opacity: 0.9;">${d.scheduled}</span>`;
-      else if (isNow) timeCol.innerHTML = `<div style="display:flex;justify-content:flex-end;"><img src="https://www.irmscher.at/linzag/linzlinien-z.png" style="width:${Math.round(B_SIZE*0.8)}px;height:${Math.round(B_SIZE*0.8)}px;object-fit:contain;"></div>`;
-      else if (this._config.time_format === "absolute" || d.isGone || d.countdown >= 45) timeCol.innerHTML = `${delayText}${d.scheduled}`;
-      else timeCol.innerHTML = `${delayText}${d.countdown}`;
+      if (isCancelled) setTime(`<span style="text-decoration: line-through; color: #ff5252; opacity: 0.9;">${d.scheduled}</span>`);
+      else if (isNow) setTime(`<div style="display:flex;justify-content:flex-end;"><img src="https://www.irmscher.at/linzag/linzlinien-z.png" style="width:${Math.round(B_SIZE*0.8)}px;height:${Math.round(B_SIZE*0.8)}px;object-fit:contain;"></div>`);
+      else if (this._config.time_format === "absolute" || d.isGone || d.countdown >= 45) setTime(`${delayText}${d.scheduled}`);
+      else setTime(`${delayText}${d.countdown}`);
 
       const destEl = row.querySelector(".dest-text");
       
@@ -1522,7 +1537,8 @@ class LinzMonitorCombined extends HTMLElement {
       const col = row.querySelector(".col-dest");
       if (col && destEl) {
          // 2 PIXEL TOLERANZ HINZUGEFÜGT
-         if (destEl.scrollWidth > col.offsetWidth - 2) {
+         if (!col.offsetWidth) { /* noch nicht sichtbar – später neu messen */ }
+         else if (destEl.scrollWidth > col.offsetWidth - 2) {
             const diff = col.offsetWidth - destEl.scrollWidth;
             destEl.style.setProperty('--scroll-dist', `${diff - 10}px`);
             destEl.classList.add("ping-pong-scroll");
