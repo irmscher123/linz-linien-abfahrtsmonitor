@@ -649,7 +649,17 @@ class LinzMonitorCombined extends HTMLElement {
   }
 
   connectedCallback() {
+    if (this._clockTimer) clearInterval(this._clockTimer);
     this._clockTimer = setInterval(() => this._updateClockDisplay(), 1000);
+    // Nach dem Wechsel der Dashboard-Ansicht wird die Karte wieder eingehängt, ohne dass neue Daten kommen:
+    // Takt der LED-Wall und des LED-Fensters hier wieder starten (sonst bleibt das Fenster leer).
+    if (this._currentLayout === "ledm" && this._lwRows) {
+      this._lwDrawn = null; this._lwClockDrawn = null;
+      if (!this._lwTimer) this._lwTimer = setInterval(() => this._lwTick(), 120);
+      if (this._lwRO && this.querySelector("#lw-board")) this._lwRO.observe(this.querySelector("#lw-board"));
+      this._lwClockLoop();
+      this._lwTick();
+    }
   }
   
   disconnectedCallback() {
@@ -1901,7 +1911,7 @@ class LinzMonitorCombined extends HTMLElement {
           <div class="lw-wrap">
             <div class="lw-bar"></div>
             <div class="lw-inner">
-              <div class="lw-head"><div class="lw-title" id="lw-title"></div>${c.led_clock !== false ? `<div class="lw-clockbox"><canvas id="lw-clock"></canvas></div>` : ``}</div>
+              <div class="lw-head"><div class="lw-title" id="lw-title"></div>${c.led_clock !== false ? `<div class="lw-clockbox"><canvas id="lw-clock" width="44" height="14"></canvas></div>` : ``}</div>
               <div class="lw-labels">
                 <span style="left:0">Linie</span>
                 <span style="left:calc(0.7cqw + ${pct(LW_PAD + LW_DEST_X - 1.5)})">Ziel</span>
@@ -1985,7 +1995,8 @@ class LinzMonitorCombined extends HTMLElement {
      Im Hintergrund (Tab nicht sichtbar) nur einmal pro Sekunde prüfen, ohne zu zeichnen. */
   _lwClockLoop() {
     clearTimeout(this._lwClockTimer);
-    if (this._currentLayout !== "ledm" || !this.isConnected) { this._lwClockTimer = null; return; }
+    if (this._currentLayout !== "ledm") { this._lwClockTimer = null; return; }
+    if (!this.isConnected) { this._lwClockTimer = null; return; }   // connectedCallback startet neu
     const delay = document.hidden ? 1000 : this._lwDrawClock(Date.now());
     this._lwClockTimer = setTimeout(() => this._lwClockLoop(), delay);
   }
