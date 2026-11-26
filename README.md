@@ -98,7 +98,7 @@ Eine Abfahrtstafel als echte Punktmatrix über die volle Kartenbreite.
 - **Kopf:** Haltestellenname groß, Spaltenköpfe „Linie / Ziel / Abfahrt“ und ein kleines LED-Fenster oben rechts: Uhrzeit (8 s, Doppelpunkt blinkt), Datum und Temperatur am Ort der Haltestelle (je 3 s) im Wechsel – wie ein Kreisel: das Datum kommt von rechts, die Temperatur von unten, die Uhrzeit wieder von links. Oder nur die Uhrzeit.
 - **Schrift:** Liniennummer und Abfahrt fett, Ziele ausgeschrieben in 5×7-Punktschrift – alles gleich hoch.
 - **Abfahrt jetzt:** wahlweise „sofort“ oder zwei eng nebeneinander stehende Sterne, die im Sekundentakt abwechselnd blinken.
-- **Abweichung vom Fahrplan** vor den Minuten: Verspätung rot `(+4)`, Verfrühung blau `(-2)` – wählbar: beides, nur Verspätungen oder keine.
+- **Abweichung vom Fahrplan** klein vor den Minuten, z. B. `(+4)` – die Zahl rot bei Verspätung, blau bei Verfrühung. Wählbar: beides, nur Verspätungen oder keine.
 - **Ab 60 Minuten** oder mit Zeitanzeige „Uhrzeit“ steht die Abfahrtszeit statt der Minuten.
 - **Hinweise** wie „Verspätung! Bitte Geduld!“ laufen im Zielfeld von rechts herein, im Wechsel mit dem Ziel. Solange der Hinweis läuft, steht ein Warndreieck mit Rufzeichen davor – beim Ziel selbst nicht.
 - **Keine Daten:** Liefert der Sensor keine Abfahrten, steht in den letzten beiden Zeilen „Keine Echtzeitdaten vorhanden!“ (weiß) und „Betrieb laut Fahrplanaushang!“ (LED-Farbe).

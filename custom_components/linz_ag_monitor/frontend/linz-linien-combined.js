@@ -287,6 +287,14 @@ const LW_DEST_X = 29;        // Ziel ab Punkt 29
 // Warndreieck mit Rufzeichen (7 x 8 Punkte) – steht vor dem Ziel, solange ein Hinweis läuft oder die Fahrt ausfällt
 const LW_WARN = ["   #   ","  # #  ","  # #  "," # # # "," # # # ","#     #","#  #  #","#######"];
 const LW_WARN_W = 9;         // Breite inkl. Abstand zum Text
+// Kleine Schrift (3 x 5 Punkte) für die Abweichung vom Fahrplan "(+4)" – kleiner als die Abfahrtsminuten
+const LW_TINY = {
+  "0":["###","# #","# #","# #","###"], "1":[" # ","## "," # "," # ","###"], "2":["###","  #","###","#  ","###"],
+  "3":["###","  #"," ##","  #","###"], "4":["# #","# #","###","  #","  #"], "5":["###","#  ","###","  #","###"],
+  "6":["###","#  ","###","# #","###"], "7":["###","  #"," # "," # "," # "], "8":["###","# #","###","# #","###"],
+  "9":["###","# #","###","  #","###"], "+":["   "," # ","###"," # ","   "], "-":["   ","   ","###","   ","   "],
+  "(":[" #","# ","# ","# "," #"], ")":["# "," #"," #"," #","# "],
+};
 
 // Kurznamen nur für die Haltestellen-Anzeige (DFI) – die anderen Designs schreiben aus
 const STELE_DEST_SHORT = [
@@ -2138,6 +2146,20 @@ class LinzMonitorCombined extends HTMLElement {
     ctx.globalAlpha = 1;
   }
 
+  /* Abweichung in kleiner 3x5-Schrift: Zahl und Vorzeichen in der Farbe (Liste "list"),
+     Klammern in der Farbe der Abfahrt ("bracketList"). Liefert die Breite. list = null: nur messen. */
+  _lwTiny(list, x, y, str, bracketList) {
+    let cx = x;
+    for (const ch of Array.from(str)) {
+      const g = LW_TINY[ch];
+      if (!g) continue;
+      const target = (ch === "(" || ch === ")") ? bracketList : list;
+      if (target) g.forEach((row, ry) => { for (let rx = 0; rx < row.length; rx++) if (row[rx] === "#") target.push([cx + rx, y + ry]); });
+      cx += g[0].length + 1;
+    }
+    return cx - x - 1;
+  }
+
   /* Text als Punkte eintragen (fett = Ziffern 6x7, sonst dünne 5x7-Schrift); liefert die Breite.
      mono = true: jedes Zeichen (auch Leerzeichen) 6 Punkte breit – für die Laufschrift. */
   _lwText(cells, x, y, str, bold, mono = false) {
@@ -2187,7 +2209,7 @@ class LinzMonitorCombined extends HTMLElement {
       else right = width(r.time.n, true) + (r.time.unit ? width(r.time.unit, false) + 2 : 0);
       // Abweichung vom Fahrplan vor der Abfahrt: "(+4)" rot, "(-2)" blau
       const dTxt = r.time.delay ? `(${r.time.delay > 0 ? "+" : "-"}${Math.abs(r.time.delay)})` : "";
-      if (dTxt) right += width(dTxt, false) + 3;
+      if (dTxt) right += this._lwTiny(null, 0, 0, dTxt) + 3;
       // Warndreieck nur, solange der Hinweis bzw. "Fahrt fällt aus!" angezeigt wird – nicht beim Ziel.
       // Platz dafür wird in solchen Zeilen immer freigehalten, damit das Ziel nicht springt.
       const canWarn = r.cancelled || r.segments.some(sg => sg.ticker);
@@ -2230,7 +2252,7 @@ class LinzMonitorCombined extends HTMLElement {
       } else {
         const wu = r.time.unit ? width(r.time.unit, false) + 2 : 0;
         let tx = ox + LW_COLS - right;
-        if (dTxt) tx += this._lwText(r.time.delay > 0 ? lates : earlies, tx, oy, dTxt, false) + 3;
+        if (dTxt) tx += this._lwTiny(r.time.delay > 0 ? lates : earlies, tx, oy + 2, dTxt, numL) + 3;   // klein, unten bündig
         this._lwText(numL, tx, oy, r.time.n, true);
         if (r.time.unit) this._lwText(numL, ox + LW_COLS - wu + 2, oy, r.time.unit, false);
       }
