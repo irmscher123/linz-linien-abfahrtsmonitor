@@ -7,7 +7,7 @@
 **Live-Abfahrten der Linz AG Linien für Home Assistant – mit fünf Anzeige-Designs,<br>vom kompakten Listen-Layout bis zum originalgetreuen Nachbau der Haltestellen-Anzeige.**
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.4.4-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
+[![version](https://img.shields.io/badge/version-2.4.5-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)](https://github.com/irmscher123)
 
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/dashboards.png" width="900" alt="Die Designs Maxi, Midi, Mini, LED-Wall und Haltestellen-Säule">
@@ -87,7 +87,7 @@ Die drei Listen-Layouts mit farbigen Linien-Badges in den Linz-AG-Farben.
 - **Midi** – kompakte Liste, Verspätung und Hinweise in einer Zeile. Zeilenhöhe und Schriftgrößen frei einstellbar.
 - **Mini** – sehr platzsparend, für Smartphones oder als Seitenleiste. Badge-Größe und -Form einstellbar.
 
-Abweichungen vom Fahrplan stehen neben der Zeit: Verspätung rot `(+4)`, Verfrühung blau `(−2)` – im Editor wählbar: beides, nur Verspätungen oder keine. Lange Hinweise laufen als Laufschrift durch, ausgefallene Fahrten werden markiert.
+Abweichungen vom Fahrplan stehen neben der Zeit: Verspätung rot `(+4)`, Verfrühung blau `(−2)` – im Editor wählbar: beides, nur Verspätungen oder keine. Lange Hinweise laufen als Laufschrift durch. Ausgefallene Fahrten werden markiert und zeigen die reguläre Abfahrtszeit; ein vorhandener Hinweis läuft auch dann durch.
 
 ### LED-Wall
 
@@ -102,7 +102,7 @@ Eine Abfahrtstafel als echte Punktmatrix über die volle Kartenbreite.
 - **Ab 60 Minuten** oder mit Zeitanzeige „Uhrzeit“ steht die Abfahrtszeit statt der Minuten.
 - **Hinweise** wie „Verspätung! Bitte Geduld!“ laufen im Zielfeld von rechts herein, im Wechsel mit dem Ziel. Solange der Hinweis läuft, steht ein Warndreieck mit Rufzeichen davor – beim Ziel selbst nicht.
 - **Keine Daten:** Liefert der Sensor keine Abfahrten, steht in den letzten beiden Zeilen „Keine Echtzeitdaten vorhanden!“ (weiß) und „Betrieb laut Fahrplanaushang!“ (LED-Farbe).
-- **Ausfälle:** Statt der Minuten steht die reguläre Abfahrtszeit laut Fahrplan. Die ganze Zeile leuchtet rot, das Ziel wechselt mit „Warndreieck + Fahrt fällt aus!“.
+- **Ausfälle:** Statt der Minuten steht die reguläre Abfahrtszeit laut Fahrplan, ein vorhandener Hinweis läuft trotzdem durch. Die ganze Zeile leuchtet rot, das Ziel wechselt mit „Warndreieck + Fahrt fällt aus!“.
 - **Farben frei wählbar:** Ziel, Linie & Abfahrt, Leisten oben/unten, Hintergrund sowie Name & Spaltenköpfe.
 - Die frühere Darstellung bleibt unter **Darstellung → Klassisch** wählbar.
 
@@ -124,7 +124,7 @@ Originalgetreuer Nachbau der Anzeige an den Linz-AG-Haltestellen (DFI) – die T
 | 4 | Zusatz | `s`, `a`, `b`, `*` |
 | 5 | Abfahrt jetzt: blinkender Block ■ · Ausfall: Warndreieck mit Rufzeichen | |
 | 6–21 | Ziel bzw. Hinweis (16 Felder) | `Trauner Kreuzung` |
-| 22–24 | Minuten, rechtsbündig, max. 99 | `5`, `12` |
+| 22–24 | Minuten, rechtsbündig, max. 99 (bei Ausfall: Abfahrtszeit in Feld 20–24) | `5`, `12`, `16:34` |
 
 **LED-Board wie am Original**
 
@@ -137,7 +137,7 @@ Originalgetreuer Nachbau der Anzeige an den Linz-AG-Haltestellen (DFI) – die T
 - **Abfahrt jetzt:** Das Minutenfeld bleibt leer, vor dem Ziel blinkt ein kleiner Block.
 - **Lange Ziele** laufen Feld für Feld durch, mit kurzer Pause am Anfang und Ende.
 - **Hinweise** wie „Verspätung bitte Geduld“ laufen von rechts nach links durch, im Wechsel mit dem Ziel.
-- **Ausfälle** bleiben bis zur geplanten Abfahrtszeit stehen: Warndreieck in Feld 5, im Zielfeld wechseln Ziel und „Fahrt fällt aus!“ – nichts wird durchgestrichen, im Minutenfeld steht nie „0“.
+- **Ausfälle** bleiben bis zur geplanten Abfahrtszeit stehen: Warndreieck in Feld 5, statt der Minuten die reguläre Abfahrtszeit (z. B. `16:34`), im Zielfeld wechseln Ziel, „Fahrt fällt aus!“ und ein vorhandener Hinweis (Laufschrift) – nichts wird durchgestrichen.
 - Nur Abfahrten bis 99 Minuten, immer in Minuten.
 
 **Kurznamen wie an der echten Anzeige** (nur in diesem Design)
