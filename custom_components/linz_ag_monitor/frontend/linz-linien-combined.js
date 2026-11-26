@@ -590,6 +590,8 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
                <option value="absolute" ${this._config.time_format === "absolute" ? 'selected' : ''}>Uhrzeit (z.B. 14:30)</option>
              </select>
            </div>
+           ${["maxi", "midi", "mini"].includes(mode) || (mode === "led" && this._config.led_style === "classic") ? `
+           <label class="toggle-box"><input id="show_delay" class="std-input" type="checkbox" ${this._config.show_delay !== false ? 'checked' : ''}><span>Verspätung / Verfrühung anzeigen <span style="color:#ff5252">(+4)</span> <span style="color:#4da3ff">(−2)</span></span></label>` : ``}
          </div>
 
          <h4>🛠️ Design Einstellungen (${mode.toUpperCase()})</h4>
@@ -845,6 +847,16 @@ class LinzMonitorCombined extends HTMLElement {
   }
 
   // --- DIE KORRIGIERTE _getRouteName FUNKTION ---
+  /* Abweichung vom Fahrplan: Verspätung rot "(+4)", Verfrühung blau "(−2)". Ausschaltbar mit show_delay: false. */
+  _delayTag(d, cls, wrap = true) {
+    if (this._config.show_delay === false || d.isGone) return "";
+    const v = Number(d.delay) || 0;
+    if (!v) return "";
+    const txt = v > 0 ? `+${v}` : `−${Math.abs(v)}`;
+    const color = v > 0 ? "#ff5252" : "#4da3ff";
+    return `<span class="${cls}" style="color:${color}">${wrap ? `(${txt})` : txt}</span>`;
+  }
+
   _getRouteName(d) {
       const cleanL = String(d.line || "").replace("*", "");
       // Bereinigt unsichtbare Leerzeichen und gleicht alles in Kleinbuchstaben ab
@@ -998,7 +1010,7 @@ class LinzMonitorCombined extends HTMLElement {
 
       let timeHtml = "";
       let delayHtml = "";
-      if (!isCancelled && !d.isGone && d.delay > 0 && !isNow) delayHtml = `<span class="delay-info">+${d.delay}</span>`;
+      if (!isCancelled && !isNow) delayHtml = this._delayTag(d, "delay-info", false);
       
       // STRIKETHROUGH FÜR ZEIT
       if (isCancelled) timeHtml = `<span style="text-decoration: line-through;">${d.scheduled}</span>`; 
@@ -1177,7 +1189,8 @@ class LinzMonitorCombined extends HTMLElement {
       const isNow = d.countdown === 0 && !d.isGone && !isCancelled;
 
       let timeVal;
-      let metaVal = (!d.isGone && d.delay > 0 && !isCancelled) ? `${d.scheduled} <span class="delay-red">(+${d.delay})</span>` : d.scheduled;
+      const dTag = !isCancelled ? this._delayTag(d, "delay-red") : "";
+      let metaVal = dTag ? `${d.scheduled} ${dTag}` : d.scheduled;
 
       if (isCancelled) {
          timeVal = `<span style="text-decoration:line-through; color:#ff5252;">${d.scheduled}</span>`;
@@ -1304,7 +1317,7 @@ class LinzMonitorCombined extends HTMLElement {
           td { vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative; }
           .col-line { width: ${BADGE_W + 10}px; }
           .col-dest { width: auto; padding-left: 8px; overflow: hidden; white-space: nowrap; }
-          .col-time { width: 105px; text-align: right; font-weight: 800; font-size: ${TIME_S + 1}px; z-index: 5; }
+          .col-time { width: ${this._config.show_delay === false ? 105 : Math.round(105 + TIME_S * 1.4)}px; text-align: right; white-space: nowrap; font-weight: 800; font-size: ${TIME_S + 1}px; z-index: 5; }
           .badge { width: ${BADGE_W}px; height: ${Math.round(ROW_H * 0.8)}px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: ${TIME_S}px; color: white; }
           .blink-badge { animation: syncBlink 1s infinite steps(1); }
           @keyframes syncBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.5; } }
@@ -1370,7 +1383,7 @@ class LinzMonitorCombined extends HTMLElement {
 
       const timeCol = row.querySelector(".col-time");
       const setTime = (h) => { if (timeCol._h !== h) { timeCol._h = h; timeCol.innerHTML = h; } };   // nur bei Änderung neu schreiben
-      const delayText = (!d.isGone && !isCancelled && d.delay > 0) ? `<span class="delay-red">(+${d.delay})</span>` : "";
+      const delayText = !isCancelled ? this._delayTag(d, "delay-red") : "";
 
       if (isCancelled) setTime(`<span style="text-decoration: line-through; color: #ff5252; opacity: 0.9;">${d.scheduled}</span>`);
       else if (isNow) setTime(`<div style="display:flex;justify-content:flex-end;"><img src="https://www.irmscher.at/linzag/linzlinien-z.png" style="width:22px;height:22px;object-fit:contain;"></div>`);
@@ -1522,7 +1535,7 @@ class LinzMonitorCombined extends HTMLElement {
 
       const timeCol = row.querySelector(".col-time");
       const setTime = (h) => { if (timeCol._h !== h) { timeCol._h = h; timeCol.innerHTML = h; } };   // nur bei Änderung neu schreiben
-      const delayText = (!d.isGone && !isCancelled && d.delay > 0) ? `<span class="delay-red">(+${d.delay})</span>` : "";
+      const delayText = !isCancelled ? this._delayTag(d, "delay-red") : "";
 
       if (isCancelled) setTime(`<span style="text-decoration: line-through; color: #ff5252; opacity: 0.9;">${d.scheduled}</span>`);
       else if (isNow) setTime(`<div style="display:flex;justify-content:flex-end;"><img src="https://www.irmscher.at/linzag/linzlinien-z.png" style="width:${Math.round(B_SIZE*0.8)}px;height:${Math.round(B_SIZE*0.8)}px;object-fit:contain;"></div>`);

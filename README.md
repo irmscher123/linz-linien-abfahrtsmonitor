@@ -7,7 +7,7 @@
 **Live-Abfahrten der Linz AG Linien für Home Assistant – mit fünf Anzeige-Designs,<br>vom kompakten Listen-Layout bis zum originalgetreuen Nachbau der Haltestellen-Anzeige.**
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.4.0-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
+[![version](https://img.shields.io/badge/version-2.4.1-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)](https://github.com/irmscher123)
 
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/dashboards.png" width="900" alt="Die Designs Maxi, Midi, Mini, LED-Wall und Haltestellen-Säule">
@@ -87,7 +87,7 @@ Die drei Listen-Layouts mit farbigen Linien-Badges in den Linz-AG-Farben.
 - **Midi** – kompakte Liste, Verspätung und Hinweise in einer Zeile. Zeilenhöhe und Schriftgrößen frei einstellbar.
 - **Mini** – sehr platzsparend, für Smartphones oder als Seitenleiste. Badge-Größe und -Form einstellbar.
 
-Lange Hinweise laufen als Laufschrift durch, ausgefallene Fahrten werden markiert.
+Abweichungen vom Fahrplan stehen neben der Zeit: Verspätung rot `(+4)`, Verfrühung blau `(−2)` – im Editor abschaltbar. Lange Hinweise laufen als Laufschrift durch, ausgefallene Fahrten werden markiert.
 
 ### LED-Wall
 
@@ -186,7 +186,7 @@ Der Sensor **„Nächste Abfahrt“** hat zusätzlich diese Attribute:
 
 | Attribut | Inhalt |
 | --- | --- |
-| `departureList` | alle Abfahrten mit Linie, Ziel, Plan-Zeit, Minuten, Verspätung, Echtzeit, Ausfall und Hinweisen |
+| `departureList` | alle Abfahrten mit Linie, Ziel, Plan-Zeit, Minuten, Abweichung (`delay`: positiv = Verspätung, negativ = Verfrühung), Echtzeit, Ausfall und Hinweisen |
 | `temperature` | Temperatur am Ort der Haltestelle (Open-Meteo, alle 10 Minuten) |
 | `stop_name`, `stop_id` | Name und ID der Haltestelle |
 | `last_update` | Zeit des letzten Abrufs |
@@ -285,6 +285,7 @@ stele_compact: false         # true = nur LED-Zeilen
 | `show_info` | Info-Zeile anzeigen (Maxi) | `true` |
 | `badge_size` | Größe der Linien-Badges in Pixel (Mini) | `24` |
 | `badge_round` | Badges rund statt eckig | `true` |
+| `show_delay` | Verspätung rot `(+4)` / Verfrühung blau `(−2)` anzeigen (auch LED-Wall klassisch) | `true` |
 </details>
 
 <details>
