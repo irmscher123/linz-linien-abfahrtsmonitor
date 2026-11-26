@@ -250,7 +250,7 @@ class LinzAGCoordinator(DataUpdateCoordinator):
                     "direction": direction_clean,
                     "scheduled": p_time,
                     "countdown": max(0, cd_minutes),
-                    "delay": max(0, delay),
+                    "delay": delay,   # Minuten: positiv = Verspätung, negativ = Verfrühung
                     "is_realtime": "departureTimeEstimated" in event,
                     "cancelled": event.get("isCancelled", False),
                     "infos": info_string
