@@ -124,7 +124,7 @@ Originalgetreuer Nachbau der Anzeige an den Linz-AG-Haltestellen (DFI) – die T
 | 4 | Zusatz | `s`, `a`, `b`, `*` |
 | 5 | Abfahrt jetzt: blinkender Block ■ · Ausfall: Warndreieck mit Rufzeichen | |
 | 6–21 | Ziel bzw. Hinweis (16 Felder) | `Trauner Kreuzung` |
-| 22–24 | Minuten, rechtsbündig, max. 99 (bei Ausfall: Abfahrtszeit in Feld 20–24) | `5`, `12`, `16:34` |
+| 22–24 | Minuten, rechtsbündig, max. 99 (bei Ausfall leer) | `5`, `12` |
 
 **LED-Board wie am Original**
 
@@ -137,7 +137,7 @@ Originalgetreuer Nachbau der Anzeige an den Linz-AG-Haltestellen (DFI) – die T
 - **Abfahrt jetzt:** Das Minutenfeld bleibt leer, vor dem Ziel blinkt ein kleiner Block.
 - **Lange Ziele** laufen Feld für Feld durch, mit kurzer Pause am Anfang und Ende.
 - **Hinweise** wie „Verspätung bitte Geduld“ laufen von rechts nach links durch, im Wechsel mit dem Ziel.
-- **Ausfälle** bleiben bis zur geplanten Abfahrtszeit stehen: Warndreieck in Feld 5, statt der Minuten die reguläre Abfahrtszeit (z. B. `16:34`), im Zielfeld wechseln Ziel, „Fahrt fällt aus!“ und ein vorhandener Hinweis (Laufschrift) – nichts wird durchgestrichen.
+- **Ausfälle** bleiben bis zur geplanten Abfahrtszeit stehen: Warndreieck in Feld 5, das Minutenfeld bleibt leer, im Zielfeld wechseln Ziel, „Fahrt fällt aus!“ und ein vorhandener Hinweis (Laufschrift) – nichts wird durchgestrichen.
 - Nur Abfahrten bis 99 Minuten, immer in Minuten.
 
 **Kurznamen wie an der echten Anzeige** (nur in diesem Design)

@@ -1786,7 +1786,7 @@ class LinzMonitorCombined extends HTMLElement {
       const prefix = base.padStart(3) + (suffix || " ") + " ";
 
       let minTxt;
-      if (isCancelled) minTxt = "";     // Ausfall: statt Minuten die reguläre Abfahrtszeit (siehe planned)
+      if (isCancelled) minTxt = "";     // Ausfall: Minutenfeld leer, keine Uhrzeit
       else if (isNow) minTxt = "";      // Abfahrt jetzt: Minutenfeld leer, dafür blinkt Kästchen 5
       else minTxt = String(d.countdown);
 
@@ -1804,7 +1804,7 @@ class LinzMonitorCombined extends HTMLElement {
         prefix, segments, min: minTxt, blink: isNow,
         strike: false,                         // Ausfall: nicht durchstreichen – Ziel wechselt mit „Fahrt fällt aus!“
         warn: !!isCancelled,                   // Ausfall: Warndreieck in Feld 5
-        planned: isCancelled ? (d.scheduled || "") : "",   // Ausfall: reguläre Abfahrtszeit (Felder 20-24)
+        planned: "",                           // Säule: bei Ausfall keine Uhrzeit, Minutenfeld bleibt leer
       });
     }
 
