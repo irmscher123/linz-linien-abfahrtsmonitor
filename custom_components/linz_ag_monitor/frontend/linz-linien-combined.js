@@ -2208,7 +2208,7 @@ class LinzMonitorCombined extends HTMLElement {
       else if (r.time.text !== undefined) right = width(r.time.text, false);
       else right = width(r.time.n, true) + (r.time.unit ? width(r.time.unit, false) + 2 : 0);
       // Abweichung vom Fahrplan vor der Abfahrt: "(+4)" rot, "(-2)" blau
-      const dTxt = r.time.delay ? `(${r.time.delay > 0 ? "+" : "-"}${Math.abs(r.time.delay)})` : "";
+      const dTxt = r.time.delay ? `${r.time.delay > 0 ? "+" : "-"}${Math.abs(r.time.delay)}` : "";   // ohne Klammern
       if (dTxt) right += this._lwTiny(null, 0, 0, dTxt) + 3;
       // Warndreieck nur, solange der Hinweis bzw. "Fahrt fällt aus!" angezeigt wird – nicht beim Ziel.
       // Platz dafür wird in solchen Zeilen immer freigehalten, damit das Ziel nicht springt.
