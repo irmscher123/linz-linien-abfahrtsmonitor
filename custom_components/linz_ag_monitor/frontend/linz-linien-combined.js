@@ -1999,7 +1999,7 @@ class LinzMonitorCombined extends HTMLElement {
       const isNow = d.countdown === 0 && !cancelled;
       if (!cancelled && !isNow && info.length > 2) segments.push({ text: info, ticker: true });
       let time;
-      if (cancelled) time = (d.countdown ?? 0) > 0 ? { n: String(d.countdown), unit: "min" } : { text: "" };
+      if (cancelled) time = d.scheduled ? { n: d.scheduled, unit: "" } : { text: "" };   // Ausfall: reguläre Abfahrtszeit laut Fahrplan
       else if (isNow) time = c.led_now === "stars" ? { stars: true } : { text: "sofort" };
       else if (c.time_format === "absolute" || d.countdown >= 60) time = { n: d.scheduled || "", unit: "" };
       else time = { n: String(d.countdown), unit: "min" };
