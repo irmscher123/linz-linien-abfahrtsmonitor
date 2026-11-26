@@ -881,6 +881,12 @@ class LinzMonitorCombined extends HTMLElement {
     return `<span class="${cls}" style="color:${color}">${wrap ? `(${txt})` : txt}</span>`;
   }
 
+  /* Zusatzhinweis einer ausgefallenen Fahrt (ohne reine "fällt aus"-Meldungen), sonst "" */
+  _cancelInfo(d) {
+    const t = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
+    return (t.length > 2 && !/^(fahrt\s*)?(fällt aus|entfällt)[!.\s]*$/i.test(t)) ? t : "";
+  }
+
   _getRouteName(d) {
       const cleanL = String(d.line || "").replace("*", "");
       // Bereinigt unsichtbare Leerzeichen und gleicht alles in Kleinbuchstaben ab
@@ -1026,7 +1032,7 @@ class LinzMonitorCombined extends HTMLElement {
       let lineT = this._getRouteName(d); 
 
       let infoText = "";
-      if (isCancelled) infoText = "FAHRT FÄLLT AUS";
+      if (isCancelled) { const ci = this._cancelInfo(d); infoText = ci ? `FAHRT FÄLLT AUS +++ ${ci}` : "FAHRT FÄLLT AUS"; }
       else if (d.infos && d.infos.length > 3) {
           let cleanInfo = d.infos.replace("Niederflurfahrzeug", "").replace(/\n/g, " ").trim();
           if (cleanInfo.length > 2) infoText = cleanInfo;
@@ -1239,7 +1245,9 @@ class LinzMonitorCombined extends HTMLElement {
          styledInfoHtml = `
             <div class="row-info alert-style">
               <span style="color:white">⚠️</span>
-              <div class="mq-w"><div class="mq-t" style="animation:none; padding-left:0;"><span class="alert-txt">FAHRT FÄLLT AUS</span></div></div>
+              <div class="mq-w">${this._cancelInfo(d)
+                ? `<div class="mq-t"><span class="alert-txt">FAHRT FÄLLT AUS</span><span> &nbsp;&nbsp; +++ &nbsp;&nbsp; ${this._cancelInfo(d).replace(/[&<>]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;" }[c]))}</span></div>`
+                : `<div class="mq-t" style="animation:none; padding-left:0;"><span class="alert-txt">FAHRT FÄLLT AUS</span></div>`}</div>
             </div>`;
       } else if (showInfo) {
          const infoTextRaw = (d.infos || "").replace(/\n/g, " ").trim();
@@ -1437,12 +1445,17 @@ class LinzMonitorCombined extends HTMLElement {
       const hideDest = (shouldHide) => { destEl.style.opacity = shouldHide ? "0" : "1"; };
 
       if (isCancelled) {
-        if (marquee.innerText !== "FAHRT FÄLLT AUS") { marquee.innerText = "FAHRT FÄLLT AUS"; marquee.className = "marquee-text alert-style"; }
+        const ci = this._cancelInfo(d);                       // Hinweis läuft auch bei Ausfall
+        const txt = ci ? `FAHRT FÄLLT AUS +++ ${ci}` : "FAHRT FÄLLT AUS";
+        if (marquee.innerText !== txt) { marquee.innerText = txt; marquee.className = "marquee-text alert-style"; }
+        const dur = Math.max(7, txt.length * 0.22);
         if (Date.now() > row._next) {
           row._state = (row._state === 'dest') ? 'warn' : 'dest';
-          row._next = Date.now() + 5000;
-          if (row._state === 'warn') { overlay.classList.add("visible"); wrap.classList.remove("animating"); hideDest(true); } 
-          else { overlay.classList.remove("visible"); hideDest(false); }
+          row._next = Date.now() + (row._state === 'warn' && ci ? dur * 1000 + 500 : 5000);
+          if (row._state === 'warn') {
+            overlay.classList.add("visible"); hideDest(true);
+            if (ci) { wrap.classList.add("animating"); marquee.style.animationDuration = `${dur}s`; } else wrap.classList.remove("animating");
+          } else { overlay.classList.remove("visible"); wrap.classList.remove("animating"); hideDest(false); }
         }
       } else if (d.infos && d.infos.length > 5 && !isNow && !d.isGone) {
         const infoText = d.infos.replace(/\n/g, " ").replace("Niederflurfahrzeug", "").trim();
@@ -1592,7 +1605,21 @@ class LinzMonitorCombined extends HTMLElement {
       const wrap = row.querySelector(".marquee-wrap");
       const hideDest = (shouldHide) => { destEl.style.opacity = shouldHide ? "0" : "1"; };
 
-      if (isCancelled) {
+      if (isCancelled && this._cancelInfo(d)) {
+        // Ausfall mit Hinweis: Hinweis läuft im Wechsel mit "Ziel ⚠️ FÄLLT AUS"
+        const infoText = this._cancelInfo(d);
+        if (marquee.innerText !== infoText) { marquee.innerText = infoText; marquee.className = "marquee-text"; }
+        const duration = Math.max(7, infoText.length * 0.22);
+        if (Date.now() > row._next) {
+          if (row._state === 'dest') {
+             row._state = 'info'; row._next = Date.now() + (duration * 1000) + 500;
+             overlay.classList.add("visible"); wrap.classList.add("animating"); marquee.style.animationDuration = `${duration}s`; hideDest(true);
+          } else {
+             row._state = 'dest'; row._next = Date.now() + 10000;
+             overlay.classList.remove("visible"); wrap.classList.remove("animating"); hideDest(false);
+          }
+        }
+      } else if (isCancelled) {
          overlay.classList.remove("visible");
          hideDest(false); 
       } else if (d.infos && d.infos.length > 5 && !isNow && !d.isGone) {
@@ -1759,7 +1786,7 @@ class LinzMonitorCombined extends HTMLElement {
       const prefix = base.padStart(3) + (suffix || " ") + " ";
 
       let minTxt;
-      if (isCancelled) minTxt = (d.countdown ?? 0) > 0 ? String(d.countdown) : "";   // Ausfall: Minuten bis zur geplanten Abfahrt, nie "0"
+      if (isCancelled) minTxt = "";     // Ausfall: Minutenfeld leer, keine Uhrzeit
       else if (isNow) minTxt = "";      // Abfahrt jetzt: Minutenfeld leer, dafür blinkt Kästchen 5
       else minTxt = String(d.countdown);
 
@@ -1769,13 +1796,15 @@ class LinzMonitorCombined extends HTMLElement {
       if (isCancelled) segments.push({ text: "Fahrt fällt aus!", ticker: false });   // genau 16 Felder: fest eingeblendet, im Wechsel mit dem Ziel
       const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
       // Bei Abfahrt "jetzt" (blinkender Block) nur das Ziel – keine Zusatzinfo
-      if (!isCancelled && !isNow && info.length > 2) segments.push({ text: info, ticker: true });
+      // Hinweis läuft auch bei Ausfall (außer er sagt nur "fällt aus")
+      if (!isNow && info.length > 2 && !(isCancelled && /^(fahrt\s*)?(fällt aus|entfällt)[!.\s]*$/i.test(info))) segments.push({ text: info, ticker: true });
 
       rows.push({
         id: `${name}|${d.direction}|${d.scheduled}`,
         prefix, segments, min: minTxt, blink: isNow,
         strike: false,                         // Ausfall: nicht durchstreichen – Ziel wechselt mit „Fahrt fällt aus!“
         warn: !!isCancelled,                   // Ausfall: Warndreieck in Feld 5
+        planned: "",                           // Säule: bei Ausfall keine Uhrzeit, Minutenfeld bleibt leer
       });
     }
 
@@ -1866,13 +1895,20 @@ class LinzMonitorCombined extends HTMLElement {
       const strike = [];
       if (row.info) text = this._steleInfoText(now);
       else if (row.prefix) {
-        const minW = STELE_MIN_W;                           // Felder 22-24
-        const fieldW = STELE_COLS - 5 - minW;               // 16 Felder (6-21)
+        let minW = STELE_MIN_W, minTxt = row.min;           // Felder 22-24
+        if (row.planned) {
+          // Ausfall: reguläre Abfahrtszeit "09:10" in Feld 20-24. Während "Fahrt fällt aus!" (16 Felder)
+          // angezeigt wird, bleibt das Zeitfeld leer, damit der Text ganz hineinpasst.
+          const st = this._steleAnim && this._steleAnim.get(row.id);
+          const seg = row.segments[st ? st.seg : 0];
+          if (!(seg && seg.text === "Fahrt fällt aus!")) { minW = row.planned.length + 1; minTxt = row.planned; }
+        }
+        const fieldW = STELE_COLS - 5 - minW;               // 16 Felder (6-21), bei Ausfall mit Uhrzeit 13
         // Abfahrt jetzt: in Kästchen 5 (direkt vor dem Ziel) blinkt ein gefüllter Block
         // Ausfall: in Kästchen 5 steht ein Warndreieck mit Rufzeichen
         const prefix = row.warn ? row.prefix.slice(0, 4) + "⚠" : row.blink ? row.prefix.slice(0, 4) + (blinkOn ? "■" : " ") : row.prefix;
         const field = this._steleField(row, fieldW, now);
-        text = prefix + field.text + row.min.padStart(minW);
+        text = prefix + field.text + minTxt.padStart(minW);
         if (row.strike) {
           // Ausfall: Ziel (nicht die Laufschrift "Fahrt fällt aus") und Minuten durchstreichen
           const destLen = field.text.replace(/\s+$/, "").length;
@@ -1997,7 +2033,7 @@ class LinzMonitorCombined extends HTMLElement {
       if (cancelled) segments.push({ text: "Fahrt fällt aus!", ticker: false });
       const info = String(d.infos || "").replace(/Niederflurfahrzeug/gi, "").replace(/\s+/g, " ").replace(/^[\s+]+|[\s+]+$/g, "");
       const isNow = d.countdown === 0 && !cancelled;
-      if (!cancelled && !isNow && info.length > 2) segments.push({ text: info, ticker: true });
+      if (!isNow && info.length > 2 && !(cancelled && /^(fahrt\s*)?(fällt aus|entfällt)[!.\s]*$/i.test(info))) segments.push({ text: info, ticker: true });
       let time;
       if (cancelled) time = d.scheduled ? { n: d.scheduled, unit: "" } : { text: "" };   // Ausfall: reguläre Abfahrtszeit laut Fahrplan
       else if (isNow) time = c.led_now === "stars" ? { stars: true } : { text: "sofort" };
