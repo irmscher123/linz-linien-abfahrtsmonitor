@@ -7,7 +7,7 @@
 **Live-Abfahrten der Linz AG Linien für Home Assistant – mit fünf Anzeige-Designs,<br>vom kompakten Listen-Layout bis zum originalgetreuen Nachbau der Haltestellen-Anzeige.**
 
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-41BDF5.svg?style=for-the-badge)](https://github.com/hacs/integration)
-[![version](https://img.shields.io/badge/version-2.4.1-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
+[![version](https://img.shields.io/badge/version-2.4.2-red.svg?style=for-the-badge)](https://github.com/irmscher123/linz-linien-abfahrtsmonitor/releases)
 [![maintainer](https://img.shields.io/badge/maintainer-irmscher123-green.svg?style=for-the-badge)](https://github.com/irmscher123)
 
 <img src="https://raw.githubusercontent.com/irmscher123/linz-linien-abfahrtsmonitor/main/pictures/dashboards.png" width="900" alt="Die Designs Maxi, Midi, Mini, LED-Wall und Haltestellen-Säule">
@@ -87,7 +87,7 @@ Die drei Listen-Layouts mit farbigen Linien-Badges in den Linz-AG-Farben.
 - **Midi** – kompakte Liste, Verspätung und Hinweise in einer Zeile. Zeilenhöhe und Schriftgrößen frei einstellbar.
 - **Mini** – sehr platzsparend, für Smartphones oder als Seitenleiste. Badge-Größe und -Form einstellbar.
 
-Abweichungen vom Fahrplan stehen neben der Zeit: Verspätung rot `(+4)`, Verfrühung blau `(−2)` – im Editor abschaltbar. Lange Hinweise laufen als Laufschrift durch, ausgefallene Fahrten werden markiert.
+Abweichungen vom Fahrplan stehen neben der Zeit: Verspätung rot `(+4)`, Verfrühung blau `(−2)` – im Editor wählbar: beides, nur Verspätungen oder keine. Lange Hinweise laufen als Laufschrift durch, ausgefallene Fahrten werden markiert.
 
 ### LED-Wall
 
@@ -98,6 +98,7 @@ Eine Abfahrtstafel als echte Punktmatrix über die volle Kartenbreite.
 - **Kopf:** Haltestellenname groß, Spaltenköpfe „Linie / Ziel / Abfahrt“ und ein kleines LED-Fenster oben rechts: Uhrzeit (8 s, Doppelpunkt blinkt), Datum und Temperatur am Ort der Haltestelle (je 3 s) im Wechsel – wie ein Kreisel: das Datum kommt von rechts, die Temperatur von unten, die Uhrzeit wieder von links. Oder nur die Uhrzeit.
 - **Schrift:** Liniennummer und Abfahrt fett, Ziele ausgeschrieben in 5×7-Punktschrift – alles gleich hoch.
 - **Abfahrt jetzt:** wahlweise „sofort“ oder zwei eng nebeneinander stehende Sterne, die im Sekundentakt abwechselnd blinken.
+- **Abweichung vom Fahrplan** vor den Minuten: Verspätung rot `(+4)`, Verfrühung blau `(-2)` – wählbar: beides, nur Verspätungen oder keine.
 - **Ab 60 Minuten** oder mit Zeitanzeige „Uhrzeit“ steht die Abfahrtszeit statt der Minuten.
 - **Hinweise** wie „Verspätung! Bitte Geduld!“ laufen im Zielfeld von rechts herein, im Wechsel mit dem Ziel. Solange der Hinweis läuft, steht ein Warndreieck mit Rufzeichen davor – beim Ziel selbst nicht.
 - **Keine Daten:** Liefert der Sensor keine Abfahrten, steht in den letzten beiden Zeilen „Keine Echtzeitdaten vorhanden!“ (weiß) und „Betrieb laut Fahrplanaushang!“ (LED-Farbe).
@@ -271,6 +272,7 @@ stele_compact: false         # true = nur LED-Zeilen
 | `sortierung` | `echtzeit` oder `plan` | `echtzeit` |
 | `time_format` | `countdown` (Minuten) oder `absolute` (Uhrzeit) | `countdown` |
 | `stop_name_override` | eigener Name der Haltestelle | offizieller Name |
+| `show_delay` | Abweichung vom Fahrplan: leer = Verspätung rot `(+4)` und Verfrühung blau `(−2)`, `late` = nur Verspätungen, `none` = keine (alle Designs außer Säule) | beides |
 </details>
 
 <details>
@@ -285,7 +287,7 @@ stele_compact: false         # true = nur LED-Zeilen
 | `show_info` | Info-Zeile anzeigen (Maxi) | `true` |
 | `badge_size` | Größe der Linien-Badges in Pixel (Mini) | `24` |
 | `badge_round` | Badges rund statt eckig | `true` |
-| `show_delay` | Verspätung rot `(+4)` / Verfrühung blau `(−2)` anzeigen (auch LED-Wall klassisch) | `true` |
+
 </details>
 
 <details>

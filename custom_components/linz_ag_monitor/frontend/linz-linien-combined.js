@@ -590,8 +590,15 @@ class LinzMonitorIrmscherEditorV11 extends HTMLElement {
                <option value="absolute" ${this._config.time_format === "absolute" ? 'selected' : ''}>Uhrzeit (z.B. 14:30)</option>
              </select>
            </div>
-           ${["maxi", "midi", "mini"].includes(mode) || (mode === "led" && this._config.led_style === "classic") ? `
-           <label class="toggle-box"><input id="show_delay" class="std-input" type="checkbox" ${this._config.show_delay !== false ? 'checked' : ''}><span>Verspätung / Verfrühung anzeigen <span style="color:#ff5252">(+4)</span> <span style="color:#4da3ff">(−2)</span></span></label>` : ``}
+           ${mode !== "stele" ? (() => { const sd = this._config.show_delay; const v = (sd === false || sd === "none") ? "none" : (sd === "late" ? "late" : ""); return `
+           <div>
+             <label>🕑 Abweichung vom Fahrplan</label>
+             <select id="show_delay" class="std-input">
+               <option value="" ${v === "" ? 'selected' : ''}>Verspätung (+4) &amp; Verfrühung (−2)</option>
+               <option value="late" ${v === "late" ? 'selected' : ''}>Nur Verspätungen (+4)</option>
+               <option value="none" ${v === "none" ? 'selected' : ''}>Nicht anzeigen</option>
+             </select>
+           </div>`; })() : ``}
          </div>
 
          <h4>🛠️ Design Einstellungen (${mode.toUpperCase()})</h4>
@@ -848,9 +855,18 @@ class LinzMonitorCombined extends HTMLElement {
 
   // --- DIE KORRIGIERTE _getRouteName FUNKTION ---
   /* Abweichung vom Fahrplan: Verspätung rot "(+4)", Verfrühung blau "(−2)". Ausschaltbar mit show_delay: false. */
+  /* Welche Abweichung soll angezeigt werden? show_delay: "" / true = Verspätung und Verfrühung,
+     "late" = nur Verspätungen, "none" / false = keine. Liefert die Minuten oder 0. */
+  _delayValue(d) {
+    const m = this._config.show_delay;
+    if (m === false || m === "none" || d.isGone) return 0;
+    const v = Math.round(Number(d.delay) || 0);
+    if (m === "late" && v < 0) return 0;
+    return v;
+  }
+
   _delayTag(d, cls, wrap = true) {
-    if (this._config.show_delay === false || d.isGone) return "";
-    const v = Number(d.delay) || 0;
+    const v = this._delayValue(d);
     if (!v) return "";
     const txt = v > 0 ? `+${v}` : `−${Math.abs(v)}`;
     const color = v > 0 ? "#ff5252" : "#4da3ff";
@@ -1317,7 +1333,7 @@ class LinzMonitorCombined extends HTMLElement {
           td { vertical-align: middle; border-bottom: 1px solid rgba(255,255,255,0.05); position: relative; }
           .col-line { width: ${BADGE_W + 10}px; }
           .col-dest { width: auto; padding-left: 8px; overflow: hidden; white-space: nowrap; }
-          .col-time { width: ${this._config.show_delay === false ? 105 : Math.round(105 + TIME_S * 1.4)}px; text-align: right; white-space: nowrap; font-weight: 800; font-size: ${TIME_S + 1}px; z-index: 5; }
+          .col-time { width: ${(this._config.show_delay === false || this._config.show_delay === "none") ? 105 : Math.round(105 + TIME_S * 1.4)}px; text-align: right; white-space: nowrap; font-weight: 800; font-size: ${TIME_S + 1}px; z-index: 5; }
           .badge { width: ${BADGE_W}px; height: ${Math.round(ROW_H * 0.8)}px; border-radius: 4px; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: ${TIME_S}px; color: white; }
           .blink-badge { animation: syncBlink 1s infinite steps(1); }
           @keyframes syncBlink { 0%, 49% { opacity: 1; } 50%, 100% { opacity: 0.5; } }
@@ -1979,6 +1995,7 @@ class LinzMonitorCombined extends HTMLElement {
       else if (isNow) time = c.led_now === "stars" ? { stars: true } : { text: "sofort" };
       else if (c.time_format === "absolute" || d.countdown >= 60) time = { n: d.scheduled || "", unit: "" };
       else time = { n: String(d.countdown), unit: "min" };
+      if (!cancelled && !isNow) { const dv = this._delayValue(d); if (dv) time.delay = dv; }
       const line = String(this._getRouteName(d) || d.line || "");
       return { id: `lw|${line}|${d.direction}|${d.scheduled}`, line, segments, time, cancelled };
     });
@@ -2168,6 +2185,9 @@ class LinzMonitorCombined extends HTMLElement {
       if (r.time.stars) right = 14;
       else if (r.time.text !== undefined) right = width(r.time.text, false);
       else right = width(r.time.n, true) + (r.time.unit ? width(r.time.unit, false) + 2 : 0);
+      // Abweichung vom Fahrplan vor der Abfahrt: "(+4)" rot, "(-2)" blau
+      const dTxt = r.time.delay ? `(${r.time.delay > 0 ? "+" : "-"}${Math.abs(r.time.delay)})` : "";
+      if (dTxt) right += width(dTxt, false) + 3;
       // Warndreieck nur, solange der Hinweis bzw. "Fahrt fällt aus!" angezeigt wird – nicht beim Ziel.
       // Platz dafür wird in solchen Zeilen immer freigehalten, damit das Ziel nicht springt.
       const canWarn = r.cancelled || r.segments.some(sg => sg.ticker);
@@ -2175,7 +2195,7 @@ class LinzMonitorCombined extends HTMLElement {
       const field = this._steleField(r, fw, now);
       const anim = this._steleAnim && this._steleAnim.get(r.id);
       const warn = canWarn && !!anim && anim.seg > 0;          // Segment 0 = Ziel
-      return { r, right, field, warn, star: r.time.stars ? starLeft : null };
+      return { r, right, field, warn, dTxt, star: r.time.stars ? starLeft : null };
     });
     const key = LED + NUM + RED + "|" + (cv.clientWidth || 0) + "|" + this._lwCount + "|" +
       plan.map(p => [p.r.line, p.r.cancelled ? 1 : 0, p.warn ? 1 : 0, JSON.stringify(p.r.time), p.star, p.field.ticker ? 1 : 0, p.field.text].join("¦")).join("\n");
@@ -2184,6 +2204,7 @@ class LinzMonitorCombined extends HTMLElement {
     // 2. Punkte berechnen
     const W = LW_COLS + 2 * LW_PAD, H = this._lwCount * (LW_ROW_H + LW_GAP) - LW_GAP + 2 * LW_PAD;
     const cells = [], nums = [], reds = [];              // Ziel (LED-Farbe) / Linie + Abfahrt (eigene Farbe) / Ausfall (rot)
+    const lates = [], earlies = [];                      // Verspätung (rot) / Verfrühung (blau)
     // Keine Abfahrten vom Sensor: Hinweis in den letzten beiden Zeilen (weiß / LED-Farbe), mittig
     if (!plan.length) {
       const msgs = [["Keine Echtzeitdaten vorhanden!", nums], ["Betrieb laut Fahrplanaushang!", cells]];
@@ -2193,7 +2214,7 @@ class LinzMonitorCombined extends HTMLElement {
         this._lwText(list, LW_PAD + Math.max(0, Math.floor((LW_COLS - width(txt, false)) / 2)), LW_PAD + row * (LW_ROW_H + LW_GAP), txt, false);
       });
     }
-    plan.forEach(({ r, right, field, warn }, i) => {
+    plan.forEach(({ r, right, field, warn, dTxt }, i) => {
       const oy = LW_PAD + i * (LW_ROW_H + LW_GAP), ox = LW_PAD;
       // Ausfall: ganze Zeile rot (nicht durchgestrichen)
       const numL = r.cancelled ? reds : nums, destL = r.cancelled ? reds : cells;
@@ -2208,7 +2229,9 @@ class LinzMonitorCombined extends HTMLElement {
         this._lwText(numL, ox + LW_COLS - right, oy, r.time.text, false);
       } else {
         const wu = r.time.unit ? width(r.time.unit, false) + 2 : 0;
-        this._lwText(numL, ox + LW_COLS - right, oy, r.time.n, true);
+        let tx = ox + LW_COLS - right;
+        if (dTxt) tx += this._lwText(r.time.delay > 0 ? lates : earlies, tx, oy, dTxt, false) + 3;
+        this._lwText(numL, tx, oy, r.time.n, true);
         if (r.time.unit) this._lwText(numL, ox + LW_COLS - wu + 2, oy, r.time.unit, false);
       }
       // Warndreieck (Ausfall: rot wie die Zeile, Hinweis: Farbe des Ziels)
@@ -2227,7 +2250,7 @@ class LinzMonitorCombined extends HTMLElement {
       }
     });
     // 3. Zeichnen
-    this._lwPaint(cv, W, H, [[cells, LED], [nums, NUM], [reds, RED]]);
+    this._lwPaint(cv, W, H, [[cells, LED], [nums, NUM], [reds, RED], [lates, "#ff5252"], [earlies, "#4da3ff"]]);
   }
 
   /* Eine LED-Zeile zeichnen: 24 Felder mit je 8 x 16 LED-Plättchen, 8x16-LED-Schrift */
